@@ -89,7 +89,7 @@ JSON:`;
         description: jsonLd.description || '',
       };
 
-      // Extract salary if available
+      // Extract salary if available in structured data
       if (jsonLd.baseSalary || jsonLd.salary) {
         const salaryData = jsonLd.baseSalary || jsonLd.salary;
         jobData.salary = {
@@ -97,6 +97,12 @@ JSON:`;
           max: salaryData.value?.maxValue || salaryData.maxValue,
           currency: salaryData.currency || 'USD',
         };
+      } else {
+        // Fallback: try to extract salary from description text
+        const salaryFromDescription = this.extractSalaryFromText(jobData.description);
+        if (salaryFromDescription) {
+          jobData.salary = salaryFromDescription;
+        }
       }
 
       // Validate required fields
@@ -126,6 +132,50 @@ JSON:`;
     }
     
     return jobLocation.name || '';
+  }
+
+  private extractSalaryFromText(description: string): { min: string; max: string; currency: string } | null {
+    if (!description) return null;
+
+    // Pattern to match salary ranges like "$248,700 - $342,000" or "Hiring Range: $248,700 - $342,000"
+    const salaryRangePatterns = [
+      /(?:Hiring Range|Salary Range|Range|Compensation):\s*\$?([\d,]+)(?:\s*-\s*|\s+to\s+)\$?([\d,]+)/i,
+      /\$?([\d,]+)(?:\s*-\s*|\s+to\s+)\$?([\d,]+)(?:\s+(?:USD|per year|annually))?/i,
+      /(?:between|from)\s+\$?([\d,]+)(?:\s*-\s*|\s+to\s+|\s+and\s+)\$?([\d,]+)/i
+    ];
+
+    // Pattern to match single salary values
+    const singleSalaryPatterns = [
+      /(?:Salary|Compensation|Pay):\s*\$?([\d,]+)/i,
+      /\$?([\d,]+)(?:\s+(?:USD|per year|annually))/i
+    ];
+
+    // Try salary range patterns first
+    for (const pattern of salaryRangePatterns) {
+      const match = description.match(pattern);
+      if (match && match[1] && match[2]) {
+        return {
+          min: `$${match[1].replace(/,/g, '')}`,
+          max: `$${match[2].replace(/,/g, '')}`,
+          currency: 'USD'
+        };
+      }
+    }
+
+    // Try single salary patterns
+    for (const pattern of singleSalaryPatterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        const salary = `$${match[1].replace(/,/g, '')}`;
+        return {
+          min: salary,
+          max: salary,
+          currency: 'USD'
+        };
+      }
+    }
+
+    return null;
   }
 
   private parseJobData(response: string): JobListing {
