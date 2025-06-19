@@ -199,4 +199,4 @@ If you encounter issues:
 
 ### Misc
 
-- created with Claude Code `$ claude "$(cat prompt.txt)" and iterated on with Windsurf
+- created with Claude Code `$ claude "$(cat prompt.txt)"` and iterated on with Windsurf
