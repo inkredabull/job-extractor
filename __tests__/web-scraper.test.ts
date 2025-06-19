@@ -34,6 +34,90 @@ describe('WebScraper', () => {
     });
   });
 
+  describe('extractStructuredData', () => {
+    it('should extract JobPosting JSON-LD data', () => {
+      const html = `
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {
+                "@context": "http://schema.org",
+                "@type": "JobPosting",
+                "title": "Software Engineer",
+                "hiringOrganization": {
+                  "name": "TechCorp",
+                  "@type": "Organization"
+                },
+                "jobLocation": {
+                  "@type": "Place",
+                  "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": "San Francisco, CA"
+                  }
+                },
+                "description": "We are looking for a software engineer..."
+              }
+            </script>
+          </head>
+          <body></body>
+        </html>
+      `;
+
+      const result = WebScraper.extractStructuredData(html);
+
+      expect(result).toBeDefined();
+      expect(result['@type']).toBe('JobPosting');
+      expect(result.title).toBe('Software Engineer');
+      expect(result.hiringOrganization.name).toBe('TechCorp');
+    });
+
+    it('should return null when no JobPosting JSON-LD found', () => {
+      const html = `
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {
+                "@context": "http://schema.org",
+                "@type": "Organization",
+                "name": "TechCorp"
+              }
+            </script>
+          </head>
+          <body></body>
+        </html>
+      `;
+
+      const result = WebScraper.extractStructuredData(html);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no JSON-LD scripts found', () => {
+      const html = '<html><body><h1>Regular HTML</h1></body></html>';
+
+      const result = WebScraper.extractStructuredData(html);
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      const html = `
+        <html>
+          <head>
+            <script type="application/ld+json">
+              { invalid json content
+            </script>
+          </head>
+          <body></body>
+        </html>
+      `;
+
+      const result = WebScraper.extractStructuredData(html);
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('simplifyHtml', () => {
     it('should remove script and style tags', () => {
       const html = '<html><body><h1>Title</h1><script>alert("test")</script><style>body{}</style></body></html>';

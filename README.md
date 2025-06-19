@@ -1,16 +1,19 @@
 # Job Extractor
 
-A TypeScript CLI tool that extracts job information from job posting URLs using AI. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction.
+A TypeScript CLI tool that extracts job information from job posting URLs using dual extraction strategies. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction.
 
 ## Features
 
-- 🤖 AI-powered job data extraction using OpenAI GPT models
-- 🌐 Web scraping with intelligent HTML simplification
-- 📋 Structured JSON output with standardized job schema
-- 🎨 Pretty-formatted console output
-- 💾 Optional file output
-- 🧪 Comprehensive unit tests
-- 🔧 TypeScript with full type safety
+- 🎯 **Smart Dual Extraction Strategy:**
+  - **Primary**: JSON-LD structured data extraction (instant, no LLM needed)
+  - **Fallback**: AI-powered HTML scraping with OpenAI GPT models
+- 🏗️ **JSON-LD Support**: Automatically detects and parses Schema.org JobPosting structured data
+- 💰 **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
+- 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
+- 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
+- 📋 **Structured JSON Output**: Standardized job schema with optional salary information
+- 🧪 **Comprehensive Testing**: Full unit test coverage with mocking for external dependencies
+- 🔧 **TypeScript**: Full type safety and modern development experience
 
 ## Installation
 
@@ -66,14 +69,17 @@ job-extractor extract "https://example.com/job-posting"
 ### Examples
 
 ```bash
-# Extract and display in pretty format
+# Extract job data (automatically logs to logs/ folder)
 job-extractor extract "https://example.com/job-posting"
 
-# Extract and save as JSON
-job-extractor extract "https://example.com/job" -f json -o job-data.json
+# Extract with JSON format output
+job-extractor extract "https://example.com/job" -f json
 
-# Extract and save in pretty format
-job-extractor extract "https://example.com/job" -o job-info.txt
+# Extract and save to additional file
+job-extractor extract "https://example.com/job" -o job-data.json
+
+# Works great with structured data sites (Workday, Greenhouse, etc.)
+job-extractor extract "https://company.myworkdaysite.com/job-posting"
 ```
 
 ## Output Schema
@@ -96,6 +102,41 @@ The tool extracts job information into the following JSON schema:
 
 **Note:** The `salary` field is optional and will be omitted if no salary information is found.
 
+## How It Works
+
+### Dual Extraction Strategy
+
+1. **JSON-LD Structured Data (Primary)**
+   - Scans for `<script type="application/ld+json">` tags
+   - Looks for Schema.org JobPosting structured data
+   - Instantly extracts: title, company, location, description
+   - Parses salary from description text using regex patterns
+   - **Advantage**: No LLM calls needed, very fast and reliable
+
+2. **HTML Scraping + AI (Fallback)**
+   - Simplifies HTML by removing scripts, styles, and empty elements
+   - Sends cleaned HTML to OpenAI GPT models
+   - Uses AI to intelligently extract job information
+   - **Advantage**: Works with any job site format
+
+### Salary Extraction Patterns
+
+The tool recognizes various salary formats in job descriptions:
+
+- `"Salary Range: $100,000 - $150,000"`
+- `"$80,000 to $120,000 annually"`
+- `"between $90,000 and $130,000"`
+- `"Compensation: $125,000"`
+
+### Automatic Logging
+
+All extracted job data is automatically saved to:
+```
+logs/job-{8-char-hash}-{timestamp}.json
+```
+
+Example: `logs/job-a1b2c3d4-2024-06-19T15-30-45-123Z.json`
+
 ## Development
 
 ### Scripts
@@ -113,30 +154,39 @@ The tool extracts job information into the following JSON schema:
 ```
 src/
 ├── agents/
-│   ├── base-agent.ts          # Abstract base class for all agents
-│   └── job-extractor-agent.ts # Job extraction implementation
+│   ├── base-agent.ts          # Abstract base class for all agents  
+│   └── job-extractor-agent.ts # Job extraction with dual strategy
 ├── types/
 │   └── index.ts               # TypeScript type definitions
 ├── utils/
-│   └── web-scraper.ts         # HTML fetching and simplification
+│   └── web-scraper.ts         # HTML fetching, JSON-LD extraction, simplification
 ├── config.ts                  # Environment configuration
-├── cli.ts                     # Command-line interface
+├── cli.ts                     # Command-line interface with logging
 └── index.ts                   # Main exports
 
 __tests__/
-├── base-agent.test.ts
-├── job-extractor-agent.test.ts
-└── web-scraper.test.ts
+├── base-agent.test.ts         # Tests for base OpenAI agent functionality
+├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
+└── web-scraper.test.ts        # Tests for structured data extraction
+
+logs/                          # Auto-generated job extraction logs
+└── job-*.json                 # Timestamped extraction results
 ```
 
 ### Architecture
 
-The project follows a modular architecture:
+The project follows a modular architecture with smart extraction strategies:
 
 1. **BaseAgent**: Abstract base class that handles OpenAI API communication
-2. **JobExtractorAgent**: Specialized agent for job data extraction
-3. **WebScraper**: Utility for fetching and simplifying HTML content
-4. **CLI**: Commander.js-based command-line interface
+2. **JobExtractorAgent**: Implements dual extraction strategy:
+   - JSON-LD structured data parsing (primary)
+   - HTML scraping + AI extraction (fallback)
+   - Advanced salary parsing from description text
+3. **WebScraper**: Utility for:
+   - HTML fetching with proper headers
+   - JSON-LD structured data extraction
+   - HTML simplification for AI processing
+4. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Environment Variables
 
