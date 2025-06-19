@@ -28,6 +28,33 @@ export class WebScraper {
     }
   }
 
+  static extractStructuredData(html: string): any {
+    const $ = cheerio.load(html);
+    
+    // Look for JSON-LD structured data
+    const jsonLdScripts = $('script[type="application/ld+json"]');
+    
+    for (let i = 0; i < jsonLdScripts.length; i++) {
+      try {
+        const scriptContent = $(jsonLdScripts[i]).html();
+        if (scriptContent) {
+          const jsonData = JSON.parse(scriptContent);
+          
+          // Check if it's JobPosting structured data
+          if (jsonData['@type'] === 'JobPosting') {
+            console.log('🔍 DEBUG: Found JobPosting JSON-LD structured data');
+            return jsonData;
+          }
+        }
+      } catch (error) {
+        console.log('🔍 DEBUG: Failed to parse JSON-LD script:', error);
+        continue;
+      }
+    }
+    
+    return null;
+  }
+
   static simplifyHtml(html: string): string {
     const $ = cheerio.load(html);
 

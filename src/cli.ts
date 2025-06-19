@@ -65,8 +65,8 @@ program
       if (options.output) {
         await fs.writeFile(options.output, output, 'utf-8');
         console.log(`✅ Job information also saved to ${options.output}`);
-      } else {
-        console.log(output);
+      // } else {
+        // console.log(output);
       }
 
     } catch (error) {

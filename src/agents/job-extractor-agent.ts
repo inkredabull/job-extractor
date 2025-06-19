@@ -9,8 +9,23 @@ export class JobExtractorAgent extends BaseAgent {
 
   async extract(url: string): Promise<ExtractorResult> {
     try {
-      // Fetch and simplify HTML
+      // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
+      
+      // First, try to extract structured data (JSON-LD)
+      const structuredData = WebScraper.extractStructuredData(html);
+      
+      if (structuredData) {
+        console.log('🎯 Using structured data (JSON-LD)');
+        const jobData = this.parseStructuredData(structuredData);
+        return {
+          success: true,
+          data: jobData,
+        };
+      }
+      
+      // Fallback to HTML scraping if no structured data
+      console.log('📄 Falling back to HTML scraping');
       const simplifiedHtml = WebScraper.simplifyHtml(html);
 
       // Create prompt for LLM
@@ -62,6 +77,55 @@ HTML Content:
 ${html.slice(0, 8000)}...
 
 JSON:`;
+  }
+
+  private parseStructuredData(jsonLd: any): JobListing {
+    try {
+      // Extract fields from JSON-LD JobPosting
+      const jobData: JobListing = {
+        title: jsonLd.title || jsonLd.identifier?.name || '',
+        company: jsonLd.hiringOrganization?.name || '',
+        location: this.extractLocation(jsonLd.jobLocation),
+        description: jsonLd.description || '',
+      };
+
+      // Extract salary if available
+      if (jsonLd.baseSalary || jsonLd.salary) {
+        const salaryData = jsonLd.baseSalary || jsonLd.salary;
+        jobData.salary = {
+          min: salaryData.value?.minValue || salaryData.minValue,
+          max: salaryData.value?.maxValue || salaryData.maxValue,
+          currency: salaryData.currency || 'USD',
+        };
+      }
+
+      // Validate required fields
+      if (!jobData.title || !jobData.company || !jobData.location || !jobData.description) {
+        throw new Error('Missing required fields in structured data');
+      }
+
+      return jobData;
+    } catch (error) {
+      throw new Error(`Failed to parse structured data: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
+    }
+  }
+
+  private extractLocation(jobLocation: any): string {
+    if (!jobLocation) return '';
+    
+    if (typeof jobLocation === 'string') return jobLocation;
+    
+    if (jobLocation.address) {
+      const address = jobLocation.address;
+      if (address.addressLocality) {
+        return address.addressLocality;
+      }
+      if (address.addressRegion && address.addressCountry) {
+        return `${address.addressRegion}, ${address.addressCountry}`;
+      }
+    }
+    
+    return jobLocation.name || '';
   }
 
   private parseJobData(response: string): JobListing {
