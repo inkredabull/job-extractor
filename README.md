@@ -1,6 +1,6 @@
 # Job Extractor
 
-A TypeScript CLI tool that extracts job information from job posting URLs using dual extraction strategies. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction.
+A TypeScript CLI tool that extracts and automatically scores job information from job posting URLs using dual extraction strategies. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction and job matching.
 
 ## Features
 
@@ -48,29 +48,30 @@ npm run build
 
 ### Command Line Interface
 
-#### Job Extraction
+#### Job Extraction (with Automatic Scoring)
 
-Extract job information from a URL:
+Extract job information from a URL and automatically score it:
 
 ```bash
-# Using npm run dev (development)
-npm run dev extract "https://example.com/job-posting"
-
-# Using built version
-npm start extract "https://example.com/job-posting"
-
-# Or install globally and use directly
-npm install -g .
+# Extract and score automatically (recommended workflow)
 job-extractor extract "https://example.com/job-posting"
+
+# Extract with custom criteria for scoring
+job-extractor extract "https://example.com/job-posting" -c my-criteria.json
+
+# Extract only (skip automatic scoring)
+job-extractor extract "https://example.com/job-posting" --no-score
 ```
 
 **Extract Options:**
 - `-o, --output <file>`: Save output to a file
 - `-f, --format <format>`: Output format (`json` or `pretty`, default: `pretty`)
+- `-c, --criteria <file>`: Path to criteria file for scoring (default: `criteria.json`)
+- `--no-score`: Skip automatic scoring after extraction
 
-#### Job Scoring
+#### Manual Job Scoring
 
-Score extracted jobs against customizable criteria:
+Score previously extracted jobs against customizable criteria:
 
 ```bash
 # Score a job using its ID from the log filename
@@ -86,22 +87,28 @@ job-extractor score "4c32e01e" -c my-criteria.json
 ### Examples
 
 ```bash
-# Extract job data (automatically logs to logs/ folder)
+# Extract and automatically score job (recommended workflow)
 job-extractor extract "https://example.com/job-posting"
 
-# Extract with JSON format output
+# Extract with custom criteria for auto-scoring
+job-extractor extract "https://example.com/job" -c senior-engineer-criteria.json
+
+# Extract only without scoring
+job-extractor extract "https://example.com/job" --no-score
+
+# Extract with JSON format output and auto-scoring
 job-extractor extract "https://example.com/job" -f json
 
-# Extract and save to additional file
+# Extract and save to additional file with auto-scoring
 job-extractor extract "https://example.com/job" -o job-data.json
 
 # Works great with structured data sites (Workday, Greenhouse, etc.)
 job-extractor extract "https://company.myworkdaysite.com/job-posting"
 
-# Score an extracted job (use the job ID from log filename)
+# Manually score an extracted job (use the job ID from log filename)
 job-extractor score "a1b2c3d4"
 
-# Score with custom criteria
+# Manually score with custom criteria
 job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
 ```
 

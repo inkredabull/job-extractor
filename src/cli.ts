@@ -12,15 +12,17 @@ const program = new Command();
 
 program
   .name('job-extractor')
-  .description('Extract job information from job posting URLs using AI')
+  .description('Extract and score job information from job posting URLs using AI')
   .version('1.0.0');
 
 program
   .command('extract')
-  .description('Extract job information from a URL')
+  .description('Extract job information from a URL and automatically score it')
   .argument('<url>', 'URL of the job posting to extract')
   .option('-o, --output <file>', 'Output file to save the extracted data (optional)')
   .option('-f, --format <format>', 'Output format: json or pretty', 'pretty')
+  .option('-c, --criteria <file>', 'Path to criteria file for scoring', 'criteria.json')
+  .option('--no-score', 'Skip automatic scoring after extraction')
   .action(async (url: string, options) => {
     try {
       console.log('🔍 Extracting job information...');
@@ -52,6 +54,37 @@ program
       const jsonOutput = JSON.stringify(result.data, null, 2);
       await fs.writeFile(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
+
+      // Automatically score the job unless --no-score is specified
+      if (options.score !== false) {
+        console.log('');
+        console.log('🎯 Automatically scoring job...');
+        
+        try {
+          const scorer = new JobScorerAgent(config, options.criteria);
+          const score = await scorer.scoreJob(jobId);
+          
+          console.log('✅ Job Scoring Complete');
+          console.log('=' .repeat(50));
+          console.log(`📊 Overall Score: ${score.overallScore}%`);
+          console.log('');
+          console.log('📈 Breakdown:');
+          console.log(`  Required Skills: ${score.breakdown.required_skills}%`);
+          console.log(`  Preferred Skills: ${score.breakdown.preferred_skills}%`);
+          console.log(`  Experience Level: ${score.breakdown.experience_level}%`);
+          console.log(`  Salary Match: ${score.breakdown.salary}%`);
+          console.log(`  Location Match: ${score.breakdown.location}%`);
+          console.log(`  Company Match: ${score.breakdown.company_match}%`);
+          console.log('');
+          console.log('💡 Rationale:');
+          console.log(score.rationale);
+          
+        } catch (scoreError) {
+          console.log('⚠️  Scoring failed (extraction was successful):');
+          console.log(`   ${scoreError instanceof Error ? scoreError.message : 'Unknown scoring error'}`);
+          console.log('   You can manually score later with: job-extractor score ' + jobId);
+        }
+      }
 
       // Format output for display
       let output: string;
