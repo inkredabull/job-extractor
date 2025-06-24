@@ -138,3 +138,16 @@ export interface ResumeResult {
   error?: string;
   tailoringChanges?: string[];
 }
+
+export interface ResumeCritique {
+  success: boolean;
+  jobId: string;
+  resumePath: string;
+  overallRating: number; // 1-10 scale
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  detailedAnalysis: string;
+  timestamp: string;
+  error?: string;
+}

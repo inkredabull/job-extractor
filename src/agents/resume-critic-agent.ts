@@ -1,0 +1,207 @@
+import { ClaudeBaseAgent } from './claude-base-agent';
+import { JobListing, ResumeCritique, ResumeResult } from '../types';
+import * as fs from 'fs';
+import * as path from 'path';
+
+export class ResumeCriticAgent extends ClaudeBaseAgent {
+  async extract(): Promise<never> {
+    throw new Error('ResumeCriticAgent does not implement extract method. Use critiqueResume instead.');
+  }
+
+  async createResume(): Promise<never> {
+    throw new Error('ResumeCriticAgent does not implement createResume method. Use critiqueResume instead.');
+  }
+
+  async critiqueResume(jobId: string): Promise<ResumeCritique> {
+    try {
+      // Find the most recent resume for this job ID
+      const resumePath = this.findMostRecentResume(jobId);
+      if (!resumePath) {
+        return {
+          success: false,
+          jobId,
+          resumePath: '',
+          overallRating: 0,
+          strengths: [],
+          weaknesses: [],
+          recommendations: [],
+          detailedAnalysis: '',
+          timestamp: new Date().toISOString(),
+          error: `No resume found for job ID: ${jobId}`
+        };
+      }
+
+      // Load the job data for context
+      const jobData = this.loadJobData(jobId);
+
+      // Extract text content from the PDF (for now, we'll simulate this)
+      const resumeContent = this.extractResumeContent(resumePath);
+
+      // Generate the critique using Claude
+      const critique = await this.generateCritique(jobData, resumeContent, resumePath, jobId);
+
+      // Log the critique
+      this.logCritique(critique);
+
+      return critique;
+    } catch (error) {
+      return {
+        success: false,
+        jobId,
+        resumePath: '',
+        overallRating: 0,
+        strengths: [],
+        weaknesses: [],
+        recommendations: [],
+        detailedAnalysis: '',
+        timestamp: new Date().toISOString(),
+        error: `Failed to critique resume for job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  private findMostRecentResume(jobId: string): string | null {
+    const logsDir = path.resolve('logs');
+    if (!fs.existsSync(logsDir)) {
+      return null;
+    }
+
+    const files = fs.readdirSync(logsDir);
+    const resumeFiles = files
+      .filter(file => file.startsWith(`resume-${jobId}-`) && file.endsWith('.pdf'))
+      .sort()
+      .reverse(); // Most recent first
+
+    return resumeFiles.length > 0 ? path.join(logsDir, resumeFiles[0]) : null;
+  }
+
+  private loadJobData(jobId: string): JobListing {
+    const logsDir = path.resolve('logs');
+    const files = fs.readdirSync(logsDir);
+    
+    const jobFile = files.find(file => file.includes(jobId) && file.startsWith('job-') && file.endsWith('.json'));
+    if (!jobFile) {
+      throw new Error(`Job file not found for ID: ${jobId}`);
+    }
+
+    const jobPath = path.join(logsDir, jobFile);
+    const jobData = fs.readFileSync(jobPath, 'utf-8');
+    return JSON.parse(jobData);
+  }
+
+  private extractResumeContent(resumePath: string): string {
+    // For now, we'll return a placeholder since PDF text extraction requires additional dependencies
+    // In a real implementation, you would use pdf-parse or similar library
+    const filename = path.basename(resumePath);
+    return `[Resume content from ${filename} - PDF text extraction would be implemented here with a library like pdf-parse]`;
+  }
+
+  private async generateCritique(job: JobListing, resumeContent: string, resumePath: string, jobId: string): Promise<ResumeCritique> {
+    const prompt = `You are an expert resume critic and career coach. Analyze the following resume that was tailored for a specific job posting and provide detailed feedback.
+
+JOB POSTING CONTEXT:
+Title: ${job.title}
+Company: ${job.company}
+Location: ${job.location}
+Description: ${job.description}
+${job.salary ? `Salary: ${job.salary.min} - ${job.salary.max} ${job.salary.currency}` : ''}
+
+RESUME CONTENT:
+${resumeContent}
+
+CRITICAL: You must respond with ONLY valid JSON. No other text, explanations, or formatting. Your response must be parseable JSON that exactly matches this schema:
+
+{
+  "overallRating": <number between 1-10>,
+  "strengths": [
+    "<specific strength 1>",
+    "<specific strength 2>",
+    "<specific strength 3>"
+  ],
+  "weaknesses": [
+    "<specific weakness 1>",
+    "<specific weakness 2>",
+    "<specific weakness 3>"
+  ],
+  "recommendations": [
+    "<actionable recommendation 1>",
+    "<actionable recommendation 2>",
+    "<actionable recommendation 3>"
+  ],
+  "detailedAnalysis": "<2-3 paragraph detailed analysis covering alignment with job requirements, presentation quality, content effectiveness, and areas for improvement>"
+}
+
+EVALUATION CRITERIA:
+- Job Alignment (40%): How well does the resume align with the specific job requirements?
+- Content Quality (25%): Are achievements quantified? Are descriptions compelling?
+- Presentation (20%): Is the resume well-structured and professional?
+- Keyword Optimization (15%): Does it include relevant keywords from the job posting?
+
+Focus on specific improvements, missing keywords, achievement quantification, narrative clarity, and technical formatting. Be constructive and provide actionable recommendations.
+
+REMEMBER: Response must be valid JSON only. No additional text or explanations outside the JSON structure.`;
+
+    const response = await this.makeClaudeRequest(prompt);
+    
+    try {
+      // Clean the response to extract JSON if Claude adds extra text
+      let cleanedResponse = response.trim();
+      
+      // Look for JSON object boundaries
+      const jsonStart = cleanedResponse.indexOf('{');
+      const jsonEnd = cleanedResponse.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanedResponse = cleanedResponse.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      const critiqueData = JSON.parse(cleanedResponse);
+      
+      // Validate required fields
+      if (typeof critiqueData.overallRating !== 'number' ||
+          !Array.isArray(critiqueData.strengths) ||
+          !Array.isArray(critiqueData.weaknesses) ||
+          !Array.isArray(critiqueData.recommendations) ||
+          typeof critiqueData.detailedAnalysis !== 'string') {
+        throw new Error('Response missing required fields or has incorrect types');
+      }
+      
+      return {
+        success: true,
+        jobId: jobId, // Use the jobId parameter instead of extracting from path
+        resumePath,
+        overallRating: Math.max(1, Math.min(10, critiqueData.overallRating)), // Ensure 1-10 range
+        strengths: critiqueData.strengths.filter((s: any) => typeof s === 'string' && s.trim()),
+        weaknesses: critiqueData.weaknesses.filter((w: any) => typeof w === 'string' && w.trim()),
+        recommendations: critiqueData.recommendations.filter((r: any) => typeof r === 'string' && r.trim()),
+        detailedAnalysis: critiqueData.detailedAnalysis,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse critique response: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
+    }
+  }
+
+  private extractJobIdFromPath(resumePath: string): string {
+    const filename = path.basename(resumePath);
+    const match = filename.match(/resume-([a-f0-9]+)-/);
+    return match ? match[1] : 'unknown';
+  }
+
+  private logCritique(critique: ResumeCritique): void {
+    const logEntry = {
+      timestamp: critique.timestamp,
+      jobId: critique.jobId,
+      resumePath: critique.resumePath,
+      overallRating: critique.overallRating,
+      strengths: critique.strengths,
+      weaknesses: critique.weaknesses,
+      recommendations: critique.recommendations,
+      detailedAnalysis: critique.detailedAnalysis
+    };
+
+    const logPath = path.resolve('logs', `critique-${critique.jobId}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    fs.writeFileSync(logPath, JSON.stringify(logEntry, null, 2));
+    console.log(`✅ Resume critique logged to: ${logPath}`);
+  }
+}

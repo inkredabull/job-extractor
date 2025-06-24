@@ -12,6 +12,7 @@ A TypeScript CLI tool that extracts and automatically scores job information fro
 - 📊 **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
 - 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
 - 🤖 **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
+- 🔍 **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -143,6 +144,49 @@ job-extractor extract "https://example.com/great-job"
 # 🔧 Tailoring changes made: 4 modifications
 ```
 
+#### Resume Critique
+
+Analyze and critique a generated resume to get actionable feedback:
+
+```bash
+# Critique the most recent resume for a job
+job-extractor critique "4c32e01e"
+```
+
+**How it works:**
+- Automatically finds the most recent resume generated for the specified job ID
+- Uses Claude 3.5 Sonnet to analyze resume content against job requirements
+- Provides structured feedback with strengths, weaknesses, and recommendations
+- Rates the resume on a 1-10 scale across multiple criteria
+- Saves critique results to the `logs/` directory
+
+**Example output:**
+```bash
+# Critique analysis results
+✅ Resume Critique Complete
+==================================================
+📄 Resume: logs/resume-a1b2c3d4-2024-06-24T15-30-45.pdf
+⭐ Overall Rating: 8/10
+
+💪 Strengths:
+  1. Strong technical background in React and Node.js
+  2. Well-quantified achievements with specific metrics
+  3. Professional formatting and clear structure
+
+⚠️  Areas for Improvement:
+  1. Missing TypeScript experience emphasis
+  2. Could include more recent project examples
+  3. Summary could be more tailored to the role
+
+💡 Recommendations:
+  1. Add TypeScript projects to showcase relevant experience
+  2. Quantify impact of recent work with specific numbers
+  3. Rewrite summary to match job requirements more closely
+
+📝 Detailed Analysis:
+This resume demonstrates solid technical competency and relevant experience...
+```
+
 ### Examples
 
 ```bash
@@ -175,6 +219,9 @@ job-extractor resume "a1b2c3d4" my-cv.txt
 
 # Generate resume with custom output path
 job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf"
+
+# Critique a generated resume for feedback
+job-extractor critique "a1b2c3d4"
 ```
 
 ## Output Schemas
@@ -389,6 +436,42 @@ Description of the project and technologies used
 GitHub: https://github.com/username/project
 ```
 
+### Resume Critique Schema
+
+Resume critique analysis produces structured feedback:
+
+```json
+{
+  "success": true,
+  "jobId": "a1b2c3d4",
+  "resumePath": "logs/resume-a1b2c3d4-2024-06-24T15-30-45.pdf",
+  "overallRating": 8,
+  "strengths": [
+    "Strong technical background in React and Node.js",
+    "Well-quantified achievements with specific metrics",
+    "Professional formatting and clear structure"
+  ],
+  "weaknesses": [
+    "Missing TypeScript experience emphasis",
+    "Could include more recent project examples",
+    "Summary could be more tailored to the role"
+  ],
+  "recommendations": [
+    "Add TypeScript projects to showcase relevant experience",
+    "Quantify impact of recent work with specific numbers",
+    "Rewrite summary to match job requirements more closely"
+  ],
+  "detailedAnalysis": "This resume demonstrates solid technical competency and relevant experience. The candidate shows strong React and Node.js skills which align well with the job requirements. However, there are opportunities to better highlight TypeScript experience and provide more recent, quantified examples of impact.",
+  "timestamp": "2024-06-24T15:45:30.000Z"
+}
+```
+
+**Critique Evaluation Criteria:**
+- **Job Alignment (40%)**: How well does the resume align with specific job requirements?
+- **Content Quality (25%)**: Are achievements quantified and descriptions compelling?
+- **Presentation (20%)**: Is the resume well-structured and professional?
+- **Keyword Optimization (15%)**: Does it include relevant keywords from the job posting?
+
 ## How It Works
 
 ### Dual Extraction Strategy
@@ -490,9 +573,11 @@ Example: `logs/resume-a1b2c3d4-2024-06-19T15-40-33-789Z.pdf`
 src/
 ├── agents/
 │   ├── base-agent.ts          # Abstract base class for all agents  
+│   ├── claude-base-agent.ts   # Abstract base class for Claude-powered agents
 │   ├── job-extractor-agent.ts # Job extraction with dual strategy
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
 │   ├── resume-creator-agent.ts # AI-powered resume generation and PDF creation
+│   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
 │   └── index.ts               # Agent exports
 ├── types/
 │   └── index.ts               # TypeScript type definitions
@@ -507,12 +592,14 @@ __tests__/
 ├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
 ├── job-scorer-agent.test.ts   # Tests for job scoring and criteria matching
 ├── resume-creator-agent.test.ts # Tests for CV parsing, tailoring, and PDF generation
+├── resume-critic-agent.test.ts # Tests for resume analysis and critique generation
 └── web-scraper.test.ts        # Tests for structured data extraction
 
 logs/                          # Auto-generated job extraction and scoring logs
 ├── job-*.json                 # Timestamped extraction results
 ├── score-*.json               # Timestamped scoring results
-└── resume-*.pdf               # Generated tailored resumes
+├── resume-*.pdf               # Generated tailored resumes
+└── critique-*.json            # Resume critique analysis results
 
 criteria.json                  # Configurable job scoring criteria
 sample-cv.txt                  # Example CV format for resume generation
@@ -537,11 +624,17 @@ The project follows a modular architecture with smart extraction and scoring str
    - Analyzes job requirements and optimizes resume content
    - Generates professional PDF resumes with tailored content
    - Tracks and reports all modifications made
-5. **WebScraper**: Utility for:
+5. **ResumeCriticAgent**: Claude 3.5 Sonnet-powered resume analysis system:
+   - Finds and analyzes the most recent resume for a given job ID
+   - Evaluates resume against job requirements using multiple criteria
+   - Provides structured feedback with strengths, weaknesses, and recommendations
+   - Rates resumes on a 1-10 scale with detailed analysis
+   - Logs critique results for tracking improvement over time
+6. **WebScraper**: Utility for:
    - HTML fetching with proper headers
    - JSON-LD structured data extraction
    - HTML simplification for AI processing
-6. **CLI**: Commander.js interface with automatic logging to unique files
+7. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Environment Variables
 
@@ -604,6 +697,16 @@ MIT License - see LICENSE file for details.
 4. **Parsing errors**
    - The AI may occasionally struggle with unusual page layouts
    - Try with more standard job posting formats
+
+5. **"Failed to parse critique response" errors**
+   - Claude occasionally returns natural language instead of JSON
+   - The system automatically attempts to extract JSON from the response
+   - If issues persist, try running the critique command again
+
+6. **Node.js Fetch API warnings**
+   - `(node:XXXX) ExperimentalWarning: The Fetch API is an experimental feature`
+   - This warning appears on older Node.js versions (< 18) and is harmless
+   - Consider upgrading to Node.js 18+ to eliminate the warning
 
 ### Getting Help
 

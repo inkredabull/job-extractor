@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { JobExtractorAgent } from './agents/job-extractor-agent';
 import { JobScorerAgent } from './agents/job-scorer-agent';
 import { ResumeCreatorAgent } from './agents/resume-creator-agent';
+import { ResumeCriticAgent } from './agents/resume-critic-agent';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -205,6 +206,71 @@ program
         }
       } else {
         console.error('❌ Resume generation failed:', result.error);
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('critique')
+  .description('Critique a tailored resume for a specific job')
+  .argument('<jobId>', 'Job ID to critique resume for (from the log filename)')
+  .action(async (jobId: string) => {
+    try {
+      console.log('🔍 Analyzing resume...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const anthropicConfig = getAnthropicConfig();
+      const critic = new ResumeCriticAgent(
+        anthropicConfig.anthropicApiKey,
+        anthropicConfig.model,
+        anthropicConfig.maxTokens
+      );
+      
+      const result = await critic.critiqueResume(jobId);
+      
+      if (result.success) {
+        console.log('✅ Resume Critique Complete');
+        console.log('=' .repeat(50));
+        console.log(`📄 Resume: ${result.resumePath}`);
+        console.log(`⭐ Overall Rating: ${result.overallRating}/10`);
+        console.log('');
+        
+        if (result.strengths && result.strengths.length > 0) {
+          console.log('💪 Strengths:');
+          result.strengths.forEach((strength, index) => {
+            console.log(`  ${index + 1}. ${strength}`);
+          });
+          console.log('');
+        }
+        
+        if (result.weaknesses && result.weaknesses.length > 0) {
+          console.log('⚠️  Areas for Improvement:');
+          result.weaknesses.forEach((weakness, index) => {
+            console.log(`  ${index + 1}. ${weakness}`);
+          });
+          console.log('');
+        }
+        
+        if (result.recommendations && result.recommendations.length > 0) {
+          console.log('💡 Recommendations:');
+          result.recommendations.forEach((recommendation, index) => {
+            console.log(`  ${index + 1}. ${recommendation}`);
+          });
+          console.log('');
+        }
+        
+        if (result.detailedAnalysis) {
+          console.log('📝 Detailed Analysis:');
+          console.log(result.detailedAnalysis);
+        }
+      } else {
+        console.error('❌ Resume critique failed:', result.error);
         process.exit(1);
       }
       
