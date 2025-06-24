@@ -1,11 +1,15 @@
 import { JobScorerAgent } from '../src/agents/job-scorer-agent';
+import { ResumeCreatorAgent } from '../src/agents/resume-creator-agent';
 import { AgentConfig, JobListing, JobCriteria } from '../src/types';
+import { getAnthropicConfig, getAutoResumeConfig } from '../src/config';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
 
 jest.mock('openai');
 jest.mock('fs');
+jest.mock('../src/agents/resume-creator-agent');
+jest.mock('../src/config');
 
 describe('JobScorerAgent', () => {
   let mockOpenAI: jest.Mocked<OpenAI>;
@@ -21,6 +25,18 @@ describe('JobScorerAgent', () => {
       temperature: 0.3,
       maxTokens: 2000,
     };
+    
+    // Mock config functions
+    (getAnthropicConfig as jest.Mock).mockReturnValue({
+      anthropicApiKey: 'test-anthropic-key',
+      model: 'claude-3-5-sonnet-20241022',
+      maxTokens: 4000
+    });
+    
+    (getAutoResumeConfig as jest.Mock).mockReturnValue({
+      threshold: 80,
+      cvPath: 'test-cv.txt'
+    });
 
     mockCriteria = {
       required_skills: ['JavaScript', 'React', 'Node.js'],
@@ -83,6 +99,16 @@ describe('JobScorerAgent', () => {
     (fs.readdirSync as jest.Mock).mockReturnValue(['job-test123-2024-01-01.json']);
     (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
 
+    // Mock ResumeCreatorAgent
+    const mockResumeCreator = {
+      createResume: jest.fn().mockResolvedValue({
+        success: true,
+        pdfPath: 'test-resume.pdf',
+        tailoringChanges: ['Test change 1', 'Test change 2']
+      })
+    };
+    (ResumeCreatorAgent as jest.MockedClass<typeof ResumeCreatorAgent>).mockImplementation(() => mockResumeCreator as any);
+    
     agent = new JobScorerAgent(config, 'test-criteria.json');
   });
 
@@ -201,6 +227,159 @@ describe('JobScorerAgent', () => {
       expect(loggedData).toHaveProperty('score');
       expect(loggedData).toHaveProperty('rationale');
       expect(loggedData).toHaveProperty('breakdown');
+    });
+  });
+
+  describe('auto-resume generation', () => {
+    let consoleSpy: jest.SpyInstance;
+    let mockResumeCreatorInstance: jest.Mocked<ResumeCreatorAgent>;
+    
+    beforeEach(() => {
+      consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      // Reset the mock and create a fresh instance
+      jest.clearAllMocks();
+      
+      mockResumeCreatorInstance = {
+        createResume: jest.fn().mockResolvedValue({
+          success: true,
+          pdfPath: 'test-resume.pdf',
+          tailoringChanges: ['Test change 1', 'Test change 2']
+        })
+      } as any;
+      
+      (ResumeCreatorAgent as jest.MockedClass<typeof ResumeCreatorAgent>).mockImplementation(() => mockResumeCreatorInstance);
+    });
+    
+    afterEach(() => {
+      consoleSpy.mockRestore();
+    });
+
+    it('should generate resume when score exceeds threshold', async () => {
+      // Mock high-scoring job
+      const highScoringJob = {
+        ...mockJob,
+        description: 'We need JavaScript, React, Node.js, TypeScript, and AWS experience. Senior level position with 5+ years required.',
+        location: 'Remote'
+      };
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('criteria.json')) {
+          return JSON.stringify(mockCriteria);
+        }
+        return JSON.stringify(highScoringJob);
+      });
+
+      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>).mockResolvedValue({
+        choices: [{ message: { content: 'High scoring job rationale' } }]
+      });
+
+      await agent.scoreJob('test123');
+
+      expect(ResumeCreatorAgent).toHaveBeenCalledWith(
+        'test-anthropic-key',
+        'claude-3-5-sonnet-20241022',
+        4000
+      );
+      
+      expect(mockResumeCreatorInstance.createResume).toHaveBeenCalledWith('test123', 'test-cv.txt');
+      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('generating tailored resume')
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auto-generated resume: test-resume.pdf')
+      );
+    });
+
+    it('should not generate resume when score is below threshold', async () => {
+      // Mock low-scoring job (missing required skills)
+      const lowScoringJob = {
+        ...mockJob,
+        description: 'We need Python and Django experience. Junior level position.',
+        location: 'New York' // Not in preferred locations
+      };
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('criteria.json')) {
+          return JSON.stringify(mockCriteria);
+        }
+        return JSON.stringify(lowScoringJob);
+      });
+
+      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>).mockResolvedValue({
+        choices: [{ message: { content: 'Low scoring job rationale' } }]
+      });
+
+      await agent.scoreJob('test123');
+
+      expect(mockResumeCreatorInstance.createResume).not.toHaveBeenCalled();
+    });
+
+    it('should not generate resume when CV path is not configured', async () => {
+      // Mock config with no CV path
+      (getAutoResumeConfig as jest.Mock).mockReturnValue({
+        threshold: 80,
+        cvPath: null
+      });
+
+      // Create new agent with updated config
+      const newAgent = new JobScorerAgent(config, 'test-criteria.json');
+
+      // Mock high-scoring job
+      const highScoringJob = {
+        ...mockJob,
+        description: 'We need JavaScript, React, Node.js, TypeScript, and AWS experience.',
+        location: 'Remote'
+      };
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('criteria.json')) {
+          return JSON.stringify(mockCriteria);
+        }
+        return JSON.stringify(highScoringJob);
+      });
+
+      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>).mockResolvedValue({
+        choices: [{ message: { content: 'High scoring job rationale' } }]
+      });
+
+      await newAgent.scoreJob('test123');
+
+      expect(mockResumeCreatorInstance.createResume).not.toHaveBeenCalled();
+    });
+
+    it('should handle resume generation errors gracefully', async () => {
+      // Mock resume generation failure
+      mockResumeCreatorInstance.createResume.mockResolvedValueOnce({
+        success: false,
+        error: 'CV file not found'
+      } as any);
+
+      // Mock high-scoring job
+      const highScoringJob = {
+        ...mockJob,
+        description: 'We need JavaScript, React, Node.js, TypeScript, and AWS experience.',
+        location: 'Remote'
+      };
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('criteria.json')) {
+          return JSON.stringify(mockCriteria);
+        }
+        return JSON.stringify(highScoringJob);
+      });
+
+      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>).mockResolvedValue({
+        choices: [{ message: { content: 'High scoring job rationale' } }]
+      });
+
+      await agent.scoreJob('test123');
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auto-resume generation failed: CV file not found')
+      );
+      expect(mockResumeCreatorInstance.createResume).toHaveBeenCalledWith('test123', 'test-cv.txt');
     });
   });
 });

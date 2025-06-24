@@ -1,14 +1,18 @@
 import { BaseAgent } from './base-agent';
+import { ResumeCreatorAgent } from './resume-creator-agent';
 import { JobListing, JobCriteria, JobScore, AgentConfig } from '../types';
+import { getAnthropicConfig, getAutoResumeConfig } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export class JobScorerAgent extends BaseAgent {
   private criteria: JobCriteria;
+  private autoResumeConfig: { threshold: number; cvPath: string | null };
 
   constructor(config: AgentConfig, criteriaPath?: string) {
     super(config);
     this.criteria = this.loadCriteria(criteriaPath || 'criteria.json');
+    this.autoResumeConfig = getAutoResumeConfig();
   }
 
   async extract(): Promise<never> {
@@ -36,6 +40,12 @@ export class JobScorerAgent extends BaseAgent {
       };
 
       this.logScore(jobScore);
+      
+      // Automatically generate resume if score is above threshold and CV path is provided
+      if (jobScore.overallScore >= this.autoResumeConfig.threshold && this.autoResumeConfig.cvPath) {
+        await this.generateAutoResume(jobId, jobScore.overallScore);
+      }
+      
       return jobScore;
     } catch (error) {
       throw new Error(`Failed to score job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -271,6 +281,32 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
 `;
 
     return await this.makeOpenAIRequest(prompt);
+  }
+
+  private async generateAutoResume(jobId: string, score: number): Promise<void> {
+    try {
+      console.log(`🎯 Score of ${score}% exceeds threshold of ${this.autoResumeConfig.threshold}% - generating tailored resume...`);
+      
+      const anthropicConfig = getAnthropicConfig();
+      const resumeCreator = new ResumeCreatorAgent(
+        anthropicConfig.anthropicApiKey,
+        anthropicConfig.model,
+        anthropicConfig.maxTokens
+      );
+      
+      const result = await resumeCreator.createResume(jobId, this.autoResumeConfig.cvPath!);
+      
+      if (result.success) {
+        console.log(`✅ Auto-generated resume: ${result.pdfPath}`);
+        if (result.tailoringChanges && result.tailoringChanges.length > 0) {
+          console.log(`🔧 Tailoring changes made: ${result.tailoringChanges.length} modifications`);
+        }
+      } else {
+        console.log(`⚠️  Auto-resume generation failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Auto-resume generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private logScore(jobScore: JobScore): void {

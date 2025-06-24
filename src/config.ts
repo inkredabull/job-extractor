@@ -31,3 +31,10 @@ export function getAnthropicConfig(): { anthropicApiKey: string; model: string; 
     maxTokens: process.env.ANTHROPIC_MAX_TOKENS ? parseInt(process.env.ANTHROPIC_MAX_TOKENS) : 4000,
   };
 }
+
+export function getAutoResumeConfig(): { threshold: number; cvPath: string | null } {
+  return {
+    threshold: process.env.AUTO_RESUME_THRESHOLD ? parseInt(process.env.AUTO_RESUME_THRESHOLD) : 80,
+    cvPath: process.env.AUTO_RESUME_CV_PATH || null,
+  };
+}

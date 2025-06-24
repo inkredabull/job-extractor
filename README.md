@@ -11,6 +11,7 @@ A TypeScript CLI tool that extracts and automatically scores job information fro
 - 💰 **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
 - 📊 **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
 - 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
+- 🤖 **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -39,6 +40,10 @@ cp .env.example .env
 ```
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Optional: Auto-resume generation settings
+AUTO_RESUME_THRESHOLD=85
+AUTO_RESUME_CV_PATH=./sample-cv.txt
 ```
 
 5. Install pandoc (required for PDF generation):
@@ -111,6 +116,32 @@ job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
+
+#### Auto-Resume Generation
+
+The tool can automatically generate tailored resumes when job scores exceed a configurable threshold. This feature integrates seamlessly with the job scoring workflow:
+
+**Setup:**
+1. Set `AUTO_RESUME_THRESHOLD` in your `.env` file (0-100, default: 80)
+2. Set `AUTO_RESUME_CV_PATH` to point to your CV file (e.g., `./sample-cv.txt`)
+
+**How it works:**
+- When extracting and scoring jobs, if a job score ≥ threshold, a resume is automatically generated
+- Uses the same Claude 3.5 Sonnet AI for tailoring content to match job requirements
+- Saves generated resumes to the `logs/` directory with timestamp
+- Reports tailoring changes made during the process
+
+**Example workflow:**
+```bash
+# With auto-resume enabled (score ≥ 85% threshold)
+job-extractor extract "https://example.com/great-job"
+
+# Output will include:
+# ✅ Job extracted and scored: 87%
+# 🎯 Score of 87% exceeds threshold of 85% - generating tailored resume...
+# ✅ Auto-generated resume: logs/resume-a1b2c3d4-2024-06-24T15-30-45.pdf
+# 🔧 Tailoring changes made: 4 modifications
+```
 
 ### Examples
 
@@ -523,6 +554,8 @@ The project follows a modular architecture with smart extraction and scoring str
 | `ANTHROPIC_API_KEY` | Anthropic API key (required for resume generation) | - |
 | `ANTHROPIC_MODEL` | Anthropic model to use | `claude-3-5-sonnet-20241022` |
 | `ANTHROPIC_MAX_TOKENS` | Maximum tokens in response | `4000` |
+| `AUTO_RESUME_THRESHOLD` | Score threshold for automatic resume generation (0-100) | `80` |
+| `AUTO_RESUME_CV_PATH` | Path to CV file for automatic resume generation | - |
 
 ## Testing
 
