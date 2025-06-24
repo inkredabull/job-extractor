@@ -9,6 +9,7 @@ A TypeScript CLI tool that extracts job information from job posting URLs using 
   - **Fallback**: AI-powered HTML scraping with OpenAI GPT models
 - 🏗️ **JSON-LD Support**: Automatically detects and parses Schema.org JobPosting structured data
 - 💰 **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
+- 📊 **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -47,6 +48,8 @@ npm run build
 
 ### Command Line Interface
 
+#### Job Extraction
+
 Extract job information from a URL:
 
 ```bash
@@ -61,10 +64,24 @@ npm install -g .
 job-extractor extract "https://example.com/job-posting"
 ```
 
-### Options
-
+**Extract Options:**
 - `-o, --output <file>`: Save output to a file
 - `-f, --format <format>`: Output format (`json` or `pretty`, default: `pretty`)
+
+#### Job Scoring
+
+Score extracted jobs against customizable criteria:
+
+```bash
+# Score a job using its ID from the log filename
+job-extractor score "4c32e01e"
+
+# Score with custom criteria file
+job-extractor score "4c32e01e" -c my-criteria.json
+```
+
+**Score Options:**
+- `-c, --criteria <file>`: Path to criteria file (default: `criteria.json`)
 
 ### Examples
 
@@ -80,9 +97,17 @@ job-extractor extract "https://example.com/job" -o job-data.json
 
 # Works great with structured data sites (Workday, Greenhouse, etc.)
 job-extractor extract "https://company.myworkdaysite.com/job-posting"
+
+# Score an extracted job (use the job ID from log filename)
+job-extractor score "a1b2c3d4"
+
+# Score with custom criteria
+job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
 ```
 
-## Output Schema
+## Output Schemas
+
+### Job Extraction Schema
 
 The tool extracts job information into the following JSON schema:
 
@@ -101,6 +126,59 @@ The tool extracts job information into the following JSON schema:
 ```
 
 **Note:** The `salary` field is optional and will be omitted if no salary information is found.
+
+### Job Scoring Schema
+
+Job scoring produces detailed analysis with percentage scores:
+
+```json
+{
+  "jobId": "4c32e01e",
+  "overallScore": 74,
+  "rationale": "This job posting received a 74% match score because it closely aligns with the candidate's experience level...",
+  "breakdown": {
+    "required_skills": 50,
+    "preferred_skills": 50,
+    "experience_level": 100,
+    "salary": 100,
+    "location": 100,
+    "company_match": 70
+  },
+  "timestamp": "2024-06-24T22:09:23.762Z"
+}
+```
+
+### Criteria Configuration
+
+The scoring system uses a configurable `criteria.json` file:
+
+```json
+{
+  "required_skills": ["JavaScript", "React", "Node.js", "TypeScript"],
+  "preferred_skills": ["AWS", "Docker", "GraphQL", "MongoDB"],
+  "experience_levels": {
+    "senior": 5,
+    "lead": 7,
+    "director": 10
+  },
+  "salary_range": {
+    "min": 120000,
+    "max": 300000,
+    "currency": "USD"
+  },
+  "locations": ["Remote", "San Francisco", "New York", "Austin"],
+  "company_size": ["startup", "mid-size", "enterprise"],
+  "job_types": ["full-time", "contract"],
+  "weights": {
+    "required_skills": 0.3,
+    "preferred_skills": 0.2,
+    "experience_level": 0.2,
+    "salary": 0.15,
+    "location": 0.1,
+    "company_match": 0.05
+  }
+}
+```
 
 ## How It Works
 
@@ -128,6 +206,19 @@ The tool recognizes various salary formats in job descriptions:
 - `"between $90,000 and $130,000"`
 - `"Compensation: $125,000"`
 
+### Job Scoring Algorithm
+
+The JobScorerAgent evaluates jobs across 6 weighted categories:
+
+1. **Required Skills (30%)**: Matches against must-have technical skills
+2. **Preferred Skills (20%)**: Bonus points for nice-to-have skills  
+3. **Experience Level (20%)**: Compares job seniority level with your target
+4. **Salary Match (15%)**: How well the salary aligns with your range
+5. **Location Match (10%)**: Remote/location preference matching
+6. **Company Match (5%)**: General company compatibility score
+
+Each category receives a 0-100% score, then weighted to produce the final percentage.
+
 ### Automatic Logging
 
 All extracted job data is automatically saved to:
@@ -136,6 +227,13 @@ logs/job-{8-char-hash}-{timestamp}.json
 ```
 
 Example: `logs/job-a1b2c3d4-2024-06-19T15-30-45-123Z.json`
+
+Job scores are saved separately:
+```
+logs/score-{job-id}-{timestamp}.json  
+```
+
+Example: `logs/score-a1b2c3d4-2024-06-19T15-35-22-456Z.json`
 
 ## Development
 
@@ -155,7 +253,9 @@ Example: `logs/job-a1b2c3d4-2024-06-19T15-30-45-123Z.json`
 src/
 ├── agents/
 │   ├── base-agent.ts          # Abstract base class for all agents  
-│   └── job-extractor-agent.ts # Job extraction with dual strategy
+│   ├── job-extractor-agent.ts # Job extraction with dual strategy
+│   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
+│   └── index.ts               # Agent exports
 ├── types/
 │   └── index.ts               # TypeScript type definitions
 ├── utils/
@@ -167,26 +267,35 @@ src/
 __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
 ├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
+├── job-scorer-agent.test.ts   # Tests for job scoring and criteria matching
 └── web-scraper.test.ts        # Tests for structured data extraction
 
-logs/                          # Auto-generated job extraction logs
-└── job-*.json                 # Timestamped extraction results
+logs/                          # Auto-generated job extraction and scoring logs
+├── job-*.json                 # Timestamped extraction results
+└── score-*.json               # Timestamped scoring results
+
+criteria.json                  # Configurable job scoring criteria
 ```
 
 ### Architecture
 
-The project follows a modular architecture with smart extraction strategies:
+The project follows a modular architecture with smart extraction and scoring strategies:
 
 1. **BaseAgent**: Abstract base class that handles OpenAI API communication
 2. **JobExtractorAgent**: Implements dual extraction strategy:
    - JSON-LD structured data parsing (primary)
    - HTML scraping + AI extraction (fallback)
    - Advanced salary parsing from description text
-3. **WebScraper**: Utility for:
+3. **JobScorerAgent**: Intelligent job matching system:
+   - Configurable scoring criteria (skills, salary, location, etc.)
+   - Weighted scoring algorithm across 6 categories
+   - AI-generated rationale for match quality
+   - Automatic score logging with timestamps
+4. **WebScraper**: Utility for:
    - HTML fetching with proper headers
    - JSON-LD structured data extraction
    - HTML simplification for AI processing
-4. **CLI**: Commander.js interface with automatic logging to unique files
+5. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Environment Variables
 
@@ -206,10 +315,11 @@ npm test
 ```
 
 The project includes comprehensive unit tests for:
-- Base agent functionality
-- Job extractor agent
-- Web scraper utility
-- Error handling scenarios
+- Base agent functionality and OpenAI integration
+- Job extractor agent with dual strategy testing
+- Job scorer agent with scoring algorithm validation
+- Web scraper utility and structured data extraction
+- Error handling scenarios and edge cases
 
 ## Contributing
 

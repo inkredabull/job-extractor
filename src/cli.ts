@@ -2,6 +2,7 @@
 
 import { Command } from 'commander';
 import { JobExtractorAgent } from './agents/job-extractor-agent';
+import { JobScorerAgent } from './agents/job-scorer-agent';
 import { getConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -100,5 +101,42 @@ program
 //   
 //   return output;
 // }
+
+program
+  .command('score')
+  .description('Score a job posting against criteria')
+  .argument('<jobId>', 'Job ID to score (from the log filename)')
+  .option('-c, --criteria <file>', 'Path to criteria file', 'criteria.json')
+  .action(async (jobId: string, options) => {
+    try {
+      console.log('🎯 Scoring job posting...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const config = getConfig();
+      const scorer = new JobScorerAgent(config, options.criteria);
+      
+      const score = await scorer.scoreJob(jobId);
+      
+      console.log('✅ Job Scoring Complete');
+      console.log('=' .repeat(50));
+      console.log(`📊 Overall Score: ${score.overallScore}%`);
+      console.log('');
+      console.log('📈 Breakdown:');
+      console.log(`  Required Skills: ${score.breakdown.required_skills}%`);
+      console.log(`  Preferred Skills: ${score.breakdown.preferred_skills}%`);
+      console.log(`  Experience Level: ${score.breakdown.experience_level}%`);
+      console.log(`  Salary Match: ${score.breakdown.salary}%`);
+      console.log(`  Location Match: ${score.breakdown.location}%`);
+      console.log(`  Company Match: ${score.breakdown.company_match}%`);
+      console.log('');
+      console.log('💡 Rationale:');
+      console.log(score.rationale);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
 
 program.parse();
