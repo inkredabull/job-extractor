@@ -3,25 +3,11 @@ import { AgentConfig, JobListing, CVData } from '../src/types';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 jest.mock('openai');
 jest.mock('fs');
-jest.mock('jspdf', () => ({
-  jsPDF: jest.fn().mockImplementation(() => ({
-    setFontSize: jest.fn(),
-    setFont: jest.fn(),
-    splitTextToSize: jest.fn().mockReturnValue(['test line']),
-    text: jest.fn(),
-    addPage: jest.fn(),
-    save: jest.fn(),
-    internal: {
-      pageSize: {
-        width: 210,
-        height: 297
-      }
-    }
-  }))
-}));
+jest.mock('child_process');
 
 describe('ResumeCreatorAgent', () => {
   let mockOpenAI: jest.Mocked<OpenAI>;
@@ -113,6 +99,13 @@ describe('ResumeCreatorAgent', () => {
       }
       return '{}';
     });
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    (fs.mkdirSync as jest.Mock).mockImplementation(() => {});
+    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    (fs.unlinkSync as jest.Mock).mockImplementation(() => {});
+    
+    // Mock execSync for pandoc
+    (execSync as jest.Mock).mockImplementation(() => {});
 
     agent = new ResumeCreatorAgent(config);
   });
@@ -128,7 +121,7 @@ describe('ResumeCreatorAgent', () => {
       
       // Mock tailoring response
       const tailoringResponse = JSON.stringify({
-        tailoredCV: mockCVData,
+        markdownContent: `# John Doe - Senior Software Engineer\n\n## SUMMARY\nExperienced software engineer...\n\n## EXPERIENCE\n### Software Engineer | Previous Corp | 2020 - Present\n...`,
         changes: [
           'Emphasized React and Node.js experience',
           'Reordered skills to highlight relevant technologies',
@@ -204,7 +197,7 @@ describe('ResumeCreatorAgent', () => {
     it('should parse CV content correctly', async () => {
       const cvParsingResponse = JSON.stringify(mockCVData);
       const tailoringResponse = JSON.stringify({
-        tailoredCV: mockCVData,
+        markdownContent: `# John Doe - Senior Software Engineer\n\n## SUMMARY\nTest content...`,
         changes: ['Test change']
       });
 
@@ -227,10 +220,7 @@ describe('ResumeCreatorAgent', () => {
     it('should generate tailored content based on job requirements', async () => {
       const cvParsingResponse = JSON.stringify(mockCVData);
       const tailoringResponse = JSON.stringify({
-        tailoredCV: {
-          ...mockCVData,
-          summary: 'Senior software engineer with expertise in React, Node.js, and TypeScript - perfect for this role.'
-        },
+        markdownContent: `# John Doe - Senior Software Engineer\n\n## SUMMARY\nSenior software engineer with expertise in React, Node.js, and TypeScript - perfect for this role.\n\n## EXPERIENCE\n...`,
         changes: [
           'Updated summary to emphasize React and TypeScript experience',
           'Reordered technical skills to highlight job-relevant technologies'

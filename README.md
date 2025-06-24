@@ -40,7 +40,18 @@ cp .env.example .env
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-5. Build the project:
+5. Install pandoc (required for PDF generation):
+```bash
+# macOS with Homebrew
+brew install pandoc
+
+# Ubuntu/Debian
+sudo apt-get install pandoc
+
+# Windows (download from https://pandoc.org/installing.html)
+```
+
+6. Build the project:
 ```bash
 npm run build
 ```
@@ -391,17 +402,19 @@ The ResumeCreatorAgent follows a 4-step process:
 
 1. **CV Parsing**: Uses AI to extract structured data from your plain text CV
 2. **Job Analysis**: Loads the specific job posting data from extraction logs
-3. **Content Tailoring**: AI optimizes your CV content for the target job:
+3. **Content Tailoring**: AI generates optimized Markdown resume content:
    - Reorders experience to highlight relevant roles
    - Emphasizes matching skills and technologies
    - Updates summary with job-specific keywords
    - Prioritizes relevant projects and achievements
-4. **PDF Generation**: Creates a professional PDF layout with tailored content
+   - Follows professional resume formatting guidelines
+4. **PDF Generation**: Uses pandoc to convert Markdown to professional PDF
 
 **Key Features:**
 - **Maintains truthfulness**: Only reorders and emphasizes existing content
 - **Job-specific optimization**: Uses actual job description for tailoring
-- **Professional formatting**: Clean, ATS-friendly PDF layout
+- **Professional formatting**: Pandoc-generated PDF with clean layout
+- **Markdown intermediate**: Allows for easy customization and review
 - **Change tracking**: Reports what modifications were made
 
 ### Automatic Logging

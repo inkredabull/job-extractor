@@ -1,8 +1,8 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, CVData, ResumeResult, AgentConfig } from '../types';
-import { jsPDF } from 'jspdf';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 export class ResumeCreatorAgent extends BaseAgent {
   constructor(config: AgentConfig) {
@@ -121,11 +121,67 @@ Return ONLY the JSON object, no other text:`;
   }
 
   private async generateTailoredContent(job: JobListing, cv: CVData): Promise<{
-    tailoredCV: CVData;
+    markdownContent: string;
     changes: string[];
   }> {
     const prompt = `
-You are a professional resume writer. Given a job posting and a candidate's CV, create a tailored version that optimizes the CV for this specific job while maintaining truthfulness.
+You are a professional resume writer. 
+
+Given a job posting and a candidate's CV, create a tailored version that optimizes the CV for this specific job while maintaining truthfulness.
+
+Instructions:
+1. Reorder and emphasize relevant experience and skills
+2. Tailor the summary to match the job requirements
+3. Highlight relevant achievements and projects
+4. Use keywords from the job description where appropriate
+5. Maintain all factual information - do not fabricate anything
+
+Lead with "<CANDIDATE NAME> - ROLE" where role is the role from the job description.
+
+## Summary
+Include a "SUMMARY" section, beginning with a professional summary in the form of a single paragraph. 
+Tailor the summary to the job description, including as much of the following points as can be organically incoprated: 
+- hands-on end-user-facing platform engineering leader 
+- player/coach approach to build and ship products
+- scales cross-functional teams while staying technical
+
+The summary must be between 275 and 400 characters in length.
+Don't use "I" statements; lead with past-tense verb in the first person instead.
+Include at least one time-based statement (e.g. 'Increased profits 50% in 5 (five) weeks')
+Include at least one improvement metric (e.g. 'Increased profits by 25-26%')
+
+# Roles
+Include only up to the most recent three roles. 
+Always include dates for roles on the same line as title and company name. 
+For each role, include an overview of the role of between 110 and 180 characters.
+
+# Per job 
+Include 5 bullet points for the most recent job, 3-4 for the next job, and 2-3 for each job after that. 
+Each bullet point should be no more than 90 characters.
+If an input contains the name of the company from the job description, be sure to include it.
+Be sure bullets reflect the verbiage used in the job description.
+
+### Technologies
+If it makes sense to include a "Technologies:" line selectively for each role, include it, highlighting those that are relevant.  
+If it is included, do not make the line in italics.  Bold "Technologies:" but not the rest of the line.
+If it is not included, add a "Technologies:" line item under the Skills sections and include relevant technologies. 
+
+Stipulate "Complete work history available upon request." in italics before a SKILLS section.
+
+# Skills
+Include a "SKILLS" section with a bulleted overview of relevant skills. 
+Separate skills with bullet points. 
+Bold the skill umbrella. 
+Include at most five relevant skill areas and only include relevant skills.
+Each line of skills should be at maximum 90 characters long.
+
+Include an "EDUCATION" section after the SKILLS section. 
+  
+# Misc
+Do not include a cover letter. 
+Do not make use of the • character.
+Return output as Markdown in the format of a reverse chronological resume.
+Final output should print to no more than one page as a PDF. 
 
 Job Posting:
 Title: ${job.title}
@@ -135,16 +191,9 @@ Description: ${job.description}
 Current CV Data:
 ${JSON.stringify(cv, null, 2)}
 
-Instructions:
-1. Reorder and emphasize relevant experience and skills
-2. Tailor the summary to match the job requirements
-3. Highlight relevant achievements and projects
-4. Use keywords from the job description where appropriate
-5. Maintain all factual information - do not fabricate anything
-
 Return a JSON object with:
 {
-  "tailoredCV": { /* The optimized CV with same structure as input */ },
+  "markdownContent": "The complete resume as markdown formatted text",
   "changes": ["List of specific changes made to tailor the resume"]
 }
 
@@ -163,136 +212,43 @@ Respond with ONLY the JSON object:`;
     }
   }
 
-  private async generatePDF(content: { tailoredCV: CVData; changes: string[] }, outputPath?: string, jobId?: string): Promise<string> {
-    const cv = content.tailoredCV;
-    const doc = new jsPDF();
-    
-    // Set up fonts and styles
-    let yPosition = 20;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 20;
-    const maxWidth = doc.internal.pageSize.width - 2 * margin;
-    
-    // Helper function to add text with word wrapping
-    const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
-      doc.setFontSize(fontSize);
-      if (isBold) {
-        doc.setFont('helvetica', 'bold');
-      } else {
-        doc.setFont('helvetica', 'normal');
-      }
-      
-      const lines = doc.splitTextToSize(text, maxWidth);
-      
-      // Check if we need a new page
-      if (yPosition + (lines.length * fontSize * 0.5) > pageHeight - margin) {
-        doc.addPage();
-        yPosition = margin;
-      }
-      
-      doc.text(lines, margin, yPosition);
-      yPosition += lines.length * fontSize * 0.5 + 5;
-    };
-
-    // Header - Personal Info
-    addText(cv.personalInfo.name, 18, true);
-    
-    const contactInfo = [
-      cv.personalInfo.email,
-      cv.personalInfo.phone,
-      cv.personalInfo.location,
-      cv.personalInfo.linkedin,
-      cv.personalInfo.github
-    ].filter(Boolean).join(' | ');
-    
-    addText(contactInfo, 10);
-    yPosition += 5;
-
-    // Summary
-    if (cv.summary) {
-      addText('PROFESSIONAL SUMMARY', 12, true);
-      addText(cv.summary, 10);
-      yPosition += 5;
-    }
-
-    // Experience
-    if (cv.experience && cv.experience.length > 0) {
-      addText('EXPERIENCE', 12, true);
-      
-      cv.experience.forEach(exp => {
-        addText(`${exp.title} | ${exp.company}`, 11, true);
-        addText(exp.duration, 10);
-        addText(exp.description, 10);
-        
-        if (exp.achievements && exp.achievements.length > 0) {
-          exp.achievements.forEach(achievement => {
-            addText(`• ${achievement}`, 10);
-          });
-        }
-        yPosition += 5;
-      });
-    }
-
-    // Skills
-    if (cv.skills) {
-      addText('SKILLS', 12, true);
-      
-      if (cv.skills.technical && cv.skills.technical.length > 0) {
-        addText(`Technical: ${cv.skills.technical.join(', ')}`, 10);
-      }
-      
-      if (cv.skills.languages && cv.skills.languages.length > 0) {
-        addText(`Languages: ${cv.skills.languages.join(', ')}`, 10);
-      }
-      
-      if (cv.skills.certifications && cv.skills.certifications.length > 0) {
-        addText(`Certifications: ${cv.skills.certifications.join(', ')}`, 10);
-      }
-      
-      yPosition += 5;
-    }
-
-    // Education
-    if (cv.education && cv.education.length > 0) {
-      addText('EDUCATION', 12, true);
-      
-      cv.education.forEach(edu => {
-        addText(`${edu.degree} | ${edu.institution} | ${edu.year}`, 10, true);
-        if (edu.details) {
-          addText(edu.details, 10);
-        }
-      });
-      yPosition += 5;
-    }
-
-    // Projects
-    if (cv.projects && cv.projects.length > 0) {
-      addText('PROJECTS', 12, true);
-      
-      cv.projects.forEach(project => {
-        addText(project.name, 11, true);
-        addText(project.description, 10);
-        
-        if (project.technologies && project.technologies.length > 0) {
-          addText(`Technologies: ${project.technologies.join(', ')}`, 10);
-        }
-        
-        if (project.url) {
-          addText(`URL: ${project.url}`, 10);
-        }
-        yPosition += 3;
-      });
-    }
-
-    // Generate output path
+  private async generatePDF(content: { markdownContent: string; changes: string[] }, outputPath?: string, jobId?: string): Promise<string> {
+    // Generate timestamp and filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `resume-${jobId || 'custom'}-${timestamp}.pdf`;
-    const finalPath = outputPath || path.join('logs', fileName);
+    const markdownFileName = `resume-${jobId || 'custom'}-${timestamp}.md`;
+    const pdfFileName = `resume-${jobId || 'custom'}-${timestamp}.pdf`;
     
-    // Save PDF
-    doc.save(finalPath);
+    // Create outputs directory if it doesn't exist
+    const outputsDir = path.join(process.cwd(), 'outputs');
+    if (!fs.existsSync(outputsDir)) {
+      fs.mkdirSync(outputsDir, { recursive: true });
+    }
     
-    console.log(`✅ Resume generated: ${finalPath}`);
-    return finalPath;
+    // Write markdown to file
+    const markdownPath = path.join(outputsDir, markdownFileName);
+    fs.writeFileSync(markdownPath, content.markdownContent, 'utf-8');
+    
+    // Determine final PDF path
+    const finalPath = outputPath || path.join('logs', pdfFileName);
+    
+    try {
+      // Use pandoc to convert markdown to PDF
+      const pandocCommand = `pandoc "${markdownPath}" -o "${finalPath}" -V geometry:margin=0.5in`;
+      execSync(pandocCommand, { stdio: 'pipe' });
+      
+      console.log(`✅ Resume generated: ${finalPath}`);
+      
+      // Clean up temporary markdown file
+      fs.unlinkSync(markdownPath);
+      
+      return finalPath;
+    } catch (error) {
+      // Clean up temporary markdown file even if pandoc fails
+      if (fs.existsSync(markdownPath)) {
+        fs.unlinkSync(markdownPath);
+      }
+      
+      throw new Error(`Failed to generate PDF with pandoc: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
