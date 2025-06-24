@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { JobExtractorAgent } from './agents/job-extractor-agent';
 import { JobScorerAgent } from './agents/job-scorer-agent';
 import { ResumeCreatorAgent } from './agents/resume-creator-agent';
-import { getConfig } from './config';
+import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
@@ -186,8 +186,8 @@ program
       console.log(`📋 CV File: ${cvFile}`);
       console.log('');
 
-      const config = getConfig();
-      const creator = new ResumeCreatorAgent(config);
+      const anthropicConfig = getAnthropicConfig();
+      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens);
       
       const result = await creator.createResume(jobId, cvFile, options.output);
       

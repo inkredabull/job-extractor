@@ -1,28 +1,21 @@
 import { ResumeCreatorAgent } from '../src/agents/resume-creator-agent';
-import { AgentConfig, JobListing, CVData } from '../src/types';
-import OpenAI from 'openai';
+import { JobListing, CVData } from '../src/types';
+import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-jest.mock('openai');
+jest.mock('@anthropic-ai/sdk');
 jest.mock('fs');
 jest.mock('child_process');
 
 describe('ResumeCreatorAgent', () => {
-  let mockOpenAI: jest.Mocked<OpenAI>;
+  let mockAnthropic: jest.Mocked<Anthropic>;
   let agent: ResumeCreatorAgent;
-  let config: AgentConfig;
   let mockJob: JobListing;
   let mockCVData: CVData;
 
   beforeEach(() => {
-    config = {
-      openaiApiKey: 'test-api-key',
-      model: 'gpt-3.5-turbo',
-      temperature: 0.3,
-      maxTokens: 2000,
-    };
 
     mockJob = {
       title: 'Senior Software Engineer',
@@ -78,15 +71,13 @@ describe('ResumeCreatorAgent', () => {
       ]
     };
 
-    mockOpenAI = {
-      chat: {
-        completions: {
-          create: jest.fn(),
-        },
+    mockAnthropic = {
+      messages: {
+        create: jest.fn(),
       },
-    } as unknown as jest.Mocked<OpenAI>;
+    } as unknown as jest.Mocked<Anthropic>;
 
-    (OpenAI as jest.MockedClass<typeof OpenAI>).mockImplementation(() => mockOpenAI);
+    (Anthropic as jest.MockedClass<typeof Anthropic>).mockImplementation(() => mockAnthropic);
 
     // Mock fs functions
     (fs.readdirSync as jest.Mock).mockReturnValue(['job-test123-2024-01-01.json']);
@@ -107,7 +98,7 @@ describe('ResumeCreatorAgent', () => {
     // Mock execSync for pandoc
     (execSync as jest.Mock).mockImplementation(() => {});
 
-    agent = new ResumeCreatorAgent(config);
+    agent = new ResumeCreatorAgent('test-anthropic-api-key', 'claude-3-5-sonnet-20241022', 4000);
   });
 
   afterEach(() => {
@@ -129,9 +120,9 @@ describe('ResumeCreatorAgent', () => {
         ]
       });
 
-      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>)
-        .mockResolvedValueOnce({ choices: [{ message: { content: cvParsingResponse } }] })
-        .mockResolvedValueOnce({ choices: [{ message: { content: tailoringResponse } }] });
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
 
       const result = await agent.createResume('test123', 'cv.txt');
 
@@ -151,8 +142,8 @@ describe('ResumeCreatorAgent', () => {
     });
 
     it('should handle CV parsing errors', async () => {
-      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>)
-        .mockResolvedValueOnce({ choices: [{ message: { content: 'Invalid JSON response' } }] });
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: 'Invalid JSON response' }] });
 
       const result = await agent.createResume('test123', 'cv.txt');
 
@@ -163,9 +154,9 @@ describe('ResumeCreatorAgent', () => {
     it('should handle tailoring errors', async () => {
       const cvParsingResponse = JSON.stringify(mockCVData);
       
-      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>)
-        .mockResolvedValueOnce({ choices: [{ message: { content: cvParsingResponse } }] })
-        .mockResolvedValueOnce({ choices: [{ message: { content: 'Invalid tailoring response' } }] });
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: 'Invalid tailoring response' }] });
 
       const result = await agent.createResume('test123', 'cv.txt');
 
@@ -185,13 +176,6 @@ describe('ResumeCreatorAgent', () => {
     });
   });
 
-  describe('extract method', () => {
-    it('should throw error when extract is called', async () => {
-      await expect(agent.extract()).rejects.toThrow(
-        'ResumeCreatorAgent does not implement extract method. Use createResume instead.'
-      );
-    });
-  });
 
   describe('CV parsing', () => {
     it('should parse CV content correctly', async () => {
@@ -201,17 +185,17 @@ describe('ResumeCreatorAgent', () => {
         changes: ['Test change']
       });
 
-      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>)
-        .mockResolvedValueOnce({ choices: [{ message: { content: cvParsingResponse } }] })
-        .mockResolvedValueOnce({ choices: [{ message: { content: tailoringResponse } }] });
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
 
       const result = await agent.createResume('test123', 'cv.txt');
 
       expect(result.success).toBe(true);
-      expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(2);
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
       
       // Check that CV parsing prompt was used
-      const firstCall = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[0][0];
+      const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
       expect(firstCall.messages[0].content).toContain('Parse the following CV/resume text');
     });
   });
@@ -227,9 +211,9 @@ describe('ResumeCreatorAgent', () => {
         ]
       });
 
-      (mockOpenAI.chat.completions.create as jest.MockedFunction<any>)
-        .mockResolvedValueOnce({ choices: [{ message: { content: cvParsingResponse } }] })
-        .mockResolvedValueOnce({ choices: [{ message: { content: tailoringResponse } }] });
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
 
       const result = await agent.createResume('test123', 'cv.txt');
 
@@ -237,7 +221,7 @@ describe('ResumeCreatorAgent', () => {
       expect(result.tailoringChanges).toContain('Updated summary to emphasize React and TypeScript experience');
       
       // Check that tailoring prompt included job information
-      const secondCall = (mockOpenAI.chat.completions.create as jest.Mock).mock.calls[1][0];
+      const secondCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[1][0];
       expect(secondCall.messages[0].content).toContain('Senior Software Engineer');
       expect(secondCall.messages[0].content).toContain('Tech Corp');
     });

@@ -1,16 +1,12 @@
-import { BaseAgent } from './base-agent';
-import { JobListing, CVData, ResumeResult, AgentConfig } from '../types';
+import { ClaudeBaseAgent } from './claude-base-agent';
+import { JobListing, CVData, ResumeResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-export class ResumeCreatorAgent extends BaseAgent {
-  constructor(config: AgentConfig) {
-    super(config);
-  }
-
-  async extract(): Promise<never> {
-    throw new Error('ResumeCreatorAgent does not implement extract method. Use createResume instead.');
+export class ResumeCreatorAgent extends ClaudeBaseAgent {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
+    super(claudeApiKey, model, maxTokens);
   }
 
   async createResume(jobId: string, cvFilePath: string, outputPath?: string): Promise<ResumeResult> {
@@ -107,7 +103,7 @@ ${cvContent}
 
 Return ONLY the JSON object, no other text:`;
 
-    const response = await this.makeOpenAIRequest(prompt);
+    const response = await this.makeClaudeRequest(prompt);
     
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -199,7 +195,7 @@ Return a JSON object with:
 
 Respond with ONLY the JSON object:`;
 
-    const response = await this.makeOpenAIRequest(prompt);
+    const response = await this.makeClaudeRequest(prompt);
     
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
