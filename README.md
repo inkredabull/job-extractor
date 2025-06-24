@@ -10,6 +10,7 @@ A TypeScript CLI tool that extracts and automatically scores job information fro
 - 🏗️ **JSON-LD Support**: Automatically detects and parses Schema.org JobPosting structured data
 - 💰 **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
 - 📊 **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
+- 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -84,6 +85,21 @@ job-extractor score "4c32e01e" -c my-criteria.json
 **Score Options:**
 - `-c, --criteria <file>`: Path to criteria file (default: `criteria.json`)
 
+#### Resume Generation
+
+Generate a tailored PDF resume for a specific job posting:
+
+```bash
+# Generate a tailored resume for a job
+job-extractor resume "4c32e01e" sample-cv.txt
+
+# Specify custom output path
+job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf
+```
+
+**Resume Options:**
+- `-o, --output <file>`: Output path for the generated PDF
+
 ### Examples
 
 ```bash
@@ -110,6 +126,12 @@ job-extractor score "a1b2c3d4"
 
 # Manually score with custom criteria
 job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
+
+# Generate a tailored resume for a specific job
+job-extractor resume "a1b2c3d4" my-cv.txt
+
+# Generate resume with custom output path
+job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf"
 ```
 
 ## Output Schemas
@@ -272,6 +294,58 @@ To customize the criteria for your job search:
 - **`deal_breakers`**: Automatic disqualifiers (returns 0% match)
 - **`weights`**: Importance of each category (0.0 to 1.0, must sum to 1.0)
 
+### Resume Generation Schema
+
+Resume generation requires a plain text CV file and produces:
+
+```json
+{
+  "success": true,
+  "pdfPath": "logs/resume-a1b2c3d4-2024-06-24T15-30-45-123Z.pdf",
+  "tailoringChanges": [
+    "Emphasized React and Node.js experience to match job requirements",
+    "Reordered technical skills to highlight relevant technologies",
+    "Updated professional summary to include keywords from job description",
+    "Moved relevant project to top of projects section"
+  ]
+}
+```
+
+#### CV File Format
+
+Your CV text file should include structured information:
+
+```text
+Full Name
+Email: your.email@example.com
+Phone: +1-555-0123
+Location: City, State
+LinkedIn: https://linkedin.com/in/yourprofile
+GitHub: https://github.com/yourusername
+
+PROFESSIONAL SUMMARY
+Brief overview of your experience and skills...
+
+EXPERIENCE
+Job Title | Company Name | Duration
+• Achievement or responsibility
+• Another achievement with metrics
+
+EDUCATION
+Degree | Institution | Year
+Additional details if relevant
+
+TECHNICAL SKILLS
+Languages: JavaScript, Python, etc.
+Frameworks: React, Node.js, etc.
+Tools: Git, Docker, AWS, etc.
+
+PROJECTS
+Project Name | Year
+Description of the project and technologies used
+GitHub: https://github.com/username/project
+```
+
 ## How It Works
 
 ### Dual Extraction Strategy
@@ -311,6 +385,25 @@ The JobScorerAgent evaluates jobs across 6 weighted categories:
 
 Each category receives a 0-100% score, then weighted to produce the final percentage.
 
+### Resume Generation Process
+
+The ResumeCreatorAgent follows a 4-step process:
+
+1. **CV Parsing**: Uses AI to extract structured data from your plain text CV
+2. **Job Analysis**: Loads the specific job posting data from extraction logs
+3. **Content Tailoring**: AI optimizes your CV content for the target job:
+   - Reorders experience to highlight relevant roles
+   - Emphasizes matching skills and technologies
+   - Updates summary with job-specific keywords
+   - Prioritizes relevant projects and achievements
+4. **PDF Generation**: Creates a professional PDF layout with tailored content
+
+**Key Features:**
+- **Maintains truthfulness**: Only reorders and emphasizes existing content
+- **Job-specific optimization**: Uses actual job description for tailoring
+- **Professional formatting**: Clean, ATS-friendly PDF layout
+- **Change tracking**: Reports what modifications were made
+
 ### Automatic Logging
 
 All extracted job data is automatically saved to:
@@ -326,6 +419,13 @@ logs/score-{job-id}-{timestamp}.json
 ```
 
 Example: `logs/score-a1b2c3d4-2024-06-19T15-35-22-456Z.json`
+
+Generated resumes are saved as:
+```
+logs/resume-{job-id}-{timestamp}.pdf
+```
+
+Example: `logs/resume-a1b2c3d4-2024-06-19T15-40-33-789Z.pdf`
 
 ## Development
 
@@ -347,6 +447,7 @@ src/
 │   ├── base-agent.ts          # Abstract base class for all agents  
 │   ├── job-extractor-agent.ts # Job extraction with dual strategy
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
+│   ├── resume-creator-agent.ts # AI-powered resume generation and PDF creation
 │   └── index.ts               # Agent exports
 ├── types/
 │   └── index.ts               # TypeScript type definitions
@@ -360,13 +461,16 @@ __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
 ├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
 ├── job-scorer-agent.test.ts   # Tests for job scoring and criteria matching
+├── resume-creator-agent.test.ts # Tests for CV parsing, tailoring, and PDF generation
 └── web-scraper.test.ts        # Tests for structured data extraction
 
 logs/                          # Auto-generated job extraction and scoring logs
 ├── job-*.json                 # Timestamped extraction results
-└── score-*.json               # Timestamped scoring results
+├── score-*.json               # Timestamped scoring results
+└── resume-*.pdf               # Generated tailored resumes
 
 criteria.json                  # Configurable job scoring criteria
+sample-cv.txt                  # Example CV format for resume generation
 ```
 
 ### Architecture
@@ -383,11 +487,16 @@ The project follows a modular architecture with smart extraction and scoring str
    - Weighted scoring algorithm across 6 categories
    - AI-generated rationale for match quality
    - Automatic score logging with timestamps
-4. **WebScraper**: Utility for:
+4. **ResumeCreatorAgent**: AI-powered resume tailoring system:
+   - Parses plain text CV files into structured data
+   - Analyzes job requirements and optimizes resume content
+   - Generates professional PDF resumes with tailored content
+   - Tracks and reports all modifications made
+5. **WebScraper**: Utility for:
    - HTML fetching with proper headers
    - JSON-LD structured data extraction
    - HTML simplification for AI processing
-5. **CLI**: Commander.js interface with automatic logging to unique files
+6. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Environment Variables
 
@@ -410,6 +519,7 @@ The project includes comprehensive unit tests for:
 - Base agent functionality and OpenAI integration
 - Job extractor agent with dual strategy testing
 - Job scorer agent with scoring algorithm validation
+- Resume creator agent with CV parsing and PDF generation
 - Web scraper utility and structured data extraction
 - Error handling scenarios and edge cases
 

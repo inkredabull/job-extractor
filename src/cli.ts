@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { JobExtractorAgent } from './agents/job-extractor-agent';
 import { JobScorerAgent } from './agents/job-scorer-agent';
+import { ResumeCreatorAgent } from './agents/resume-creator-agent';
 import { getConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -165,6 +166,47 @@ program
       console.log('');
       console.log('💡 Rationale:');
       console.log(score.rationale);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('resume')
+  .description('Generate a tailored resume PDF for a specific job')
+  .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
+  .argument('<cvFile>', 'Path to your CV/resume text file')
+  .option('-o, --output <file>', 'Output path for the generated PDF')
+  .action(async (jobId: string, cvFile: string, options) => {
+    try {
+      console.log('📄 Generating tailored resume...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log(`📋 CV File: ${cvFile}`);
+      console.log('');
+
+      const config = getConfig();
+      const creator = new ResumeCreatorAgent(config);
+      
+      const result = await creator.createResume(jobId, cvFile, options.output);
+      
+      if (result.success) {
+        console.log('✅ Resume Generation Complete');
+        console.log('=' .repeat(50));
+        console.log(`📄 PDF Generated: ${result.pdfPath}`);
+        
+        if (result.tailoringChanges && result.tailoringChanges.length > 0) {
+          console.log('');
+          console.log('🔧 Tailoring Changes Made:');
+          result.tailoringChanges.forEach((change, index) => {
+            console.log(`  ${index + 1}. ${change}`);
+          });
+        }
+      } else {
+        console.error('❌ Resume generation failed:', result.error);
+        process.exit(1);
+      }
       
     } catch (error) {
       console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');

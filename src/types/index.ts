@@ -95,3 +95,46 @@ export interface JobScore {
   };
   timestamp: string;
 }
+
+export interface CVData {
+  personalInfo: {
+    name: string;
+    email: string;
+    phone?: string;
+    location?: string;
+    linkedin?: string;
+    github?: string;
+  };
+  summary?: string;
+  experience: Array<{
+    title: string;
+    company: string;
+    duration: string;
+    description: string;
+    achievements?: string[];
+  }>;
+  education: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+    details?: string;
+  }>;
+  skills: {
+    technical?: string[];
+    languages?: string[];
+    certifications?: string[];
+  };
+  projects?: Array<{
+    name: string;
+    description: string;
+    technologies?: string[];
+    url?: string;
+  }>;
+}
+
+export interface ResumeResult {
+  success: boolean;
+  pdfPath?: string;
+  error?: string;
+  tailoringChanges?: string[];
+}
