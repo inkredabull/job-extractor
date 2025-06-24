@@ -33,8 +33,44 @@ export interface JobCriteria {
     currency: string;
   };
   locations: string[];
-  company_size: string[];
-  job_types: string[];
+  company_size?: string[];
+  job_types?: string[];
+  company_requirements?: {
+    funding_stage?: string[];
+    company_size?: {
+      min: number;
+      max: number;
+      ideal: number;
+    };
+    team_size?: {
+      direct_reports?: {
+        min: number;
+        max: number;
+      };
+      org_size?: number;
+    };
+    financial_metrics?: {
+      arr_minimum?: number;
+      runway_years?: number;
+      revenue_per_employee?: number;
+      net_dollar_retention?: number;
+      new_logo_growth?: number;
+    };
+    budget_responsibility?: number;
+    domains?: string[];
+    example_companies?: string[];
+  };
+  role_requirements?: {
+    leadership_level?: string;
+    autonomy?: boolean;
+    hands_on?: boolean;
+    strategic_involvement?: boolean;
+    no_oncall?: boolean;
+    report_to_ceo?: boolean;
+    proven_executive_team?: boolean;
+  };
+  cultural_values?: string[];
+  deal_breakers?: string[];
   weights: {
     required_skills: number;
     preferred_skills: number;

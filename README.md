@@ -150,12 +150,13 @@ Job scoring produces detailed analysis with percentage scores:
 
 ### Criteria Configuration
 
-The scoring system uses a configurable `criteria.json` file:
+The scoring system uses a configurable `criteria.json` file. You can customize it based on your specific requirements:
 
+#### Basic Example (Simple Criteria)
 ```json
 {
-  "required_skills": ["JavaScript", "React", "Node.js", "TypeScript"],
-  "preferred_skills": ["AWS", "Docker", "GraphQL", "MongoDB"],
+  "required_skills": ["JavaScript", "React", "Node.js"],
+  "preferred_skills": ["AWS", "Docker", "GraphQL"],
   "experience_levels": {
     "senior": 5,
     "lead": 7,
@@ -166,9 +167,7 @@ The scoring system uses a configurable `criteria.json` file:
     "max": 300000,
     "currency": "USD"
   },
-  "locations": ["Remote", "San Francisco", "New York", "Austin"],
-  "company_size": ["startup", "mid-size", "enterprise"],
-  "job_types": ["full-time", "contract"],
+  "locations": ["Remote", "San Francisco"],
   "weights": {
     "required_skills": 0.3,
     "preferred_skills": 0.2,
@@ -179,6 +178,92 @@ The scoring system uses a configurable `criteria.json` file:
   }
 }
 ```
+
+#### Advanced Example (Comprehensive Criteria)
+```json
+{
+  "required_skills": ["React", "Python", "TypeScript", "Leadership"],
+  "preferred_skills": ["GCP", "Serverless", "GenAI", "Product Development"],
+  "experience_levels": {
+    "senior": 7,
+    "staff": 8,
+    "principal": 10,
+    "director": 12,
+    "vp": 15
+  },
+  "salary_range": {
+    "min": 245000,
+    "max": 400000,
+    "currency": "USD"
+  },
+  "locations": ["Remote", "San Francisco", "Hybrid"],
+  "company_requirements": {
+    "funding_stage": ["Series A", "Series B"],
+    "company_size": {
+      "min": 30,
+      "max": 50,
+      "ideal": 38
+    },
+    "financial_metrics": {
+      "arr_minimum": 5000000,
+      "runway_years": 2
+    },
+    "domains": ["wellness", "coaching", "mental health"],
+    "example_companies": ["Spring Health", "Headspace", "Calm"]
+  },
+  "role_requirements": {
+    "leadership_level": "player-coach",
+    "autonomy": true,
+    "hands_on": true,
+    "no_oncall": true
+  },
+  "cultural_values": [
+    "collaborative",
+    "mission-driven",
+    "product-led growth"
+  ],
+  "deal_breakers": [
+    "5 day RTO policy",
+    "evening/weekend on-call",
+    "only tactical responsibilities"
+  ],
+  "weights": {
+    "required_skills": 0.15,
+    "preferred_skills": 0.10,
+    "experience_level": 0.15,
+    "salary": 0.20,
+    "location": 0.15,
+    "company_match": 0.25
+  }
+}
+```
+
+#### Creating Your Own Criteria
+
+To customize the criteria for your job search:
+
+1. **Start with your requirements list** (like the provided `criteria.txt`)
+2. **Categorize requirements** into the JSON structure:
+   - **Must-haves** → `required_skills`, `salary_range`, `locations`
+   - **Nice-to-haves** → `preferred_skills`, `company_requirements`
+   - **Deal-breakers** → `deal_breakers` array
+3. **Set appropriate weights** (must sum to 1.0):
+   - Higher weight = more important in final score
+   - Recommended: salary (0.2), company_match (0.25) for senior roles
+4. **Test and iterate** by scoring sample jobs and adjusting criteria
+
+#### Criteria Fields Explained
+
+- **`required_skills`**: Must-have technical/leadership skills
+- **`preferred_skills`**: Bonus skills that add value  
+- **`experience_levels`**: Seniority levels with years of experience
+- **`salary_range`**: Your target compensation range
+- **`locations`**: Acceptable work locations (Remote, city names, Hybrid)
+- **`company_requirements`**: Advanced filtering for company stage, size, domain
+- **`role_requirements`**: Leadership style, autonomy level, work-life balance
+- **`cultural_values`**: Company culture keywords to match
+- **`deal_breakers`**: Automatic disqualifiers (returns 0% match)
+- **`weights`**: Importance of each category (0.0 to 1.0, must sum to 1.0)
 
 ## How It Works
 

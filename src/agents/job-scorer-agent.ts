@@ -162,7 +162,93 @@ export class JobScorerAgent extends BaseAgent {
   }
 
   private scoreCompanyMatch(job: JobListing): number {
-    return 0.7;
+    let score = 0;
+    let maxScore = 0;
+    
+    const jobText = `${job.title} ${job.description} ${job.company}`.toLowerCase();
+    
+    // Check for domain match
+    if (this.criteria.company_requirements?.domains) {
+      maxScore += 0.3;
+      const matchingDomains = this.criteria.company_requirements.domains.filter(domain =>
+        jobText.includes(domain.toLowerCase())
+      );
+      if (matchingDomains.length > 0) {
+        score += 0.3;
+      }
+    }
+    
+    // Check for example companies
+    if (this.criteria.company_requirements?.example_companies) {
+      maxScore += 0.2;
+      const matchingCompanies = this.criteria.company_requirements.example_companies.filter(company =>
+        job.company.toLowerCase().includes(company.toLowerCase()) ||
+        company.toLowerCase().includes(job.company.toLowerCase())
+      );
+      if (matchingCompanies.length > 0) {
+        score += 0.2;
+      }
+    }
+    
+    // Check for cultural values
+    if (this.criteria.cultural_values) {
+      maxScore += 0.2;
+      const matchingValues = this.criteria.cultural_values.filter(value =>
+        jobText.includes(value.toLowerCase())
+      );
+      if (matchingValues.length > 0) {
+        score += 0.2 * (matchingValues.length / this.criteria.cultural_values.length);
+      }
+    }
+    
+    // Check for deal breakers (negative scoring)
+    if (this.criteria.deal_breakers) {
+      const dealBreakerFound = this.criteria.deal_breakers.some(dealBreaker => {
+        if (dealBreaker.toLowerCase().includes('rto') || dealBreaker.toLowerCase().includes('return to office')) {
+          return jobText.includes('5 days') && jobText.includes('office');
+        }
+        if (dealBreaker.toLowerCase().includes('on-call') || dealBreaker.toLowerCase().includes('oncall')) {
+          return jobText.includes('on-call') || jobText.includes('oncall') || jobText.includes('pager');
+        }
+        return jobText.includes(dealBreaker.toLowerCase());
+      });
+      
+      if (dealBreakerFound) {
+        return 0; // Immediate disqualification
+      }
+    }
+    
+    // Check for leadership/management requirements
+    if (this.criteria.role_requirements) {
+      maxScore += 0.3;
+      let roleScore = 0;
+      
+      if (this.criteria.role_requirements.leadership_level === 'player-coach') {
+        if (jobText.includes('player-coach') || 
+            (jobText.includes('hands-on') && jobText.includes('leadership'))) {
+          roleScore += 0.1;
+        }
+      }
+      
+      if (this.criteria.role_requirements.autonomy && 
+          (jobText.includes('autonomy') || jobText.includes('independent'))) {
+        roleScore += 0.1;
+      }
+      
+      if (this.criteria.role_requirements.strategic_involvement && 
+          (jobText.includes('strategic') || jobText.includes('vision') || jobText.includes('roadmap'))) {
+        roleScore += 0.1;
+      }
+      
+      score += roleScore;
+    }
+    
+    // Default base score if no specific criteria
+    if (maxScore === 0) {
+      return 0.7;
+    }
+    
+    return Math.min(score / maxScore, 1);
   }
 
   private async generateRationale(job: JobListing, score: any): Promise<string> {
