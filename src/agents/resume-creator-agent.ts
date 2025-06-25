@@ -269,7 +269,7 @@ Instructions:
 4. Use keywords from the job description where appropriate
 5. Maintain all factual information - do not fabricate anything
 
-Lead with "<CANDIDATE NAME> - ROLE" where role is the role from the job description.
+Lead with "<CANDIDATE NAME> : ROLE" where role is the role from the job description.
 
 ## Summary
 Include a "SUMMARY" section, beginning with a professional summary in the form of a single paragraph. 
