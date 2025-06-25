@@ -181,5 +181,133 @@ describe('ResumeCreatorAgent', () => {
         'utf-8'
       );
     });
+
+    it('should use configurable number of roles in prompt', async () => {
+      // Create agent with different maxRoles
+      const customAgent = new ResumeCreatorAgent('test-api-key', 'claude-3-5-sonnet-20241022', 4000, 2);
+      
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Resume with 2 roles',
+        changes: ['Limited to 2 roles']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await customAgent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      
+      // Check that prompt includes "2 roles" instead of "3 roles"
+      const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
+      expect(firstCall.messages[0].content).toContain('most recent 2 roles');
+      expect(firstCall.messages[0].content).not.toContain('most recent 3 roles');
+    });
+
+    it('should incorporate recommendations from recommendations.txt file', async () => {
+      // Mock recommendations.txt file content
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('recommendations.txt')) {
+          return 'Add more TypeScript experience\nHighlight team leadership skills\n# This is a comment\n\nEmphasize cloud architecture';
+        }
+        if (filePath.includes('job-') && filePath.includes('test123')) {
+          return JSON.stringify(mockJob);
+        }
+        if (filePath.includes('cv.txt')) {
+          return 'John Doe\nEmail: john.doe@example.com\nExperience: Software Engineer at Previous Corp...';
+        }
+        return '{}';
+      });
+
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Resume with recommendations',
+        changes: ['Applied recommendations from previous critique']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      
+      // Check that prompt includes recommendations section
+      const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
+      expect(firstCall.messages[0].content).toContain('Previous Recommendations');
+      expect(firstCall.messages[0].content).toContain('Add more TypeScript experience');
+      expect(firstCall.messages[0].content).toContain('Highlight team leadership skills');
+      expect(firstCall.messages[0].content).toContain('Emphasize cloud architecture');
+      expect(firstCall.messages[0].content).not.toContain('# This is a comment'); // Comments should be skipped
+    });
+
+    it('should incorporate recommendations from critique JSON files', async () => {
+      // Mock critique file with recommendations
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('critique-') && filePath.includes('test123')) {
+          return JSON.stringify({
+            recommendations: [
+              'Include more quantified achievements',
+              'Add certifications section'
+            ]
+          });
+        }
+        if (filePath.includes('job-') && filePath.includes('test123')) {
+          return JSON.stringify(mockJob);
+        }
+        if (filePath.includes('cv.txt')) {
+          return 'John Doe\nEmail: john.doe@example.com\nExperience: Software Engineer at Previous Corp...';
+        }
+        return '{}';
+      });
+
+      // Mock finding critique files
+      (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('test123')) {
+          return ['job-2024-01-01.json', 'critique-2024-01-02.json', 'critique-2024-01-01.json'];
+        }
+        return [];
+      });
+
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Resume with critique recommendations',
+        changes: ['Applied recommendations from latest critique']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      
+      // Check that prompt includes recommendations from critique
+      const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
+      expect(firstCall.messages[0].content).toContain('Previous Recommendations');
+      expect(firstCall.messages[0].content).toContain('Include more quantified achievements');
+      expect(firstCall.messages[0].content).toContain('Add certifications section');
+    });
+
+    it('should handle missing recommendations gracefully', async () => {
+      // Mock no recommendations files
+      (fs.existsSync as jest.Mock).mockImplementation((filePath: string) => {
+        return !filePath.includes('recommendations.txt');
+      });
+
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Resume without recommendations',
+        changes: ['Standard tailoring applied']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      
+      // Check that prompt does not include recommendations section
+      const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
+      expect(firstCall.messages[0].content).not.toContain('Previous Recommendations');
+    });
   });
 });

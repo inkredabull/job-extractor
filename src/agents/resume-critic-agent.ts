@@ -210,8 +210,27 @@ REMEMBER: Response must be valid JSON only. No additional text or explanations o
       fs.mkdirSync(jobDir, { recursive: true });
     }
 
+    // Log the full critique as JSON
     const logPath = path.join(jobDir, `critique-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
     fs.writeFileSync(logPath, JSON.stringify(logEntry, null, 2));
     console.log(`✅ Resume critique logged to: ${logPath}`);
+
+    // Also append recommendations to recommendations.txt file
+    if (critique.recommendations && critique.recommendations.length > 0) {
+      const recommendationsFile = path.join(jobDir, 'recommendations.txt');
+      const timestamp = new Date().toISOString();
+      
+      // Create header with timestamp for this critique session
+      const recommendationHeader = `\n# Recommendations from critique on ${timestamp}\n`;
+      const recommendationEntries = critique.recommendations.map(rec => rec.trim()).join('\n') + '\n';
+      
+      try {
+        // Append to file (or create if it doesn't exist)
+        fs.appendFileSync(recommendationsFile, recommendationHeader + recommendationEntries);
+        console.log(`📝 ${critique.recommendations.length} recommendations appended to: ${recommendationsFile}`);
+      } catch (error) {
+        console.warn(`⚠️  Failed to write recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
   }
 }

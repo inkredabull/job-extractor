@@ -78,6 +78,7 @@ describe('ResumeCriticAgent', () => {
       return '{}';
     });
     (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    (fs.appendFileSync as jest.Mock).mockImplementation(() => {});
 
     agent = new ResumeCriticAgent('test-anthropic-api-key', 'claude-3-5-sonnet-20241022', 4000);
   });
@@ -291,6 +292,55 @@ describe('ResumeCriticAgent', () => {
       expect(loggedData).toHaveProperty('weaknesses');
       expect(loggedData).toHaveProperty('recommendations');
       expect(loggedData).toHaveProperty('detailedAnalysis');
+    });
+
+    it('should append recommendations to recommendations.txt file', async () => {
+      const mockResponse = JSON.stringify({
+        overallRating: 7,
+        strengths: ['Good technical skills'],
+        weaknesses: ['Missing some keywords'],
+        recommendations: [
+          'Add more TypeScript experience',
+          'Include specific project metrics',
+          'Highlight team leadership'
+        ],
+        detailedAnalysis: 'Overall solid resume with room for improvement'
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: mockResponse }] });
+
+      await agent.critiqueResume('test123');
+
+      // Should append to recommendations.txt file
+      expect(fs.appendFileSync).toHaveBeenCalled();
+      const appendCall = (fs.appendFileSync as jest.Mock).mock.calls[0];
+      expect(appendCall[0]).toMatch(/test123\/recommendations\.txt$/);
+      
+      const appendedContent = appendCall[1];
+      expect(appendedContent).toContain('# Recommendations from critique on');
+      expect(appendedContent).toContain('Add more TypeScript experience');
+      expect(appendedContent).toContain('Include specific project metrics');
+      expect(appendedContent).toContain('Highlight team leadership');
+    });
+
+    it('should handle missing recommendations gracefully', async () => {
+      const mockResponse = JSON.stringify({
+        overallRating: 9,
+        strengths: ['Excellent resume'],
+        weaknesses: [],
+        recommendations: [], // No recommendations
+        detailedAnalysis: 'Perfect resume'
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: mockResponse }] });
+
+      await agent.critiqueResume('test123');
+
+      // Should not try to append recommendations when none exist
+      expect(fs.appendFileSync).not.toHaveBeenCalled();
+      expect(fs.writeFileSync).toHaveBeenCalledTimes(1); // Only the JSON critique file
     });
   });
 });

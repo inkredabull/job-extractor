@@ -5,8 +5,11 @@ import * as path from 'path';
 import { execSync } from 'child_process';
 
 export class ResumeCreatorAgent extends ClaudeBaseAgent {
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
+  private maxRoles: number;
+
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 3) {
     super(claudeApiKey, model, maxTokens);
+    this.maxRoles = maxRoles;
   }
 
   async createResume(jobId: string, cvFilePath: string, outputPath?: string): Promise<ResumeResult> {
@@ -17,7 +20,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Always regenerate tailored content (no caching)
       console.log(`🔄 Regenerating tailored content for job ${jobId}`);
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-      const tailoredContent = await this.generateTailoredContent(jobData, cvContent, jobId);
+      const scopedCvContent = this.scopeCVContent(cvContent);
+      const tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
       
       // Cache the tailored content
       this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
@@ -178,11 +182,178 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     }
   }
 
+  private scopeCVContent(cvContent: string): string {
+    if (this.maxRoles <= 0) return cvContent;
+
+    // Try to identify role/experience sections and limit them
+    const lines = cvContent.split('\n');
+    const scopedLines: string[] = [];
+    let roleCount = 0;
+    let inExperienceSection = false;
+    let currentRoleLines: string[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim().toLowerCase();
+      
+      // Detect experience section headers
+      if (trimmedLine.includes('experience') || 
+          trimmedLine.includes('employment') || 
+          trimmedLine.includes('work history') ||
+          trimmedLine.includes('professional experience')) {
+        inExperienceSection = true;
+        scopedLines.push(line);
+        continue;
+      }
+      
+      // Detect end of experience section (start of other sections)
+      if (inExperienceSection && (
+          trimmedLine.includes('education') ||
+          trimmedLine.includes('skills') ||
+          trimmedLine.includes('projects') ||
+          trimmedLine.includes('certifications') ||
+          trimmedLine.includes('languages') ||
+          trimmedLine.includes('achievements') ||
+          trimmedLine.includes('publications'))) {
+        // Add any remaining role lines before ending experience section
+        if (currentRoleLines.length > 0 && roleCount < this.maxRoles) {
+          scopedLines.push(...currentRoleLines);
+        }
+        inExperienceSection = false;
+        scopedLines.push(line);
+        continue;
+      }
+      
+      if (!inExperienceSection) {
+        // Not in experience section, include all lines
+        scopedLines.push(line);
+        continue;
+      }
+      
+      // In experience section - try to detect role boundaries
+      const isRoleHeader = this.isLikelyRoleHeader(line);
+      
+      if (isRoleHeader) {
+        // Save previous role if we have room
+        if (currentRoleLines.length > 0 && roleCount < this.maxRoles) {
+          scopedLines.push(...currentRoleLines);
+          roleCount++;
+        }
+        
+        // Start new role
+        currentRoleLines = [line];
+        
+        // If we've reached max roles, stop processing experience
+        if (roleCount >= this.maxRoles) {
+          break;
+        }
+      } else {
+        // Add to current role
+        currentRoleLines.push(line);
+      }
+    }
+    
+    // Add final role if we have room
+    if (currentRoleLines.length > 0 && roleCount < this.maxRoles) {
+      scopedLines.push(...currentRoleLines);
+    }
+    
+    // Add remaining non-experience lines from where we left off
+    const remainingLines = lines.slice(scopedLines.length);
+    for (const line of remainingLines) {
+      const trimmedLine = line.trim().toLowerCase();
+      if (!trimmedLine.includes('experience') && 
+          !trimmedLine.includes('employment') && 
+          !this.isLikelyRoleHeader(line)) {
+        scopedLines.push(line);
+      }
+    }
+    
+    const scopedContent = scopedLines.join('\n');
+    console.log(`📝 Scoped CV to ${this.maxRoles} most recent roles`);
+    return scopedContent;
+  }
+
+  private isLikelyRoleHeader(line: string): boolean {
+    const trimmedLine = line.trim();
+    if (trimmedLine.length === 0) return false;
+    
+    // Common patterns for role headers
+    const rolePatterns = [
+      /^[A-Z][A-Za-z\s]+\s*[||\-–—]\s*[A-Z]/,  // "Job Title | Company" or "Job Title - Company"
+      /^[A-Z][A-Za-z\s]+\s*at\s*[A-Z]/,        // "Job Title at Company"
+      /^\d{4}\s*[-–—]\s*\d{4}/,                 // "2020 - 2023"
+      /^\d{4}\s*[-–—]\s*Present/i,              // "2020 - Present"
+      /^[A-Z][A-Za-z\s]+\s*\(\d{4}/,           // "Job Title (2020"
+    ];
+    
+    return rolePatterns.some(pattern => pattern.test(trimmedLine));
+  }
+
+  private loadRecommendations(jobId?: string): string[] {
+    const recommendations: string[] = [];
+    
+    if (!jobId) return recommendations;
+    
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      // Check for recommendations.txt file in job directory
+      const recommendationsFile = path.join(jobDir, 'recommendations.txt');
+      if (fs.existsSync(recommendationsFile)) {
+        const content = fs.readFileSync(recommendationsFile, 'utf-8');
+        const lines = content.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && !line.startsWith('#')); // Skip comments and empty lines
+        recommendations.push(...lines);
+        console.log(`📋 Loaded ${lines.length} recommendations from recommendations.txt`);
+      }
+      
+      // Also check for latest critique file recommendations
+      if (fs.existsSync(jobDir)) {
+        const files = fs.readdirSync(jobDir);
+        const critiqueFiles = files
+          .filter(file => file.startsWith('critique-') && file.endsWith('.json'))
+          .sort()
+          .reverse(); // Most recent first
+        
+        if (critiqueFiles.length > 0) {
+          const latestCritiqueFile = path.join(jobDir, critiqueFiles[0]);
+          const critiqueData = JSON.parse(fs.readFileSync(latestCritiqueFile, 'utf-8'));
+          
+          if (critiqueData.recommendations && Array.isArray(critiqueData.recommendations)) {
+            recommendations.push(...critiqueData.recommendations);
+            console.log(`📋 Loaded ${critiqueData.recommendations.length} recommendations from latest critique`);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to load recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    // Remove duplicates
+    return [...new Set(recommendations)];
+  }
 
   private async generateTailoredContent(job: JobListing, cvContent: string, jobId?: string): Promise<{
     markdownContent: string;
     changes: string[];
   }> {
+    // Load any existing recommendations
+    const recommendations = this.loadRecommendations(jobId);
+    
+    // Build the recommendations section for the prompt
+    let recommendationsSection = '';
+    if (recommendations.length > 0) {
+      recommendationsSection = `
+
+## Previous Recommendations
+Based on previous critiques, please also incorporate these specific recommendations:
+${recommendations.map(rec => `- ${rec}`).join('\n')}
+
+`;
+    }
+
     const prompt = `
 You are a professional resume writer. 
 
@@ -195,6 +366,7 @@ Highlight relevant achievements and projects
 Be sure to include metrics to quantify team size, project scope, and business impact
 Use keywords from the job description where appropriate
 Maintain all factual information - do not fabricate anything
+${recommendationsSection}
 
 General structure should be:
 
@@ -223,7 +395,7 @@ Include at least one time-based statement (e.g. 'Increased profits 50% in 5 (fiv
 Include at least one improvement metric (e.g. 'Increased profits by 25-26%')
 
 ## Roles
-Include only up to the most recent three roles. 
+Include only up to the most recent ${this.maxRoles} roles. 
 Always include dates for roles on the same line as title and company name. 
 For each role, include an overview of the role of between 110 and 180 characters, being sure to include specific, quantitative metrics where referenced.
 Include 5 bullet points for the most recent role, 3-4 for the next role, and 2-3 for each role after that. 
