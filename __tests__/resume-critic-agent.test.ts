@@ -58,16 +58,21 @@ describe('ResumeCriticAgent', () => {
 
     (Anthropic as jest.MockedClass<typeof Anthropic>).mockImplementation(() => mockAnthropic);
 
-    // Mock fs functions
+    // Mock fs functions - files now in job subdirectory
     (fs.existsSync as jest.Mock).mockReturnValue(true);
-    (fs.readdirSync as jest.Mock).mockReturnValue([
-      'job-test123-2024-01-01.json',
-      'resume-test123-2024-01-01.pdf',
-      'resume-test123-2024-01-02.pdf', // More recent resume
-      'score-test123-2024-01-01.json'
-    ]);
+    (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+      if (dirPath.includes('test123')) {
+        return [
+          'job-2024-01-01.json',
+          'resume-2024-01-01.pdf',
+          'resume-2024-01-02.pdf', // More recent resume
+          'score-2024-01-01.json'
+        ];
+      }
+      return ['test123']; // Job directory exists
+    });
     (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.includes('job-test123')) {
+      if (filePath.includes('job-') && filePath.includes('test123')) {
         return JSON.stringify(mockJob);
       }
       return '{}';
@@ -277,7 +282,7 @@ describe('ResumeCriticAgent', () => {
 
       expect(fs.writeFileSync).toHaveBeenCalled();
       const writeCall = (fs.writeFileSync as jest.Mock).mock.calls[0];
-      expect(writeCall[0]).toMatch(/critique-test123-.*\.json$/);
+      expect(writeCall[0]).toMatch(/test123\/critique-.*\.json$/); // Now in job subdirectory
       
       const loggedData = JSON.parse(writeCall[1]);
       expect(loggedData).toHaveProperty('jobId', 'test123');

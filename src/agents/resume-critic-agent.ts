@@ -61,30 +61,34 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
   }
 
   private findMostRecentResume(jobId: string): string | null {
-    const logsDir = path.resolve('logs');
-    if (!fs.existsSync(logsDir)) {
+    const jobDir = path.resolve('logs', jobId);
+    if (!fs.existsSync(jobDir)) {
       return null;
     }
 
-    const files = fs.readdirSync(logsDir);
+    const files = fs.readdirSync(jobDir);
     const resumeFiles = files
-      .filter(file => file.startsWith(`resume-${jobId}-`) && file.endsWith('.pdf'))
+      .filter(file => file.startsWith('resume-') && file.endsWith('.pdf'))
       .sort()
       .reverse(); // Most recent first
 
-    return resumeFiles.length > 0 ? path.join(logsDir, resumeFiles[0]) : null;
+    return resumeFiles.length > 0 ? path.join(jobDir, resumeFiles[0]) : null;
   }
 
   private loadJobData(jobId: string): JobListing {
-    const logsDir = path.resolve('logs');
-    const files = fs.readdirSync(logsDir);
+    const jobDir = path.resolve('logs', jobId);
     
-    const jobFile = files.find(file => file.includes(jobId) && file.startsWith('job-') && file.endsWith('.json'));
+    if (!fs.existsSync(jobDir)) {
+      throw new Error(`Job directory not found for ID: ${jobId}`);
+    }
+    
+    const files = fs.readdirSync(jobDir);
+    const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
     if (!jobFile) {
       throw new Error(`Job file not found for ID: ${jobId}`);
     }
 
-    const jobPath = path.join(logsDir, jobFile);
+    const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
   }
@@ -200,7 +204,13 @@ REMEMBER: Response must be valid JSON only. No additional text or explanations o
       detailedAnalysis: critique.detailedAnalysis
     };
 
-    const logPath = path.resolve('logs', `critique-${critique.jobId}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    // Create job-specific subdirectory if it doesn't exist
+    const jobDir = path.resolve('logs', critique.jobId);
+    if (!fs.existsSync(jobDir)) {
+      fs.mkdirSync(jobDir, { recursive: true });
+    }
+
+    const logPath = path.join(jobDir, `critique-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
     fs.writeFileSync(logPath, JSON.stringify(logEntry, null, 2));
     console.log(`✅ Resume critique logged to: ${logPath}`);
   }

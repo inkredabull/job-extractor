@@ -49,8 +49,13 @@ program
       // Generate unique job ID from URL
       const jobId = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const logFileName = `job-${jobId}-${timestamp}.json`;
-      const logFilePath = path.join('logs', logFileName);
+      
+      // Create job-specific subdirectory
+      const jobDir = path.join('logs', jobId);
+      await fs.mkdir(jobDir, { recursive: true });
+      
+      const logFileName = `job-${timestamp}.json`;
+      const logFilePath = path.join(jobDir, logFileName);
 
       // Save JSON to log file
       const jsonOutput = JSON.stringify(result.data, null, 2);

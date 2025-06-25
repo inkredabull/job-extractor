@@ -48,15 +48,19 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const logsDir = path.resolve('logs');
-    const files = fs.readdirSync(logsDir);
+    const jobDir = path.resolve('logs', jobId);
     
-    const jobFile = files.find(file => file.includes(jobId) && file.endsWith('.json') && file.startsWith('job-'));
+    if (!fs.existsSync(jobDir)) {
+      throw new Error(`Job directory not found for ID: ${jobId}`);
+    }
+    
+    const files = fs.readdirSync(jobDir);
+    const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
     if (!jobFile) {
       throw new Error(`Job file not found for ID: ${jobId}`);
     }
 
-    const jobPath = path.join(logsDir, jobFile);
+    const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
   }
@@ -357,8 +361,19 @@ Respond with ONLY the JSON object:`;
     const markdownPath = path.join(outputsDir, markdownFileName);
     fs.writeFileSync(markdownPath, content.markdownContent, 'utf-8');
     
-    // Determine final PDF path
-    const finalPath = outputPath || path.join('logs', pdfFileName);
+    // Determine final PDF path - save to job subdirectory if jobId provided
+    let finalPath: string;
+    if (outputPath) {
+      finalPath = outputPath;
+    } else if (jobId) {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+      finalPath = path.join(jobDir, `resume-${timestamp}.pdf`);
+    } else {
+      finalPath = path.join('logs', pdfFileName);
+    }
     
     try {
       // Use pandoc to convert markdown to PDF

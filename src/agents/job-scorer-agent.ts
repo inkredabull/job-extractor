@@ -63,15 +63,19 @@ export class JobScorerAgent extends BaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const logsDir = path.resolve('logs');
-    const files = fs.readdirSync(logsDir);
+    const jobDir = path.resolve('logs', jobId);
     
-    const jobFile = files.find(file => file.includes(jobId) && file.endsWith('.json'));
+    if (!fs.existsSync(jobDir)) {
+      throw new Error(`Job directory not found for ID: ${jobId}`);
+    }
+    
+    const files = fs.readdirSync(jobDir);
+    const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
     if (!jobFile) {
       throw new Error(`Job file not found for ID: ${jobId}`);
     }
 
-    const jobPath = path.join(logsDir, jobFile);
+    const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
   }
@@ -318,7 +322,13 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
       breakdown: jobScore.breakdown,
     };
 
-    const logPath = path.resolve('logs', `score-${jobScore.jobId}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    // Create job-specific subdirectory if it doesn't exist
+    const jobDir = path.resolve('logs', jobScore.jobId);
+    if (!fs.existsSync(jobDir)) {
+      fs.mkdirSync(jobDir, { recursive: true });
+    }
+
+    const logPath = path.join(jobDir, `score-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
     fs.writeFileSync(logPath, JSON.stringify(logEntry, null, 2));
     console.log(`✅ Job score logged to: ${logPath}`);
   }

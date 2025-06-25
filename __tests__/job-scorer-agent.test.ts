@@ -220,7 +220,7 @@ describe('JobScorerAgent', () => {
 
       expect(fs.writeFileSync).toHaveBeenCalled();
       const writeCall = (fs.writeFileSync as jest.Mock).mock.calls[0];
-      expect(writeCall[0]).toMatch(/score-test123-.*\.json$/);
+      expect(writeCall[0]).toMatch(/test123\/score-.*\.json$/); // Now in job subdirectory
       
       const loggedData = JSON.parse(writeCall[1]);
       expect(loggedData).toHaveProperty('jobId', 'test123');
