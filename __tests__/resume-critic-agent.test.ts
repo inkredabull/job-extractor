@@ -29,7 +29,7 @@ describe('ResumeCriticAgent', () => {
     mockCritique = {
       success: true,
       jobId: 'test123',
-      resumePath: 'logs/resume-test123-2024-01-01.pdf',
+      resumePath: 'logs/test123/resume-2024-01-01.pdf',
       overallRating: 8,
       strengths: [
         'Strong technical background in React and Node.js',
@@ -103,7 +103,7 @@ describe('ResumeCriticAgent', () => {
 
       expect(result.success).toBe(true);
       expect(result.jobId).toBe('test123');
-      expect(result.resumePath).toContain('resume-test123-2024-01-02.pdf'); // Most recent
+      expect(result.resumePath).toContain('resume-2024-01-02.pdf'); // Most recent
       expect(result.overallRating).toBe(8);
       expect(result.strengths).toHaveLength(3);
       expect(result.weaknesses).toHaveLength(3);
@@ -112,7 +112,7 @@ describe('ResumeCriticAgent', () => {
     });
 
     it('should handle missing resume file', async () => {
-      (fs.readdirSync as jest.Mock).mockReturnValue(['job-test123-2024-01-01.json']);
+      (fs.readdirSync as jest.Mock).mockReturnValue(['job-2024-01-01.json']);
 
       const result = await agent.critiqueResume('test123');
 
@@ -121,7 +121,7 @@ describe('ResumeCriticAgent', () => {
     });
 
     it('should handle missing job file', async () => {
-      (fs.readdirSync as jest.Mock).mockReturnValue(['resume-test123-2024-01-01.pdf']);
+      (fs.readdirSync as jest.Mock).mockReturnValue(['resume-2024-01-01.pdf']);
 
       const result = await agent.critiqueResume('test123');
 
@@ -172,10 +172,10 @@ describe('ResumeCriticAgent', () => {
 
     it('should find the most recent resume when multiple exist', async () => {
       (fs.readdirSync as jest.Mock).mockReturnValue([
-        'resume-test123-2024-01-01.pdf',
-        'resume-test123-2024-01-03.pdf', // Most recent
-        'resume-test123-2024-01-02.pdf',
-        'job-test123-2024-01-01.json'
+        'resume-2024-01-01.pdf',
+        'resume-2024-01-03.pdf', // Most recent
+        'resume-2024-01-02.pdf',
+        'job-2024-01-01.json'
       ]);
 
       const mockResponse = JSON.stringify({
@@ -192,7 +192,7 @@ describe('ResumeCriticAgent', () => {
       const result = await agent.critiqueResume('test123');
 
       expect(result.success).toBe(true);
-      expect(result.resumePath).toContain('resume-test123-2024-01-03.pdf');
+      expect(result.resumePath).toContain('resume-2024-01-03.pdf');
     });
 
     it('should handle missing logs directory', async () => {

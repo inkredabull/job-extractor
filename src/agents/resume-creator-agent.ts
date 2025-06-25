@@ -1,5 +1,5 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, CVData, ResumeResult } from '../types';
+import { JobListing, ResumeResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -14,22 +14,13 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Load job data
       const jobData = this.loadJobData(jobId);
       
-      // Check for cached tailored content first
-      const cachedContent = this.loadCachedTailoredContent(jobId, cvFilePath);
+      // Always regenerate tailored content (no caching)
+      console.log(`🔄 Regenerating tailored content for job ${jobId}`);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const tailoredContent = await this.generateTailoredContent(jobData, cvContent, jobId);
       
-      let tailoredContent: { markdownContent: string; changes: string[] };
-      
-      if (cachedContent) {
-        console.log(`📋 Using cached tailored content for job ${jobId}`);
-        tailoredContent = cachedContent;
-      } else {
-        // Parse CV data and generate new tailored content
-        const cvData = await this.parseCVFile(cvFilePath);
-        tailoredContent = await this.generateTailoredContent(jobData, cvData);
-        
-        // Cache the tailored content
-        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
-      }
+      // Cache the tailored content
+      this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
       
       // Create PDF
       const pdfPath = await this.generatePDF(tailoredContent, outputPath, jobId);
@@ -187,73 +178,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     }
   }
 
-  private async parseCVFile(cvFilePath: string): Promise<CVData> {
-    const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-    
-    const prompt = `
-Parse the following CV/resume text and extract structured information. Return a JSON object with this exact schema:
 
-{
-  "personalInfo": {
-    "name": "Full Name",
-    "email": "email@example.com",
-    "phone": "phone number if found",
-    "location": "city, state/country if found",
-    "linkedin": "LinkedIn URL if found",
-    "github": "GitHub URL if found"
-  },
-  "summary": "Professional summary or objective if found",
-  "experience": [
-    {
-      "title": "Job Title",
-      "company": "Company Name",
-      "duration": "Start - End dates",
-      "description": "Job description",
-      "achievements": ["achievement 1", "achievement 2"]
-    }
-  ],
-  "education": [
-    {
-      "degree": "Degree Type",
-      "institution": "School Name",
-      "year": "Graduation year",
-      "details": "Additional details if any"
-    }
-  ],
-  "skills": {
-    "technical": ["skill1", "skill2"],
-    "languages": ["language1", "language2"],
-    "certifications": ["cert1", "cert2"]
-  },
-  "projects": [
-    {
-      "name": "Project Name",
-      "description": "Project description",
-      "technologies": ["tech1", "tech2"],
-      "url": "project URL if found"
-    }
-  ]
-}
-
-CV Content:
-${cvContent}
-
-Return ONLY the JSON object, no other text:`;
-
-    const response = await this.makeClaudeRequest(prompt);
-    
-    try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in CV parsing response');
-      }
-      return JSON.parse(jsonMatch[0]);
-    } catch (error) {
-      throw new Error(`Failed to parse CV data: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
-    }
-  }
-
-  private async generateTailoredContent(job: JobListing, cv: CVData): Promise<{
+  private async generateTailoredContent(job: JobListing, cvContent: string, jobId?: string): Promise<{
     markdownContent: string;
     changes: string[];
   }> {
@@ -263,34 +189,45 @@ You are a professional resume writer.
 Given a job posting and a candidate's CV, create a tailored version that optimizes the CV for this specific job while maintaining truthfulness.
 
 Instructions:
-1. Reorder and emphasize relevant experience and skills
-2. Tailor the summary to match the job requirements
-3. Highlight relevant achievements and projects
-4. Use keywords from the job description where appropriate
-5. Maintain all factual information - do not fabricate anything
 
+Reorder and emphasize relevant experience and skills
+Highlight relevant achievements and projects
+Be sure to include metrics to quantify team size, project scope, and business impact
+Use keywords from the job description where appropriate
+Maintain all factual information - do not fabricate anything
+
+General structure should be:
+
+* Heading
+* Contact Information 
+* Summary
+* Roles
+* Skills
+* Education
+
+## Heading
 Lead with "<CANDIDATE NAME> : ROLE" where role is the role from the job description.
+
+## Contact Information
+San Francisco, CA | +1 415-269-4893 | anthony at bluxomelabs.com | linkedin.com/in/anthony-bull
 
 ## Summary
 Include a "SUMMARY" section, beginning with a professional summary in the form of a single paragraph. 
 Tailor the summary to the job description, including as much of the following points as can be organically incoprated: 
-- hands-on end-user-facing platform engineering leader 
-- player/coach approach to build and ship products
-- scales cross-functional teams while staying technical
+- hands-on, end-user-facing engineering leader as player/coach who builds and ships products
+- scales teams collaboratively and cross-functionally while staying technical
 
 The summary must be between 275 and 400 characters in length.
 Don't use "I" statements; lead with past-tense verb in the first person instead.
 Include at least one time-based statement (e.g. 'Increased profits 50% in 5 (five) weeks')
 Include at least one improvement metric (e.g. 'Increased profits by 25-26%')
 
-# Roles
+## Roles
 Include only up to the most recent three roles. 
 Always include dates for roles on the same line as title and company name. 
-For each role, include an overview of the role of between 110 and 180 characters.
-
-# Per job 
-Include 5 bullet points for the most recent job, 3-4 for the next job, and 2-3 for each job after that. 
-Each bullet point should be no more than 90 characters.
+For each role, include an overview of the role of between 110 and 180 characters, being sure to include specific, quantitative metrics where referenced.
+Include 5 bullet points for the most recent role, 3-4 for the next role, and 2-3 for each role after that. 
+Each bullet point should be between 80 and 95 characters.
 If an input contains the name of the company from the job description, be sure to include it.
 Be sure bullets reflect the verbiage used in the job description.
 
@@ -301,13 +238,14 @@ If it is not included, add a "Technologies:" line item under the Skills sections
 
 Stipulate "Complete work history available upon request." in italics before a SKILLS section.
 
-# Skills
+## Skills
 Include a "SKILLS" section with a bulleted overview of relevant skills. 
 Separate skills with bullet points. 
 Bold the skill umbrella. 
 Include at most five relevant skill areas and only include relevant skills.
-Each line of skills should be at maximum 90 characters long.
+Each line of skills should be at maximum 95 characters long.
 
+## Education
 Include an "EDUCATION" section after the SKILLS section. 
   
 # Misc
@@ -321,8 +259,8 @@ Title: ${job.title}
 Company: ${job.company}
 Description: ${job.description}
 
-Current CV Data:
-${JSON.stringify(cv, null, 2)}
+Current CV Content:
+${cvContent}
 
 Return a JSON object with:
 {
@@ -331,6 +269,38 @@ Return a JSON object with:
 }
 
 Respond with ONLY the JSON object:`;
+
+    // Write prompt to log file in job subdirectory
+    if (jobId) {
+      try {
+        const logsDir = path.resolve('logs');
+        const jobDir = path.resolve(logsDir, jobId);
+        
+        // Create logs and job directories if they don't exist
+        if (!fs.existsSync(logsDir)) {
+          fs.mkdirSync(logsDir, { recursive: true });
+        }
+        if (!fs.existsSync(jobDir)) {
+          fs.mkdirSync(jobDir, { recursive: true });
+        }
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const promptLogFile = path.join(jobDir, `prompt-${timestamp}.txt`);
+        
+        const logContent = [
+          '📝 Prompt being sent to Claude for resume tailoring:',
+          '='.repeat(80),
+          prompt,
+          '='.repeat(80),
+          `\nGenerated at: ${new Date().toISOString()}`
+        ].join('\n');
+        
+        fs.writeFileSync(promptLogFile, logContent, 'utf-8');
+        console.log(`📄 Prompt logged to: ${promptLogFile}`);
+      } catch (error) {
+        console.warn(`⚠️  Failed to log prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
 
     const response = await this.makeClaudeRequest(prompt);
     
