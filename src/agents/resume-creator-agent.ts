@@ -14,11 +14,22 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Load job data
       const jobData = this.loadJobData(jobId);
       
-      // Parse CV data
-      const cvData = await this.parseCVFile(cvFilePath);
+      // Check for cached tailored content first
+      const cachedContent = this.loadCachedTailoredContent(jobId, cvFilePath);
       
-      // Generate tailored content using AI
-      const tailoredContent = await this.generateTailoredContent(jobData, cvData);
+      let tailoredContent: { markdownContent: string; changes: string[] };
+      
+      if (cachedContent) {
+        console.log(`📋 Using cached tailored content for job ${jobId}`);
+        tailoredContent = cachedContent;
+      } else {
+        // Parse CV data and generate new tailored content
+        const cvData = await this.parseCVFile(cvFilePath);
+        tailoredContent = await this.generateTailoredContent(jobData, cvData);
+        
+        // Cache the tailored content
+        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+      }
       
       // Create PDF
       const pdfPath = await this.generatePDF(tailoredContent, outputPath, jobId);
@@ -48,6 +59,91 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     const jobPath = path.join(logsDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
+  }
+
+  private loadCachedTailoredContent(jobId: string, cvFilePath: string): { markdownContent: string; changes: string[] } | null {
+    try {
+      const logsDir = path.resolve('logs');
+      const cvHash = this.generateCVHash(cvFilePath);
+      const files = fs.readdirSync(logsDir);
+      
+      // Look for cached tailored content file
+      const cacheFile = files.find(file => 
+        file.startsWith(`tailored-${jobId}-${cvHash}-`) && 
+        file.endsWith('.json')
+      );
+      
+      if (!cacheFile) {
+        return null;
+      }
+      
+      const cachePath = path.join(logsDir, cacheFile);
+      const cacheData = fs.readFileSync(cachePath, 'utf-8');
+      const parsedData = JSON.parse(cacheData);
+      
+      // Validate cache structure
+      if (parsedData.markdownContent && Array.isArray(parsedData.changes)) {
+        return {
+          markdownContent: parsedData.markdownContent,
+          changes: parsedData.changes
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      // If any error occurs in cache loading, return null to generate fresh content
+      return null;
+    }
+  }
+
+  private saveTailoredContent(jobId: string, cvFilePath: string, content: { markdownContent: string; changes: string[] }): void {
+    try {
+      const logsDir = path.resolve('logs');
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
+      
+      const cvHash = this.generateCVHash(cvFilePath);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const cacheFileName = `tailored-${jobId}-${cvHash}-${timestamp}.json`;
+      const cachePath = path.join(logsDir, cacheFileName);
+      
+      const cacheData = {
+        jobId,
+        cvFilePath: path.basename(cvFilePath),
+        timestamp: new Date().toISOString(),
+        markdownContent: content.markdownContent,
+        changes: content.changes
+      };
+      
+      fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2), 'utf-8');
+      console.log(`📋 Tailored content cached to: ${cachePath}`);
+    } catch (error) {
+      // Log error but don't fail the resume generation process
+      console.warn(`⚠️  Failed to cache tailored content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private generateCVHash(cvFilePath: string): string {
+    try {
+      // Generate a simple hash based on CV file content and modification time
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const stats = fs.statSync(cvFilePath);
+      const combinedData = cvContent + stats.mtime.toISOString();
+      
+      // Simple hash function
+      let hash = 0;
+      for (let i = 0; i < combinedData.length; i++) {
+        const char = combinedData.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      
+      return Math.abs(hash).toString(16).substring(0, 8);
+    } catch (error) {
+      // Fallback to timestamp-based hash if file operations fail
+      return Date.now().toString(16).substring(0, 8);
+    }
   }
 
   private async parseCVFile(cvFilePath: string): Promise<CVData> {

@@ -94,6 +94,9 @@ describe('ResumeCreatorAgent', () => {
     (fs.mkdirSync as jest.Mock).mockImplementation(() => {});
     (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
     (fs.unlinkSync as jest.Mock).mockImplementation(() => {});
+    (fs.statSync as jest.Mock).mockReturnValue({
+      mtime: new Date('2024-01-01T12:00:00.000Z')
+    });
     
     // Mock execSync for pandoc
     (execSync as jest.Mock).mockImplementation(() => {});
@@ -224,6 +227,171 @@ describe('ResumeCreatorAgent', () => {
       const secondCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[1][0];
       expect(secondCall.messages[0].content).toContain('Senior Software Engineer');
       expect(secondCall.messages[0].content).toContain('Tech Corp');
+    });
+  });
+
+  describe('caching functionality', () => {
+    it('should use cached content when available', async () => {
+      // Mock cached content
+      const cachedContent = {
+        markdownContent: '# Cached Resume Content',
+        changes: ['Cached change 1', 'Cached change 2']
+      };
+      
+      // Create consistent CV content for hash generation
+      const cvContent = 'John Doe\nEmail: john.doe@example.com\nExperience: Software Engineer at Previous Corp...';
+      const mtime = new Date('2024-01-01T12:00:00.000Z');
+      
+      // Calculate the expected hash for the test
+      const combinedData = cvContent + mtime.toISOString();
+      let hash = 0;
+      for (let i = 0; i < combinedData.length; i++) {
+        const char = combinedData.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      const expectedHash = Math.abs(hash).toString(16).substring(0, 8);
+      
+      // Mock the cache file exists with correct hash
+      (fs.readdirSync as jest.Mock).mockReturnValue([
+        'job-test123-2024-01-01.json',
+        `tailored-test123-${expectedHash}-2024-01-01.json`
+      ]);
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('job-test123')) {
+          return JSON.stringify(mockJob);
+        }
+        if (filePath.includes('tailored-test123')) {
+          return JSON.stringify({
+            jobId: 'test123',
+            cvFilePath: 'cv.txt',
+            timestamp: '2024-01-01T12:00:00.000Z',
+            markdownContent: cachedContent.markdownContent,
+            changes: cachedContent.changes
+          });
+        }
+        if (filePath.includes('cv.txt')) {
+          return cvContent;
+        }
+        return '{}';
+      });
+      
+      // Mock file stats for hash generation
+      (fs.statSync as jest.Mock).mockReturnValue({
+        mtime: mtime
+      });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(cachedContent.changes);
+      
+      // Should not call Claude API when using cache
+      expect(mockAnthropic.messages.create).not.toHaveBeenCalled();
+    });
+
+    it('should generate new content when no cache exists', async () => {
+      // Mock no cache file exists
+      (fs.readdirSync as jest.Mock).mockReturnValue(['job-test123-2024-01-01.json']);
+      
+      // Mock CV parsing and tailoring responses
+      const cvParsingResponse = JSON.stringify(mockCVData);
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Fresh Resume Content',
+        changes: ['Fresh change 1', 'Fresh change 2']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(['Fresh change 1', 'Fresh change 2']);
+      
+      // Should call Claude API twice (CV parsing + tailoring)
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
+      
+      // Should save cache
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringMatching(/tailored-test123-.*\.json$/),
+        expect.stringContaining('Fresh Resume Content'),
+        'utf-8'
+      );
+    });
+
+    it('should regenerate content when CV file is modified', async () => {
+      // Mock cache file exists but with different hash
+      (fs.readdirSync as jest.Mock).mockReturnValue([
+        'job-test123-2024-01-01.json',
+        'tailored-test123-oldHash-2024-01-01.json'  // Different hash
+      ]);
+      
+      // Mock newer CV file modification time
+      (fs.statSync as jest.Mock).mockReturnValue({
+        mtime: new Date('2024-01-02T12:00:00.000Z')  // Newer than cache
+      });
+      
+      // Mock CV parsing and tailoring responses
+      const cvParsingResponse = JSON.stringify(mockCVData);
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Updated Resume Content',
+        changes: ['Updated change 1']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(['Updated change 1']);
+      
+      // Should call Claude API for fresh content
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle cache loading errors gracefully', async () => {
+      // Mock cache file exists but is corrupted
+      (fs.readdirSync as jest.Mock).mockReturnValue([
+        'job-test123-2024-01-01.json',
+        'tailored-test123-abcd1234-2024-01-01.json'
+      ]);
+      
+      (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
+        if (filePath.includes('job-test123')) {
+          return JSON.stringify(mockJob);
+        }
+        if (filePath.includes('tailored-test123')) {
+          return 'invalid json content';  // Corrupted cache
+        }
+        if (filePath.includes('cv.txt')) {
+          return 'John Doe\nEmail: john.doe@example.com\nExperience: Software Engineer at Previous Corp...';
+        }
+        return '{}';
+      });
+      
+      // Mock CV parsing and tailoring responses
+      const cvParsingResponse = JSON.stringify(mockCVData);
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Fallback Resume Content',
+        changes: ['Fallback change 1']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: cvParsingResponse }] })
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt');
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(['Fallback change 1']);
+      
+      // Should fall back to generating fresh content
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
     });
   });
 });

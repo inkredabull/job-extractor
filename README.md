@@ -531,6 +531,29 @@ The ResumeCreatorAgent follows a 4-step process:
 - **Professional formatting**: Pandoc-generated PDF with clean layout
 - **Markdown intermediate**: Allows for easy customization and review
 - **Change tracking**: Reports what modifications were made
+- **Smart caching**: Automatically caches tailored content to avoid redundant LLM calls
+
+#### Smart Caching System
+
+The resume generation system includes intelligent caching to improve performance:
+
+- **Content-based caching**: Uses CV file content and modification time to generate cache keys
+- **Automatic reuse**: Subsequent resume generations for the same job+CV combination use cached content
+- **Cache invalidation**: Automatically detects CV file changes and regenerates content when needed
+- **Performance benefit**: Eliminates redundant Claude API calls for unchanged CV content
+- **Cache storage**: Cached content stored as `logs/tailored-{jobId}-{cvHash}-{timestamp}.json`
+
+**Example workflow:**
+```bash
+# First generation - calls Claude API
+job-extractor resume "4c32e01e" my-cv.txt
+# 🤖 Generating tailored content...
+# 📋 Tailored content cached to: logs/tailored-4c32e01e-a1b2c3d4.json
+
+# Second generation - uses cache
+job-extractor resume "4c32e01e" my-cv.txt  
+# 📋 Using cached tailored content for job 4c32e01e
+```
 
 ### Automatic Logging
 
@@ -599,7 +622,8 @@ logs/                          # Auto-generated job extraction and scoring logs
 ├── job-*.json                 # Timestamped extraction results
 ├── score-*.json               # Timestamped scoring results
 ├── resume-*.pdf               # Generated tailored resumes
-└── critique-*.json            # Resume critique analysis results
+├── critique-*.json            # Resume critique analysis results
+└── tailored-*.json            # Cached tailored resume content
 
 criteria.json                  # Configurable job scoring criteria
 sample-cv.txt                  # Example CV format for resume generation
