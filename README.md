@@ -572,26 +572,29 @@ job-extractor resume "4c32e01e" my-cv.txt
 
 ### Automatic Logging
 
-All extracted job data is automatically saved to:
+All extracted job data and related files are automatically saved to the `logs/` directory with the following structure:
+
+**Root logs directory:**
 ```
-logs/job-{8-char-hash}-{timestamp}.json
+logs/job-{8-char-hash}-{timestamp}.json     # Job extraction results
+logs/score-{job-id}-{timestamp}.json        # Job scoring results  
+logs/resume-{job-id}-{timestamp}.pdf        # Generated PDF resumes
+logs/critique-{job-id}-{timestamp}.json     # Resume critique results
 ```
 
-Example: `logs/job-a1b2c3d4-2024-06-19T15-30-45-123Z.json`
-
-Job scores are saved separately:
+**Job-specific subdirectories:**
 ```
-logs/score-{job-id}-{timestamp}.json  
-```
-
-Example: `logs/score-a1b2c3d4-2024-06-19T15-35-22-456Z.json`
-
-Generated resumes are saved as:
-```
-logs/resume-{job-id}-{timestamp}.pdf
+logs/{job-id}/tailored-{cv-hash}-{timestamp}.json  # Cache metadata
+logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 ```
 
-Example: `logs/resume-a1b2c3d4-2024-06-19T15-40-33-789Z.pdf`
+**Examples:**
+- `logs/job-a1b2c3d4-2024-06-19T15-30-45-123Z.json`
+- `logs/score-a1b2c3d4-2024-06-19T15-35-22-456Z.json`
+- `logs/resume-a1b2c3d4-2024-06-19T15-40-33-789Z.pdf`
+- `logs/critique-a1b2c3d4-2024-06-19T15-45-10-123Z.json`
+- `logs/a1b2c3d4/tailored-xyz123-2024-06-19T15-42-15-456Z.json`
+- `logs/a1b2c3d4/tailored-xyz123-2024-06-19T15-42-15-456Z.md`
 
 ## Development
 
