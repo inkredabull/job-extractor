@@ -258,7 +258,10 @@ describe('ResumeCreatorAgent', () => {
           return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
         }
         if (dirPath.includes('test123')) {
-          return [`tailored-${expectedHash}-2024-01-01.json`]; // Cache file in job dir
+          return [
+            `tailored-${expectedHash}-2024-01-01.json`, // Metadata file
+            `tailored-${expectedHash}-2024-01-01.md`    // Markdown file
+          ]; 
         }
         return [];
       });
@@ -267,14 +270,17 @@ describe('ResumeCreatorAgent', () => {
         if (filePath.includes('job-test123')) {
           return JSON.stringify(mockJob);
         }
-        if (filePath.includes('tailored-')) {
+        if (filePath.includes('tailored-') && filePath.endsWith('.json')) {
           return JSON.stringify({
             jobId: 'test123',
             cvFilePath: 'cv.txt',
             timestamp: '2024-01-01T12:00:00.000Z',
-            markdownContent: cachedContent.markdownContent,
+            markdownFilename: `tailored-${expectedHash}-2024-01-01.md`,
             changes: cachedContent.changes
           });
+        }
+        if (filePath.includes('tailored-') && filePath.endsWith('.md')) {
+          return cachedContent.markdownContent;
         }
         if (filePath.includes('cv.txt')) {
           return cvContent;
@@ -326,10 +332,15 @@ describe('ResumeCreatorAgent', () => {
       // Should call Claude API twice (CV parsing + tailoring)
       expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
       
-      // Should save cache in job subdirectory
+      // Should save both JSON metadata and markdown files
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringMatching(/test123\/tailored-.*\.md$/),
+        '# Fresh Resume Content',
+        'utf-8'
+      );
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expect.stringMatching(/test123\/tailored-.*\.json$/),
-        expect.stringContaining('Fresh Resume Content'),
+        expect.stringContaining('markdownFilename'),
         'utf-8'
       );
     });
@@ -341,7 +352,10 @@ describe('ResumeCreatorAgent', () => {
           return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
         }
         if (dirPath.includes('test123')) {
-          return ['tailored-oldHash-2024-01-01.json']; // Cache file with different hash
+          return [
+            'tailored-oldHash-2024-01-01.json', // Cache file with different hash
+            'tailored-oldHash-2024-01-01.md'
+          ];
         }
         return [];
       });
@@ -378,7 +392,10 @@ describe('ResumeCreatorAgent', () => {
           return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
         }
         if (dirPath.includes('test123')) {
-          return ['tailored-abcd1234-2024-01-01.json']; // Corrupted cache file
+          return [
+            'tailored-abcd1234-2024-01-01.json', // Corrupted cache file
+            'tailored-abcd1234-2024-01-01.md'
+          ];
         }
         return [];
       });

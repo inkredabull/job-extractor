@@ -73,7 +73,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       const cvHash = this.generateCVHash(cvFilePath);
       const files = fs.readdirSync(jobDir);
       
-      // Look for cached tailored content file in job directory
+      // Look for cached tailored content metadata file in job directory
       const cacheFile = files.find(file => 
         file.startsWith(`tailored-${cvHash}-`) && 
         file.endsWith('.json')
@@ -83,14 +83,29 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         return null;
       }
       
+      // Load metadata from JSON file
       const cachePath = path.join(jobDir, cacheFile);
       const cacheData = fs.readFileSync(cachePath, 'utf-8');
       const parsedData = JSON.parse(cacheData);
       
+      // Extract markdown filename from JSON metadata
+      const markdownFilename = parsedData.markdownFilename;
+      if (!markdownFilename) {
+        return null;
+      }
+      
+      // Load markdown content from separate .md file
+      const markdownPath = path.join(jobDir, markdownFilename);
+      if (!fs.existsSync(markdownPath)) {
+        return null;
+      }
+      
+      const markdownContent = fs.readFileSync(markdownPath, 'utf-8');
+      
       // Validate cache structure
-      if (parsedData.markdownContent && Array.isArray(parsedData.changes)) {
+      if (markdownContent && Array.isArray(parsedData.changes)) {
         return {
-          markdownContent: parsedData.markdownContent,
+          markdownContent: markdownContent,
           changes: parsedData.changes
         };
       }
@@ -119,6 +134,13 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       
       const cvHash = this.generateCVHash(cvFilePath);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
+      // Save markdown content to separate .md file
+      const markdownFileName = `tailored-${cvHash}-${timestamp}.md`;
+      const markdownPath = path.join(jobDir, markdownFileName);
+      fs.writeFileSync(markdownPath, content.markdownContent, 'utf-8');
+      
+      // Save metadata to JSON file (without markdown content)
       const cacheFileName = `tailored-${cvHash}-${timestamp}.json`;
       const cachePath = path.join(jobDir, cacheFileName);
       
@@ -126,12 +148,13 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         jobId,
         cvFilePath: path.basename(cvFilePath),
         timestamp: new Date().toISOString(),
-        markdownContent: content.markdownContent,
+        markdownFilename: markdownFileName,
         changes: content.changes
       };
       
       fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2), 'utf-8');
       console.log(`📋 Tailored content cached to: ${cachePath}`);
+      console.log(`📝 Editable markdown saved to: ${markdownPath}`);
     } catch (error) {
       // Log error but don't fail the resume generation process
       console.warn(`⚠️  Failed to cache tailored content: ${error instanceof Error ? error.message : 'Unknown error'}`);

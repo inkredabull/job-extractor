@@ -541,7 +541,9 @@ The resume generation system includes intelligent caching to improve performance
 - **Automatic reuse**: Subsequent resume generations for the same job+CV combination use cached content
 - **Cache invalidation**: Automatically detects CV file changes and regenerates content when needed
 - **Performance benefit**: Eliminates redundant Claude API calls for unchanged CV content
-- **Cache storage**: Cached content stored as `logs/{jobId}/tailored-{cvHash}-{timestamp}.json`
+- **Cache storage**: Cached content stored as separate files:
+  - `logs/{jobId}/tailored-{cvHash}-{timestamp}.json` (metadata)
+  - `logs/{jobId}/tailored-{cvHash}-{timestamp}.md` (editable markdown)
 
 **Example workflow:**
 ```bash
@@ -549,10 +551,23 @@ The resume generation system includes intelligent caching to improve performance
 job-extractor resume "4c32e01e" my-cv.txt
 # 🤖 Generating tailored content...
 # 📋 Tailored content cached to: logs/4c32e01e/tailored-a1b2c3d4.json
+# 📝 Editable markdown saved to: logs/4c32e01e/tailored-a1b2c3d4.md
 
 # Second generation - uses cache
 job-extractor resume "4c32e01e" my-cv.txt  
 # 📋 Using cached tailored content for job 4c32e01e
+```
+
+**Editing Cached Content:**
+You can directly edit the generated markdown files to fine-tune your resume content:
+
+```bash
+# Edit the tailored markdown content
+code logs/4c32e01e/tailored-a1b2c3d4.md
+
+# After editing, regenerate the PDF with your changes
+job-extractor resume "4c32e01e" my-cv.txt
+# 📋 Using cached tailored content for job 4c32e01e (with your edits)
 ```
 
 ### Automatic Logging
@@ -624,7 +639,8 @@ logs/                          # Auto-generated job extraction and scoring logs
 ├── resume-*.pdf               # Generated tailored resumes
 ├── critique-*.json            # Resume critique analysis results
 └── {jobId}/                   # Job-specific subdirectories
-    └── tailored-*.json        # Cached tailored resume content for specific job
+    ├── tailored-*.json        # Cached metadata (changes, timestamps)
+    └── tailored-*.md          # Editable tailored resume markdown
 
 criteria.json                  # Configurable job scoring criteria
 sample-cv.txt                  # Example CV format for resume generation
