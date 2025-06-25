@@ -252,17 +252,22 @@ describe('ResumeCreatorAgent', () => {
       }
       const expectedHash = Math.abs(hash).toString(16).substring(0, 8);
       
-      // Mock the cache file exists with correct hash
-      (fs.readdirSync as jest.Mock).mockReturnValue([
-        'job-test123-2024-01-01.json',
-        `tailored-test123-${expectedHash}-2024-01-01.json`
-      ]);
+      // Mock the cache file exists with correct hash in job subdirectory
+      (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('logs') && !dirPath.includes('test123')) {
+          return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
+        }
+        if (dirPath.includes('test123')) {
+          return [`tailored-${expectedHash}-2024-01-01.json`]; // Cache file in job dir
+        }
+        return [];
+      });
       
       (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
         if (filePath.includes('job-test123')) {
           return JSON.stringify(mockJob);
         }
-        if (filePath.includes('tailored-test123')) {
+        if (filePath.includes('tailored-')) {
           return JSON.stringify({
             jobId: 'test123',
             cvFilePath: 'cv.txt',
@@ -292,7 +297,14 @@ describe('ResumeCreatorAgent', () => {
     });
 
     it('should generate new content when no cache exists', async () => {
-      // Mock no cache file exists
+      // Mock no cache file exists - job directory doesn't exist
+      (fs.existsSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('test123')) {
+          return false; // Job subdirectory doesn't exist
+        }
+        return true; // Other directories exist
+      });
+      
       (fs.readdirSync as jest.Mock).mockReturnValue(['job-test123-2024-01-01.json']);
       
       // Mock CV parsing and tailoring responses
@@ -314,9 +326,9 @@ describe('ResumeCreatorAgent', () => {
       // Should call Claude API twice (CV parsing + tailoring)
       expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
       
-      // Should save cache
+      // Should save cache in job subdirectory
       expect(fs.writeFileSync).toHaveBeenCalledWith(
-        expect.stringMatching(/tailored-test123-.*\.json$/),
+        expect.stringMatching(/test123\/tailored-.*\.json$/),
         expect.stringContaining('Fresh Resume Content'),
         'utf-8'
       );
@@ -324,10 +336,15 @@ describe('ResumeCreatorAgent', () => {
 
     it('should regenerate content when CV file is modified', async () => {
       // Mock cache file exists but with different hash
-      (fs.readdirSync as jest.Mock).mockReturnValue([
-        'job-test123-2024-01-01.json',
-        'tailored-test123-oldHash-2024-01-01.json'  // Different hash
-      ]);
+      (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('logs') && !dirPath.includes('test123')) {
+          return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
+        }
+        if (dirPath.includes('test123')) {
+          return ['tailored-oldHash-2024-01-01.json']; // Cache file with different hash
+        }
+        return [];
+      });
       
       // Mock newer CV file modification time
       (fs.statSync as jest.Mock).mockReturnValue({
@@ -356,16 +373,21 @@ describe('ResumeCreatorAgent', () => {
 
     it('should handle cache loading errors gracefully', async () => {
       // Mock cache file exists but is corrupted
-      (fs.readdirSync as jest.Mock).mockReturnValue([
-        'job-test123-2024-01-01.json',
-        'tailored-test123-abcd1234-2024-01-01.json'
-      ]);
+      (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('logs') && !dirPath.includes('test123')) {
+          return ['job-test123-2024-01-01.json', 'test123']; // Job dir exists
+        }
+        if (dirPath.includes('test123')) {
+          return ['tailored-abcd1234-2024-01-01.json']; // Corrupted cache file
+        }
+        return [];
+      });
       
       (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
         if (filePath.includes('job-test123')) {
           return JSON.stringify(mockJob);
         }
-        if (filePath.includes('tailored-test123')) {
+        if (filePath.includes('tailored-')) {
           return 'invalid json content';  // Corrupted cache
         }
         if (filePath.includes('cv.txt')) {

@@ -63,13 +63,19 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private loadCachedTailoredContent(jobId: string, cvFilePath: string): { markdownContent: string; changes: string[] } | null {
     try {
-      const logsDir = path.resolve('logs');
-      const cvHash = this.generateCVHash(cvFilePath);
-      const files = fs.readdirSync(logsDir);
+      const jobDir = path.resolve('logs', jobId);
       
-      // Look for cached tailored content file
+      // Check if job directory exists
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+      
+      const cvHash = this.generateCVHash(cvFilePath);
+      const files = fs.readdirSync(jobDir);
+      
+      // Look for cached tailored content file in job directory
       const cacheFile = files.find(file => 
-        file.startsWith(`tailored-${jobId}-${cvHash}-`) && 
+        file.startsWith(`tailored-${cvHash}-`) && 
         file.endsWith('.json')
       );
       
@@ -77,7 +83,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         return null;
       }
       
-      const cachePath = path.join(logsDir, cacheFile);
+      const cachePath = path.join(jobDir, cacheFile);
       const cacheData = fs.readFileSync(cachePath, 'utf-8');
       const parsedData = JSON.parse(cacheData);
       
@@ -99,14 +105,22 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private saveTailoredContent(jobId: string, cvFilePath: string, content: { markdownContent: string; changes: string[] }): void {
     try {
       const logsDir = path.resolve('logs');
+      const jobDir = path.resolve(logsDir, jobId);
+      
+      // Create logs directory if it doesn't exist
       if (!fs.existsSync(logsDir)) {
         fs.mkdirSync(logsDir, { recursive: true });
       }
       
+      // Create job-specific subdirectory if it doesn't exist
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+      
       const cvHash = this.generateCVHash(cvFilePath);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const cacheFileName = `tailored-${jobId}-${cvHash}-${timestamp}.json`;
-      const cachePath = path.join(logsDir, cacheFileName);
+      const cacheFileName = `tailored-${cvHash}-${timestamp}.json`;
+      const cachePath = path.join(jobDir, cacheFileName);
       
       const cacheData = {
         jobId,

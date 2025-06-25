@@ -541,14 +541,14 @@ The resume generation system includes intelligent caching to improve performance
 - **Automatic reuse**: Subsequent resume generations for the same job+CV combination use cached content
 - **Cache invalidation**: Automatically detects CV file changes and regenerates content when needed
 - **Performance benefit**: Eliminates redundant Claude API calls for unchanged CV content
-- **Cache storage**: Cached content stored as `logs/tailored-{jobId}-{cvHash}-{timestamp}.json`
+- **Cache storage**: Cached content stored as `logs/{jobId}/tailored-{cvHash}-{timestamp}.json`
 
 **Example workflow:**
 ```bash
 # First generation - calls Claude API
 job-extractor resume "4c32e01e" my-cv.txt
 # 🤖 Generating tailored content...
-# 📋 Tailored content cached to: logs/tailored-4c32e01e-a1b2c3d4.json
+# 📋 Tailored content cached to: logs/4c32e01e/tailored-a1b2c3d4.json
 
 # Second generation - uses cache
 job-extractor resume "4c32e01e" my-cv.txt  
@@ -623,7 +623,8 @@ logs/                          # Auto-generated job extraction and scoring logs
 ├── score-*.json               # Timestamped scoring results
 ├── resume-*.pdf               # Generated tailored resumes
 ├── critique-*.json            # Resume critique analysis results
-└── tailored-*.json            # Cached tailored resume content
+└── {jobId}/                   # Job-specific subdirectories
+    └── tailored-*.json        # Cached tailored resume content for specific job
 
 criteria.json                  # Configurable job scoring criteria
 sample-cv.txt                  # Example CV format for resume generation
