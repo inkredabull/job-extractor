@@ -108,15 +108,22 @@ job-extractor score "4c32e01e" -c my-criteria.json
 Generate a tailored PDF resume for a specific job posting:
 
 ```bash
-# Generate a tailored resume for a job
+# Generate a tailored resume for a job (uses cache if available)
 job-extractor resume "4c32e01e" sample-cv.txt
+
+# Force regenerate fresh content (ignores cache)
+job-extractor resume "4c32e01e" sample-cv.txt --regen
 
 # Specify custom output path
 job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf
+
+# Force regenerate with custom output path
+job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf --regen
 ```
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
+- `--regen`: Force regenerate tailored content (ignores cached content)
 
 #### Auto-Resume Generation
 
@@ -214,11 +221,17 @@ job-extractor score "a1b2c3d4"
 # Manually score with custom criteria
 job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
 
-# Generate a tailored resume for a specific job
+# Generate a tailored resume for a specific job (uses cache if available)
 job-extractor resume "a1b2c3d4" my-cv.txt
+
+# Force regenerate fresh content (ignores cache)
+job-extractor resume "a1b2c3d4" my-cv.txt --regen
 
 # Generate resume with custom output path
 job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf"
+
+# Generate fresh resume with custom output path
+job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf" --regen
 
 # Critique a generated resume for feedback
 job-extractor critique "a1b2c3d4"
@@ -535,28 +548,43 @@ The ResumeCreatorAgent follows a 4-step process:
 
 #### Smart Caching System
 
-The resume generation system includes intelligent caching to improve performance:
+The resume generation system includes intelligent caching to improve performance and cost efficiency:
 
 - **Content-based caching**: Uses CV file content and modification time to generate cache keys
-- **Automatic reuse**: Subsequent resume generations for the same job+CV combination use cached content
+- **Automatic reuse**: Subsequent resume generations for the same job+CV combination use cached content by default
 - **Cache invalidation**: Automatically detects CV file changes and regenerates content when needed
 - **Performance benefit**: Eliminates redundant Claude API calls for unchanged CV content
+- **Manual control**: Use `--regen` flag to force fresh content generation when needed
 - **Cache storage**: Cached content stored as separate files:
   - `logs/{jobId}/tailored-{cvHash}-{timestamp}.json` (metadata)
   - `logs/{jobId}/tailored-{cvHash}-{timestamp}.md` (editable markdown)
 
+**Caching Behavior:**
+- **Without `--regen`**: Uses cached content if available, generates fresh content if no cache exists
+- **With `--regen`**: Always generates fresh content and updates cache, ignoring existing cache
+
 **Example workflow:**
 ```bash
-# First generation - calls Claude API
+# First generation - calls Claude API and creates cache
 job-extractor resume "4c32e01e" my-cv.txt
-# 🤖 Generating tailored content...
+# 🔄 Regenerating tailored content for job 4c32e01e
 # 📋 Tailored content cached to: logs/4c32e01e/tailored-a1b2c3d4.json
 # 📝 Editable markdown saved to: logs/4c32e01e/tailored-a1b2c3d4.md
 
-# Second generation - uses cache
+# Second generation - uses cache (fast, no API call)
 job-extractor resume "4c32e01e" my-cv.txt  
 # 📋 Using cached tailored content for job 4c32e01e
+
+# Force regeneration - calls Claude API and updates cache
+job-extractor resume "4c32e01e" my-cv.txt --regen
+# 🔄 Regenerating tailored content for job 4c32e01e
 ```
+
+**When to use `--regen`:**
+- After updating your CV with new experience or skills
+- When you want to incorporate new recommendations from resume critiques
+- To generate fresh content with updated job requirements understanding
+- When experimenting with different resume variations
 
 **Editing Cached Content:**
 You can directly edit the generated markdown files to fine-tune your resume content:
@@ -565,9 +593,13 @@ You can directly edit the generated markdown files to fine-tune your resume cont
 # Edit the tailored markdown content
 code logs/4c32e01e/tailored-a1b2c3d4.md
 
-# After editing, regenerate the PDF with your changes
+# After editing, regenerate the PDF with your changes (uses edited cache)
 job-extractor resume "4c32e01e" my-cv.txt
 # 📋 Using cached tailored content for job 4c32e01e (with your edits)
+
+# Or force fresh generation if you want to start over
+job-extractor resume "4c32e01e" my-cv.txt --regen
+# 🔄 Regenerating tailored content for job 4c32e01e (overwrites your edits)
 ```
 
 ### Automatic Logging

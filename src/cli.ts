@@ -185,6 +185,7 @@ program
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .argument('<cvFile>', 'Path to your CV/resume text file')
   .option('-o, --output <file>', 'Output path for the generated PDF')
+  .option('--regen', 'Force regeneration of tailored content (skip cache)')
   .action(async (jobId: string, cvFile: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
@@ -195,7 +196,7 @@ program
       const anthropicConfig = getAnthropicConfig();
       const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens);
       
-      const result = await creator.createResume(jobId, cvFile, options.output);
+      const result = await creator.createResume(jobId, cvFile, options.output, !!options.regen);
       
       if (result.success) {
         console.log('✅ Resume Generation Complete');

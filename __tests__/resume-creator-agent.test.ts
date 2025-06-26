@@ -151,7 +151,7 @@ describe('ResumeCreatorAgent', () => {
   });
 
   describe('content generation', () => {
-    it('should always regenerate tailored content', async () => {
+    it('should regenerate tailored content by default', async () => {
       // Mock tailoring response (no CV parsing needed)
       const tailoringResponse = JSON.stringify({
         markdownContent: '# Fresh Resume Content',
@@ -308,6 +308,102 @@ describe('ResumeCreatorAgent', () => {
       // Check that prompt does not include recommendations section
       const firstCall = (mockAnthropic.messages.create as jest.Mock).mock.calls[0][0];
       expect(firstCall.messages[0].content).not.toContain('Previous Recommendations');
+    });
+  });
+
+  describe('caching behavior', () => {
+    it('should use most recent tailored content when regenerate=false', async () => {
+      // Reset all mocks for this test
+      jest.clearAllMocks();
+      
+      // Mock console.log to capture log messages
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Mock the loadMostRecentTailoredContent method directly to return our cached content
+      const mockAgent = agent as any;
+      const originalMethod = mockAgent.loadMostRecentTailoredContent;
+      mockAgent.loadMostRecentTailoredContent = jest.fn().mockReturnValue({
+        markdownContent: '# Most Recent Resume Content',
+        changes: ['Most recent change 1', 'Most recent change 2']
+      });
+
+      const result = await agent.createResume('test123', 'cv.txt', undefined, false);
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(['Most recent change 1', 'Most recent change 2']);
+      expect(consoleSpy).toHaveBeenCalledWith('📋 Using most recent tailored content for job test123');
+      
+      // Should not call Claude API when using cached content
+      expect(mockAnthropic.messages.create).not.toHaveBeenCalled();
+
+      // Verify that the cache method was called
+      expect(mockAgent.loadMostRecentTailoredContent).toHaveBeenCalledWith('test123');
+
+      // Restore original method
+      mockAgent.loadMostRecentTailoredContent = originalMethod;
+      consoleSpy.mockRestore();
+    });
+
+    it('should regenerate when regenerate=false but no cache exists', async () => {
+      // Reset all mocks for this test
+      jest.clearAllMocks();
+      
+      // Mock no cached content found
+      (fs.readdirSync as jest.Mock).mockImplementation((dirPath: string) => {
+        if (dirPath.includes('test123')) {
+          return ['job-2024-01-01.json']; // No cached tailored content
+        }
+        return [];
+      });
+
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Fresh Resume Content',
+        changes: ['Fresh change 1', 'Fresh change 2']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValueOnce({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      const result = await agent.createResume('test123', 'cv.txt', undefined, false);
+
+      expect(result.success).toBe(true);
+      expect(result.tailoringChanges).toEqual(['Fresh change 1', 'Fresh change 2']);
+      
+      // Should call Claude API to generate new content
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('should always regenerate when regenerate=true (default behavior)', async () => {
+      // Reset all mocks for this test
+      jest.clearAllMocks();
+      
+      const tailoringResponse = JSON.stringify({
+        markdownContent: '# Regenerated Resume Content',
+        changes: ['Regenerated change 1', 'Regenerated change 2']
+      });
+
+      (mockAnthropic.messages.create as jest.MockedFunction<any>)
+        .mockResolvedValue({ content: [{ type: 'text', text: tailoringResponse }] });
+
+      // Mock console.log to capture log messages
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Test both explicit true and default behavior
+      const result1 = await agent.createResume('test123', 'cv.txt', undefined, true);
+      const result2 = await agent.createResume('test123', 'cv.txt'); // Default should be true
+
+      expect(result1.success).toBe(true);
+      expect(result2.success).toBe(true);
+      expect(result1.tailoringChanges).toEqual(['Regenerated change 1', 'Regenerated change 2']);
+      expect(result2.tailoringChanges).toEqual(['Regenerated change 1', 'Regenerated change 2']);
+      
+      // Should log regeneration messages
+      expect(consoleSpy).toHaveBeenCalledWith('🔄 Regenerating tailored content for job test123');
+      
+      // Should call Claude API twice (once for each call)
+      expect(mockAnthropic.messages.create).toHaveBeenCalledTimes(2);
+
+      consoleSpy.mockRestore();
     });
   });
 });

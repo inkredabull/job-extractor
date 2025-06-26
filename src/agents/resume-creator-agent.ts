@@ -12,19 +12,38 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     this.maxRoles = maxRoles;
   }
 
-  async createResume(jobId: string, cvFilePath: string, outputPath?: string): Promise<ResumeResult> {
+  async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true): Promise<ResumeResult> {
     try {
       // Load job data
       const jobData = this.loadJobData(jobId);
       
-      // Always regenerate tailored content (no caching)
-      console.log(`🔄 Regenerating tailored content for job ${jobId}`);
-      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-      const scopedCvContent = this.scopeCVContent(cvContent);
-      const tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+      let tailoredContent: { markdownContent: string; changes: string[] };
       
-      // Cache the tailored content
-      this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+      // Check if we should use cached content or regenerate
+      if (!regenerate) {
+        const cachedContent = this.loadMostRecentTailoredContent(jobId);
+        if (cachedContent) {
+          console.log(`📋 Using most recent tailored content for job ${jobId}`);
+          tailoredContent = cachedContent;
+        } else {
+          console.log(`📋 No cached content found for job ${jobId}, regenerating...`);
+          const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+          const scopedCvContent = this.scopeCVContent(cvContent);
+          tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+          
+          // Cache the newly generated content
+          this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+        }
+      } else {
+        // Regenerate tailored content
+        console.log(`🔄 Regenerating tailored content for job ${jobId}`);
+        const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+        const scopedCvContent = this.scopeCVContent(cvContent);
+        tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+        
+        // Cache the tailored content
+        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+      }
       
       // Create PDF
       const pdfPath = await this.generatePDF(tailoredContent, outputPath, jobId);
@@ -58,6 +77,62 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
+  }
+
+  private loadMostRecentTailoredContent(jobId: string): { markdownContent: string; changes: string[] } | null {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      // Check if job directory exists
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+      
+      const files = fs.readdirSync(jobDir);
+      
+      // Find all tailored content JSON files and sort by timestamp (most recent first)
+      const tailoredFiles = files
+        .filter(file => file.startsWith('tailored-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+      
+      if (tailoredFiles.length === 0) {
+        return null;
+      }
+      
+      // Load the most recent tailored content
+      const mostRecentFile = tailoredFiles[0];
+      const cachePath = path.join(jobDir, mostRecentFile);
+      const cacheData = fs.readFileSync(cachePath, 'utf-8');
+      const parsedData = JSON.parse(cacheData);
+      
+      // Extract markdown filename from JSON metadata
+      const markdownFilename = parsedData.markdownFilename;
+      if (!markdownFilename) {
+        return null;
+      }
+      
+      // Load markdown content from separate .md file
+      const markdownPath = path.join(jobDir, markdownFilename);
+      if (!fs.existsSync(markdownPath)) {
+        return null;
+      }
+      
+      const markdownContent = fs.readFileSync(markdownPath, 'utf-8');
+      
+      // Validate cache structure
+      if (markdownContent && Array.isArray(parsedData.changes)) {
+        return {
+          markdownContent: markdownContent,
+          changes: parsedData.changes
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      // If any error occurs in cache loading, return null to generate fresh content
+      return null;
+    }
   }
 
   private loadCachedTailoredContent(jobId: string, cvFilePath: string): { markdownContent: string; changes: string[] } | null {
@@ -218,6 +293,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         // Add any remaining role lines before ending experience section
         if (currentRoleLines.length > 0 && roleCount < this.maxRoles) {
           scopedLines.push(...currentRoleLines);
+          currentRoleLines = [];  // Clear currentRoleLines after adding them
         }
         inExperienceSection = false;
         scopedLines.push(line);
