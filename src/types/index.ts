@@ -159,3 +159,19 @@ export interface ResumeCritique {
   timestamp: string;
   error?: string;
 }
+
+export type StatementType = 'cover-letter' | 'endorsement' | 'about-me' | 'general';
+
+export interface StatementOptions {
+  emphasis?: string;
+  companyInfo?: string;
+  customInstructions?: string;
+}
+
+export interface StatementResult {
+  success: boolean;
+  content?: string;
+  error?: string;
+  type: StatementType;
+  characterCount?: number;
+}

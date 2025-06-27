@@ -1,0 +1,371 @@
+import { ClaudeBaseAgent } from './claude-base-agent';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult } from '../types';
+import * as fs from 'fs';
+import * as path from 'path';
+
+export class StatementAgent extends ClaudeBaseAgent {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
+    super(claudeApiKey, model, maxTokens);
+  }
+
+  async extract(): Promise<never> {
+    throw new Error('StatementAgent does not implement extract method. Use generateStatement instead.');
+  }
+
+  async createResume(): Promise<never> {
+    throw new Error('StatementAgent does not implement createResume method. Use generateStatement instead.');
+  }
+
+  async generateStatement(
+    type: StatementType,
+    jobId: string,
+    cvFilePath: string,
+    options: StatementOptions = {},
+    regenerate: boolean = false,
+    contentOnly: boolean = false
+  ): Promise<StatementResult> {
+    try {
+      let content: string;
+      
+      // If content-only mode and not regenerating, just find the most recent statement file
+      if (contentOnly && !regenerate) {
+        const mostRecentContent = this.loadMostRecentStatement(jobId, type);
+        if (mostRecentContent) {
+          return {
+            success: true,
+            content: mostRecentContent,
+            type,
+            characterCount: mostRecentContent.length
+          };
+        } else {
+          // No existing statement found, fall through to generate new one
+          console.log(`📋 No existing ${type.replace('-', ' ')} statement found for job ${jobId}, generating...`);
+        }
+      }
+      
+      // Load job data and CV content
+      const jobData = this.loadJobData(jobId);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      
+      // Check if we should use cached content or regenerate
+      if (!regenerate && !contentOnly) {
+        const cachedContent = this.loadCachedStatement(jobId, type, cvFilePath, options);
+        if (cachedContent) {
+          console.log(`📋 Using cached ${type.replace('-', ' ')} statement for job ${jobId}`);
+          content = cachedContent;
+        } else {
+          console.log(`📋 No cached ${type.replace('-', ' ')} statement found for job ${jobId}, generating...`);
+          content = await this.createStatement(type, jobData, cvContent, options);
+          // Cache the newly generated content
+          this.cacheStatement(jobId, type, content, cvFilePath, options);
+        }
+      } else {
+        // Regenerate content or content-only mode with no existing file
+        if (regenerate) {
+          console.log(`🔄 Regenerating ${type.replace('-', ' ')} statement for job ${jobId}`);
+        }
+        content = await this.createStatement(type, jobData, cvContent, options);
+        // Cache the regenerated content
+        this.cacheStatement(jobId, type, content, cvFilePath, options);
+      }
+      
+      return {
+        success: true,
+        content,
+        type,
+        characterCount: content.length
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        type
+      };
+    }
+  }
+
+  private loadJobData(jobId: string): JobListing {
+    const jobDir = path.resolve('logs', jobId);
+    
+    if (!fs.existsSync(jobDir)) {
+      throw new Error(`Job directory not found for ID: ${jobId}`);
+    }
+    
+    const files = fs.readdirSync(jobDir);
+    const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
+    if (!jobFile) {
+      throw new Error(`Job file not found for ID: ${jobId}`);
+    }
+
+    const jobPath = path.join(jobDir, jobFile);
+    const jobData = fs.readFileSync(jobPath, 'utf-8');
+    return JSON.parse(jobData);
+  }
+
+  private loadPromptTemplate(type: StatementType): string {
+    try {
+      const promptPath = path.resolve('prompts', `statement-${type}.md`);
+      return fs.readFileSync(promptPath, 'utf-8');
+    } catch (error) {
+      console.warn(`⚠️  Failed to load prompt template for ${type}, using fallback`);
+      return this.getFallbackPrompt(type);
+    }
+  }
+
+  private getFallbackPrompt(type: StatementType): string {
+    const basePrompt = `You are a professional writer helping create a ${type.replace('-', ' ')} based on a job posting and work history.`;
+    
+    switch (type) {
+      case 'cover-letter':
+        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters. Begin with "Greetings:" and end with "Regards, Anthony". Use informal tone.`;
+      case 'endorsement':
+        return `${basePrompt}\n\nCreate an endorsement between 375-500 characters in third person. Use first name only when referencing the candidate.`;
+      case 'about-me':
+        return `${basePrompt}\n\nCreate talking points as a two-level nested bullet list for "Tell me about yourself" response. Maximum 900 characters.`;
+      case 'general':
+        return `${basePrompt}\n\nCreate a general statement between 250-425 characters in third person. Reference examples from entire work history.`;
+      default:
+        return basePrompt;
+    }
+  }
+
+  private async createStatement(
+    type: StatementType,
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions
+  ): Promise<string> {
+    const promptTemplate = this.loadPromptTemplate(type);
+    
+    // Build the complete prompt
+    const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options);
+    
+    // Log the prompt
+    console.log(`📝 Generating ${type.replace('-', ' ')} statement...`);
+    
+    const response = await this.makeClaudeRequest(prompt);
+    
+    // Clean up the response
+    return this.cleanResponse(response, type);
+  }
+
+  private buildPrompt(
+    template: string,
+    type: StatementType,
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions
+  ): string {
+    // Replace template variables
+    let prompt = template
+      .replace(/{{job\.title}}/g, job.title)
+      .replace(/{{job\.company}}/g, job.company)
+      .replace(/{{job\.description}}/g, job.description)
+      .replace(/{{cvContent}}/g, cvContent)
+      .replace(/{{emphasis}}/g, options.emphasis || '')
+      .replace(/{{companyInfo}}/g, options.companyInfo || '')
+      .replace(/{{customInstructions}}/g, options.customInstructions || '');
+
+    // Add specific instructions based on type
+    const typeInstructions = this.getTypeSpecificInstructions(type, options);
+    if (typeInstructions) {
+      prompt += `\n\nAdditional Instructions:\n${typeInstructions}`;
+    }
+
+    prompt += `\n\nJob Posting:\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\n\nWork History:\n${cvContent}`;
+
+    return prompt;
+  }
+
+  private getTypeSpecificInstructions(type: StatementType, options: StatementOptions): string {
+    switch (type) {
+      case 'cover-letter':
+        let instructions = 'Length: 600-850 characters. Begin with "Greetings:" and end with "Regards, Anthony". Informal tone.';
+        if (options.emphasis) {
+          instructions += `\n\nEMPHASIS: ${options.emphasis}`;
+        }
+        return instructions;
+        
+      case 'endorsement':
+        return 'Length: 375-500 characters. Third person. Use first name only. Tell stories about strengths and value.';
+        
+      case 'about-me':
+        let aboutInstructions = 'Two-level nested bullet list. Informal tone. Max 900 characters. Include desire for small team (5-7 people) and ability to have impact.';
+        if (options.companyInfo) {
+          aboutInstructions += `\n\nInclude: "I'm excited about ${options.companyInfo} because..."`;
+        }
+        return aboutInstructions;
+        
+      case 'general':
+        return 'Length: 250-425 characters. Third person. Use first name only. Reference examples from entire work history, including end user work and data center/on-premise deployment experience.';
+        
+      default:
+        return '';
+    }
+  }
+
+  private generateCacheKey(type: StatementType, cvFilePath: string, options: StatementOptions): string {
+    // Generate a simple hash based on statement type, CV file content, and options
+    const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+    const stats = fs.statSync(cvFilePath);
+    const optionsStr = JSON.stringify(options);
+    const combinedData = type + cvContent + stats.mtime.toISOString() + optionsStr;
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < combinedData.length; i++) {
+      const char = combinedData.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    return Math.abs(hash).toString(16).substring(0, 8);
+  }
+
+  private loadMostRecentStatement(jobId: string, type: StatementType): string | null {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+      
+      const files = fs.readdirSync(jobDir);
+      
+      // Find all statement files for this type and get the most recent one
+      const statementFiles = files
+        .filter(file => 
+          file.startsWith(`statement-${type}-`) && 
+          file.endsWith('.json')
+        )
+        .sort()
+        .reverse(); // Most recent first
+      
+      const mostRecentFile = statementFiles[0];
+      
+      if (!mostRecentFile) {
+        return null;
+      }
+      
+      const filePath = path.join(jobDir, mostRecentFile);
+      const fileData = fs.readFileSync(filePath, 'utf-8');
+      const parsedData = JSON.parse(fileData);
+      
+      // Return content if it exists and type matches
+      if (parsedData.content && parsedData.type === type) {
+        return parsedData.content;
+      }
+      
+      return null;
+    } catch (error) {
+      // If any error occurs, return null
+      return null;
+    }
+  }
+
+  private loadCachedStatement(
+    jobId: string,
+    type: StatementType,
+    cvFilePath: string,
+    options: StatementOptions
+  ): string | null {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+      
+      const cacheKey = this.generateCacheKey(type, cvFilePath, options);
+      const files = fs.readdirSync(jobDir);
+      
+      // Look for cached statement files and get the most recent one
+      const cacheFiles = files
+        .filter(file => 
+          file.startsWith(`statement-${type}-${cacheKey}-`) && 
+          file.endsWith('.json')
+        )
+        .sort()
+        .reverse(); // Most recent first
+      
+      const cacheFile = cacheFiles[0];
+      
+      if (!cacheFile) {
+        return null;
+      }
+      
+      const cachePath = path.join(jobDir, cacheFile);
+      const cacheData = fs.readFileSync(cachePath, 'utf-8');
+      const parsedData = JSON.parse(cacheData);
+      
+      // Validate cache structure - ensure it has the cache key and correct type
+      if (parsedData.content && 
+          parsedData.type === type && 
+          parsedData.cacheKey === cacheKey) {
+        return parsedData.content;
+      }
+      
+      return null;
+    } catch (error) {
+      // If any error occurs in cache loading, return null to generate fresh content
+      return null;
+    }
+  }
+
+  private cacheStatement(
+    jobId: string,
+    type: StatementType,
+    content: string,
+    cvFilePath: string,
+    options: StatementOptions
+  ): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      const cacheKey = this.generateCacheKey(type, cvFilePath, options);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
+      const cacheData = {
+        timestamp: new Date().toISOString(),
+        jobId,
+        type,
+        content,
+        characterCount: content.length,
+        options,
+        cvFilePath: path.basename(cvFilePath),
+        cacheKey
+      };
+
+      const cachePath = path.join(jobDir, `statement-${type}-${cacheKey}-${timestamp}.json`);
+      fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+      console.log(`📝 Statement cached to: ${cachePath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to cache statement: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private cleanResponse(response: string, type: StatementType): string {
+    // Remove any markdown formatting or extra text
+    let cleaned = response
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
+      .trim();
+
+    // For about-me type, preserve bullet formatting
+    if (type === 'about-me') {
+      return cleaned;
+    }
+
+    // For other types, ensure single paragraph format if needed
+    if (type === 'general') {
+      cleaned = cleaned.replace(/\n\n+/g, ' ').replace(/\n/g, ' ');
+    }
+
+    return cleaned;
+  }
+
+}

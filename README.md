@@ -13,6 +13,7 @@ A TypeScript CLI tool that extracts and automatically scores job information fro
 - 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
 - 🤖 **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
 - 🔍 **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
+- 📝 **Statement Generation**: Create personalized cover letters, endorsements, interview talking points, and general statements
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -193,6 +194,116 @@ job-extractor critique "4c32e01e"
 📝 Detailed Analysis:
 This resume demonstrates solid technical competency and relevant experience...
 ```
+
+#### Statement Generation
+
+Generate various types of personalized statements for job applications:
+
+```bash
+# Generate a cover letter
+job-extractor statement cover-letter "4c32e01e" cv.txt
+
+# Generate a cover letter with special emphasis
+job-extractor statement cover-letter "4c32e01e" cv.txt --emphasis "Focus on AI/ML and technical architecture experience"
+
+# Generate an endorsement (third-person recommendation)
+job-extractor statement endorsement "4c32e01e" cv.txt
+
+# Generate "about me" talking points for interviews
+job-extractor statement about-me "4c32e01e" cv.txt --company-info "the innovative AI platform and strong engineering culture"
+
+# Generate a general statement
+job-extractor statement general "4c32e01e" cv.txt
+
+# Get just the content without formatting (useful for copying)
+job-extractor statement cover-letter "4c32e01e" cv.txt --content
+
+# Force regenerate statement (ignoring cache)
+job-extractor statement endorsement "4c32e01e" cv.txt --regen
+
+# Combine flags
+job-extractor statement about-me "4c32e01e" cv.txt --regen --content
+```
+
+**Statement Types:**
+
+1. **Cover Letter** (600-850 characters)
+   - Informal tone with "Greetings:" and "Regards, Anthony" format
+   - Can include special emphasis or instructions
+   - Tailored to specific job requirements
+
+2. **Endorsement** (375-500 characters) 
+   - Third-person professional recommendation
+   - Uses first name only when referencing candidate
+   - Tells stories about strengths and value delivered
+
+3. **About Me** (max 900 characters)
+   - Two-level nested bullet list for interview responses
+   - Includes priority themes from job description
+   - Incorporates desire for small team environment and impact
+   - Can include company-specific excitement
+
+4. **General** (250-425 characters)
+   - Third-person career summary
+   - References entire work history, not just recent roles
+   - Emphasizes end-user and infrastructure experience
+
+**Statement Options:**
+- `-e, --emphasis <text>`: Special instructions (useful for cover letters)
+- `-c, --company-info <text>`: Company information for excitement factor (useful for about-me)
+- `-i, --instructions <text>`: Custom instructions for any statement type
+- `--content`: Output only the statement content without formatting (useful for piping or copying)
+- `--regen`: Force regenerate statement (ignores cached content)
+
+**Example output:**
+```bash
+✅ Statement Generation Complete
+==================================================
+📝 Type: COVER LETTER
+📊 Character Count: 647
+
+📄 Generated Statement:
+Greetings:
+
+I'm excited to apply my experience leading AI-powered innovation to your mission...
+
+Regards, Anthony
+```
+
+#### Statement Caching
+
+The statement generation feature includes intelligent caching to improve performance and reduce API costs:
+
+**How it works:**
+- Generated statements are automatically cached in the `logs/` directory
+- Cache keys are based on statement type, CV content, CV file modification time, and options
+- Subsequent requests use cached content instead of calling the LLM again
+- Each statement type (cover-letter, endorsement, etc.) has its own cache
+
+**Cache behavior:**
+```bash
+# First call - generates new content and caches it
+job-extractor statement cover-letter "4c32e01e" cv.txt
+# Output: 📋 No cached cover letter statement found, generating...
+
+# Second call - uses cached content (much faster)
+job-extractor statement cover-letter "4c32e01e" cv.txt --content
+# Output: 📋 Using cached cover letter statement for job 4c32e01e
+
+# Force regeneration when needed
+job-extractor statement cover-letter "4c32e01e" cv.txt --regen
+# Output: 🔄 Regenerating cover letter statement for job 4c32e01e
+```
+
+**When cache is invalidated:**
+- CV file content changes (automatic detection via file modification time)
+- Different statement options are used (emphasis, company-info, etc.)
+- `--regen` flag is explicitly used
+
+**Benefits:**
+- ⚡ **Fast content retrieval**: `--content` calls return instantly from cache
+- 💰 **Cost efficient**: Avoid unnecessary LLM API calls for identical requests
+- 🔄 **Smart invalidation**: Automatically detects when CV or options change
 
 ### Examples
 

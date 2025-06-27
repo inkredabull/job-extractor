@@ -5,6 +5,8 @@ import { JobExtractorAgent } from './agents/job-extractor-agent';
 import { JobScorerAgent } from './agents/job-scorer-agent';
 import { ResumeCreatorAgent } from './agents/resume-creator-agent';
 import { ResumeCriticAgent } from './agents/resume-critic-agent';
+import { StatementAgent } from './agents/statement-agent';
+import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -277,6 +279,80 @@ program
         }
       } else {
         console.error('❌ Resume critique failed:', result.error);
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('statement')
+  .description('Generate various types of statements (cover letter, endorsement, about me, general)')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, or general')
+  .argument('<jobId>', 'Job ID to generate statement for')
+  .argument('<cvFile>', 'Path to CV file')
+  .option('-e, --emphasis <text>', 'Special emphasis or instructions for the statement')
+  .option('-c, --company-info <text>', 'Additional company information (for about-me statements)')
+  .option('-i, --instructions <text>', 'Custom instructions for the statement')
+  .option('--content', 'Output only the statement content without formatting')
+  .option('--regen', 'Force regenerate statement (ignores cached content)')
+  .action(async (type: string, jobId: string, cvFile: string, options) => {
+    try {
+      // Validate statement type
+      const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
+      if (!validTypes.includes(type as StatementType)) {
+        console.error(`❌ Invalid statement type: ${type}`);
+        console.error(`Valid types: ${validTypes.join(', ')}`);
+        process.exit(1);
+      }
+
+      if (!options.content) {
+        console.log('📝 Generating statement...');
+        console.log(`📊 Type: ${type}`);
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log(`📋 CV File: ${cvFile}`);
+      }
+
+      const config = getAnthropicConfig();
+      const statementAgent = new StatementAgent(
+        config.anthropicApiKey,
+        config.model,
+        config.maxTokens
+      );
+      
+      const statementOptions = {
+        emphasis: options.emphasis,
+        companyInfo: options.companyInfo,
+        customInstructions: options.instructions
+      };
+
+      const result = await statementAgent.generateStatement(
+        type as StatementType,
+        jobId,
+        cvFile,
+        statementOptions,
+        !!options.regen, // Force regeneration if --regen flag is provided, otherwise use cache
+        !!options.content // Content-only mode - find most recent statement file
+      );
+
+      if (result.success) {
+        if (options.content) {
+          // Just output the content without any formatting
+          console.log(result.content);
+        } else {
+          console.log('✅ Statement Generation Complete');
+          console.log('=' .repeat(50));
+          console.log(`📝 Type: ${result.type.replace('-', ' ').toUpperCase()}`);
+          console.log(`📊 Character Count: ${result.characterCount}`);
+          console.log('');
+          console.log('📄 Generated Statement:');
+          console.log(result.content);
+        }
+      } else {
+        console.error(`❌ Statement generation failed: ${result.error}`);
         process.exit(1);
       }
       
