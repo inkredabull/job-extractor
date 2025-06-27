@@ -68,11 +68,24 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
 
     const files = fs.readdirSync(jobDir);
     const resumeFiles = files
-      .filter(file => file.startsWith('resume-') && file.endsWith('.pdf'))
-      .sort()
-      .reverse(); // Most recent first
+      .filter(file => {
+        return file.endsWith('.pdf') && (
+          file.startsWith('resume-') || // Old timestamp-based format
+          (!file.startsWith('job-') && !file.startsWith('score-') && !file.startsWith('critique-') && !file.startsWith('tailored-') && !file.startsWith('prompt-')) // New meaningful format (exclude other log files)
+        );
+      })
+      .map(file => {
+        const fullPath = path.join(jobDir, file);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: file,
+          path: fullPath,
+          mtime: stats.mtime
+        };
+      })
+      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime()); // Sort by modification time, most recent first
 
-    return resumeFiles.length > 0 ? path.join(jobDir, resumeFiles[0]) : null;
+    return resumeFiles.length > 0 ? resumeFiles[0].path : null;
   }
 
   private loadJobData(jobId: string): JobListing {

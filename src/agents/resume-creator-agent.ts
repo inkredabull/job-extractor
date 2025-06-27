@@ -46,7 +46,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       }
       
       // Create PDF
-      const pdfPath = await this.generatePDF(tailoredContent, outputPath, jobId);
+      const pdfPath = await this.generatePDF(tailoredContent, jobData, outputPath, jobId);
       
       return {
         success: true,
@@ -411,6 +411,16 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     return [...new Set(recommendations)];
   }
 
+  private escapeForPrompt(text: string): string {
+    // Remove or replace problematic control characters
+    return text
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ') // Replace control characters with spaces
+      .replace(/\r\n/g, '\n') // Normalize line endings
+      .replace(/\r/g, '\n') // Convert remaining carriage returns
+      .replace(/\t/g, '    ') // Convert tabs to spaces
+      .trim();
+  }
+
   private loadPromptTemplate(variables: {
     job: JobListing;
     cvContent: string;
@@ -426,19 +436,22 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         .replace(/^# .+$/gm, '') // Remove markdown headers
         .replace(/^## (.+)$/gm, '$1') // Convert ## headers to plain text
         .replace(/^### (.+)$/gm, '$1') // Convert ### headers to plain text
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
         .replace(/```json[\s\S]*?```/g, (match) => {
           // Extract JSON from code block
           return match.replace(/```json\n?/, '').replace(/\n?```/, '');
         })
+        .replace(/- \[ \]/g, '-') // Remove checkbox formatting
         .trim();
       
-      // Replace template variables
+      // Replace template variables with escaped content
       const prompt = promptTemplate
         .replace(/{{maxRoles}}/g, variables.maxRoles.toString())
-        .replace(/{{job\.title}}/g, variables.job.title)
-        .replace(/{{job\.company}}/g, variables.job.company)
-        .replace(/{{job\.description}}/g, variables.job.description)
-        .replace(/{{cvContent}}/g, variables.cvContent)
+        .replace(/{{job\.title}}/g, this.escapeForPrompt(variables.job.title))
+        .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
+        .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
+        .replace(/{{cvContent}}/g, this.escapeForPrompt(variables.cvContent))
         .replace(/{{recommendationsSection}}/g, variables.recommendationsSection);
       
       return prompt;
@@ -518,11 +531,47 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
     }
   }
 
-  private async generatePDF(content: { markdownContent: string; changes: string[] }, outputPath?: string, jobId?: string): Promise<string> {
-    // Generate timestamp and filename
+  private extractCandidateName(markdownContent: string): string {
+    // Look for the heading pattern: "# NAME : ROLE" or just "# NAME"
+    const headingMatch = markdownContent.match(/^#\s*([^:]+?)(?:\s*:\s*.+)?$/m);
+    if (headingMatch) {
+      return headingMatch[1].trim();
+    }
+    
+    // Fallback: look for name in contact info or other patterns
+    const namePatterns = [
+      /^([A-Z][a-z]+\s+[A-Z][a-z]+)/m, // First Last pattern
+      /San Francisco, CA.*?([A-Z][a-z]+\s+[A-Z][a-z]+)/m, // Name before contact
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = markdownContent.match(pattern);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+    
+    return 'Resume'; // Fallback
+  }
+
+  private sanitizeFilename(filename: string): string {
+    // Remove or replace characters that aren't safe for filenames
+    return filename
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+      .replace(/\s+/g, ' ') // Normalize spaces
+      .trim();
+  }
+
+  private async generatePDF(content: { markdownContent: string; changes: string[] }, job: JobListing, outputPath?: string, jobId?: string): Promise<string> {
+    // Extract candidate name and create meaningful filename
+    const candidateName = this.extractCandidateName(content.markdownContent);
+    const role = job.title;
+    const company = job.company;
+    
+    const meaningfulName = this.sanitizeFilename(`${candidateName} for ${role} at ${company}`);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const markdownFileName = `resume-${jobId || 'custom'}-${timestamp}.md`;
-    const pdfFileName = `resume-${jobId || 'custom'}-${timestamp}.pdf`;
+    const markdownFileName = `${meaningfulName}-${timestamp}.md`;
+    const pdfFileName = `${meaningfulName}.pdf`;
     
     // Create outputs directory if it doesn't exist
     const outputsDir = path.join(process.cwd(), 'outputs');
@@ -543,7 +592,7 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
-      finalPath = path.join(jobDir, `resume-${timestamp}.pdf`);
+      finalPath = path.join(jobDir, pdfFileName);
     } else {
       finalPath = path.join('logs', pdfFileName);
     }
