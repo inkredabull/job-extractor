@@ -36,6 +36,14 @@ export class JobScorerAgent extends BaseAgent {
           location: Math.round(score.breakdown.location * 100),
           company_match: Math.round(score.breakdown.company_match * 100),
         },
+        explanations: {
+          required_skills: score.explanations.required_skills,
+          preferred_skills: score.explanations.preferred_skills,
+          experience_level: score.explanations.experience_level,
+          salary: score.explanations.salary,
+          location: score.explanations.location,
+          company_match: score.explanations.company_match,
+        },
         timestamp: new Date().toISOString(),
       };
 
@@ -90,14 +98,38 @@ export class JobScorerAgent extends BaseAgent {
       location: number;
       company_match: number;
     };
+    explanations: {
+      required_skills: string;
+      preferred_skills: string;
+      experience_level: string;
+      salary: string;
+      location: string;
+      company_match: string;
+    };
   }> {
+    const requiredSkillsResult = this.scoreRequiredSkills(job);
+    const preferredSkillsResult = this.scorePreferredSkills(job);
+    const experienceLevelResult = this.scoreExperienceLevel(job);
+    const salaryResult = this.scoreSalary(job);
+    const locationResult = this.scoreLocation(job);
+    const companyMatchResult = this.scoreCompanyMatch(job);
+
     const breakdown = {
-      required_skills: this.scoreRequiredSkills(job),
-      preferred_skills: this.scorePreferredSkills(job),
-      experience_level: this.scoreExperienceLevel(job),
-      salary: this.scoreSalary(job),
-      location: this.scoreLocation(job),
-      company_match: this.scoreCompanyMatch(job),
+      required_skills: requiredSkillsResult.score,
+      preferred_skills: preferredSkillsResult.score,
+      experience_level: experienceLevelResult.score,
+      salary: salaryResult.score,
+      location: locationResult.score,
+      company_match: companyMatchResult.score,
+    };
+
+    const explanations = {
+      required_skills: requiredSkillsResult.explanation,
+      preferred_skills: preferredSkillsResult.explanation,
+      experience_level: experienceLevelResult.explanation,
+      salary: salaryResult.explanation,
+      location: locationResult.explanation,
+      company_match: companyMatchResult.explanation,
     };
 
     const overall =
@@ -108,28 +140,45 @@ export class JobScorerAgent extends BaseAgent {
       breakdown.location * this.criteria.weights.location +
       breakdown.company_match * this.criteria.weights.company_match;
 
-    return { overall, breakdown };
+    return { overall, breakdown, explanations };
   }
 
-  private scoreRequiredSkills(job: JobListing): number {
+  private scoreRequiredSkills(job: JobListing): { score: number; explanation: string } {
     const jobText = `${job.title} ${job.description}`.toLowerCase();
     const foundSkills = this.criteria.required_skills.filter(skill =>
       jobText.includes(skill.toLowerCase())
     );
-    return foundSkills.length / this.criteria.required_skills.length;
+    const score = foundSkills.length / this.criteria.required_skills.length;
+    
+    const explanation = foundSkills.length === this.criteria.required_skills.length
+      ? `All ${this.criteria.required_skills.length} required skills found`
+      : foundSkills.length === 0
+      ? `None of the ${this.criteria.required_skills.length} required skills found`
+      : `${foundSkills.length}/${this.criteria.required_skills.length} required skills found: ${foundSkills.join(', ')}`;
+    
+    return { score, explanation };
   }
 
-  private scorePreferredSkills(job: JobListing): number {
+  private scorePreferredSkills(job: JobListing): { score: number; explanation: string } {
     const jobText = `${job.title} ${job.description}`.toLowerCase();
     const foundSkills = this.criteria.preferred_skills.filter(skill =>
       jobText.includes(skill.toLowerCase())
     );
-    return foundSkills.length / this.criteria.preferred_skills.length;
+    const score = foundSkills.length / this.criteria.preferred_skills.length;
+    
+    const explanation = foundSkills.length === this.criteria.preferred_skills.length
+      ? `All ${this.criteria.preferred_skills.length} preferred skills found`
+      : foundSkills.length === 0
+      ? `None of the ${this.criteria.preferred_skills.length} preferred skills found`
+      : `${foundSkills.length}/${this.criteria.preferred_skills.length} preferred skills found: ${foundSkills.join(', ')}`;
+    
+    return { score, explanation };
   }
 
-  private scoreExperienceLevel(job: JobListing): number {
+  private scoreExperienceLevel(job: JobListing): { score: number; explanation: string } {
     const jobText = `${job.title} ${job.description}`.toLowerCase();
     let bestMatch = 0;
+    let bestExplanation = 'No experience level keywords found';
     
     for (const [level, years] of Object.entries(this.criteria.experience_levels)) {
       if (jobText.includes(level.toLowerCase())) {
@@ -139,45 +188,64 @@ export class JobScorerAgent extends BaseAgent {
         if (yearMatches) {
           const requiredYears = Math.max(...yearMatches.map(match => parseInt(match)));
           const score = Math.min(years / requiredYears, 1);
-          bestMatch = Math.max(bestMatch, score);
+          if (score > bestMatch) {
+            bestMatch = score;
+            bestExplanation = `Found '${level}' level, requiring ${requiredYears} years (you have ${years})`;
+          }
         } else {
-          bestMatch = Math.max(bestMatch, 0.7);
+          if (0.7 > bestMatch) {
+            bestMatch = 0.7;
+            bestExplanation = `Found '${level}' level but no specific years mentioned`;
+          }
         }
       }
     }
     
-    return bestMatch;
+    return { score: bestMatch, explanation: bestExplanation };
   }
 
-  private scoreSalary(job: JobListing): number {
-    if (!job.salary) return 0.5;
+  private scoreSalary(job: JobListing): { score: number; explanation: string } {
+    if (!job.salary) return { score: 0.5, explanation: 'No salary information provided' };
     
     const jobMin = parseInt(job.salary.min?.replace(/[$,]/g, '') || '0');
     const jobMax = parseInt(job.salary.max?.replace(/[$,]/g, '') || '0');
     const criteriaMin = this.criteria.salary_range.min;
     const criteriaMax = this.criteria.salary_range.max;
     
-    if (jobMin === 0 && jobMax === 0) return 0.5;
+    if (jobMin === 0 && jobMax === 0) return { score: 0.5, explanation: 'Salary range not specified' };
     
     const jobAvg = jobMax > 0 ? (jobMin + jobMax) / 2 : jobMin;
-    const criteriaAvg = (criteriaMin + criteriaMax) / 2;
+    const salaryRange = jobMax > 0 ? `$${jobMin.toLocaleString()}-$${jobMax.toLocaleString()}` : `$${jobMin.toLocaleString()}`;
+    const criteriaRange = `$${criteriaMin.toLocaleString()}-$${criteriaMax.toLocaleString()}`;
     
-    if (jobAvg >= criteriaMin && jobAvg <= criteriaMax) return 1;
-    if (jobAvg < criteriaMin) return Math.max(0, jobAvg / criteriaMin);
-    return Math.max(0, 1 - (jobAvg - criteriaMax) / criteriaMax);
+    if (jobAvg >= criteriaMin && jobAvg <= criteriaMax) {
+      return { score: 1, explanation: `Salary ${salaryRange} fits within target range ${criteriaRange}` };
+    }
+    if (jobAvg < criteriaMin) {
+      const score = Math.max(0, jobAvg / criteriaMin);
+      return { score, explanation: `Salary ${salaryRange} below target range ${criteriaRange}` };
+    }
+    const score = Math.max(0, 1 - (jobAvg - criteriaMax) / criteriaMax);
+    return { score, explanation: `Salary ${salaryRange} above target range ${criteriaRange}` };
   }
 
-  private scoreLocation(job: JobListing): number {
+  private scoreLocation(job: JobListing): { score: number; explanation: string } {
     const jobLocation = job.location.toLowerCase();
     const matchingLocations = this.criteria.locations.filter(location =>
       jobLocation.includes(location.toLowerCase()) || location.toLowerCase() === 'remote'
     );
-    return matchingLocations.length > 0 ? 1 : 0.3;
+    
+    if (matchingLocations.length > 0) {
+      return { score: 1, explanation: `Job location '${job.location}' matches preferred: ${matchingLocations.join(', ')}` };
+    } else {
+      return { score: 0.3, explanation: `Job location '${job.location}' doesn't match any preferred locations` };
+    }
   }
 
-  private scoreCompanyMatch(job: JobListing): number {
+  private scoreCompanyMatch(job: JobListing): { score: number; explanation: string } {
     let score = 0;
     let maxScore = 0;
+    const explanationParts: string[] = [];
     
     const jobText = `${job.title} ${job.description} ${job.company}`.toLowerCase();
     
@@ -189,6 +257,9 @@ export class JobScorerAgent extends BaseAgent {
       );
       if (matchingDomains.length > 0) {
         score += 0.3;
+        explanationParts.push(`domain match (${matchingDomains.join(', ')})`);
+      } else {
+        explanationParts.push('no domain match');
       }
     }
     
@@ -201,6 +272,9 @@ export class JobScorerAgent extends BaseAgent {
       );
       if (matchingCompanies.length > 0) {
         score += 0.2;
+        explanationParts.push(`similar company (${matchingCompanies.join(', ')})`);
+      } else {
+        explanationParts.push('no similar companies');
       }
     }
     
@@ -212,6 +286,9 @@ export class JobScorerAgent extends BaseAgent {
       );
       if (matchingValues.length > 0) {
         score += 0.2 * (matchingValues.length / this.criteria.cultural_values.length);
+        explanationParts.push(`cultural values (${matchingValues.join(', ')})`);
+      } else {
+        explanationParts.push('no cultural value matches');
       }
     }
     
@@ -228,7 +305,7 @@ export class JobScorerAgent extends BaseAgent {
       });
       
       if (dealBreakerFound) {
-        return 0; // Immediate disqualification
+        return { score: 0, explanation: 'Deal breaker found - immediate disqualification' };
       }
     }
     
@@ -236,33 +313,45 @@ export class JobScorerAgent extends BaseAgent {
     if (this.criteria.role_requirements) {
       maxScore += 0.3;
       let roleScore = 0;
+      const roleMatches: string[] = [];
       
       if (this.criteria.role_requirements.leadership_level === 'player-coach') {
         if (jobText.includes('player-coach') || 
             (jobText.includes('hands-on') && jobText.includes('leadership'))) {
           roleScore += 0.1;
+          roleMatches.push('player-coach');
         }
       }
       
       if (this.criteria.role_requirements.autonomy && 
           (jobText.includes('autonomy') || jobText.includes('independent'))) {
         roleScore += 0.1;
+        roleMatches.push('autonomy');
       }
       
       if (this.criteria.role_requirements.strategic_involvement && 
           (jobText.includes('strategic') || jobText.includes('vision') || jobText.includes('roadmap'))) {
         roleScore += 0.1;
+        roleMatches.push('strategic');
       }
       
       score += roleScore;
+      if (roleMatches.length > 0) {
+        explanationParts.push(`role match (${roleMatches.join(', ')})`);
+      } else {
+        explanationParts.push('no role requirement matches');
+      }
     }
     
     // Default base score if no specific criteria
     if (maxScore === 0) {
-      return 0.7;
+      return { score: 0.7, explanation: 'No specific company criteria defined, using default score' };
     }
     
-    return Math.min(score / maxScore, 1);
+    const finalScore = Math.min(score / maxScore, 1);
+    const explanation = explanationParts.length > 0 ? explanationParts.join(', ') : 'No matches found';
+    
+    return { score: finalScore, explanation };
   }
 
   private async generateRationale(job: JobListing, score: any): Promise<string> {
@@ -320,6 +409,7 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
       score: jobScore.overallScore,
       rationale: jobScore.rationale,
       breakdown: jobScore.breakdown,
+      explanations: jobScore.explanations,
     };
 
     // Create job-specific subdirectory if it doesn't exist

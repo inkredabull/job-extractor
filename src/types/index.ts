@@ -93,6 +93,14 @@ export interface JobScore {
     location: number;
     company_match: number;
   };
+  explanations: {
+    required_skills: string;
+    preferred_skills: string;
+    experience_level: string;
+    salary: string;
+    location: string;
+    company_match: string;
+  };
   timestamp: string;
 }
 
