@@ -1,5 +1,5 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -366,6 +366,138 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     }
 
     return cleaned;
+  }
+
+  async extractThemes(jobId: string): Promise<ThemeExtractionResult> {
+    try {
+      // Load job data
+      const jobData = this.loadJobData(jobId);
+      
+      // Extract themes using Claude
+      const themes = await this.extractJobThemes(jobData);
+      
+      // Log themes to file
+      this.logThemes(jobId, themes);
+      
+      // Console log themes
+      this.displayThemes(themes);
+      
+      return {
+        success: true,
+        jobId,
+        themes,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        jobId,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  private async extractJobThemes(job: JobListing): Promise<JobTheme[]> {
+    const prompt = `Analyze the following job posting and extract 3-5 priority themes that are most important for this role. For each theme, provide:
+1. A clear, concise name (2-4 words)
+2. A brief definition overview (1-2 sentences explaining what this theme means in the context of this role)
+3. Importance level (high, medium, low)
+
+Focus on the core competencies, skills, and qualities that would be essential for success in this position.
+
+Job Title: ${job.title}
+Company: ${job.company}
+Description: ${job.description}
+
+Please respond in the following JSON format:
+{
+  "themes": [
+    {
+      "name": "Theme Name",
+      "definition": "Brief definition explaining what this theme means for this role...",
+      "importance": "high"
+    }
+  ]
+}`;
+
+    console.log('🎯 Extracting priority themes from job description...');
+    
+    const response = await this.makeClaudeRequest(prompt);
+    
+    try {
+      // Clean the response to extract JSON
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in Claude response');
+      }
+      
+      const parsedResponse = JSON.parse(jsonMatch[0]);
+      
+      if (!parsedResponse.themes || !Array.isArray(parsedResponse.themes)) {
+        throw new Error('Invalid themes format in response');
+      }
+      
+      return parsedResponse.themes;
+    } catch (parseError) {
+      console.warn('⚠️  Failed to parse themes response, using fallback');
+      // Return fallback themes if parsing fails
+      return [
+        {
+          name: "Technical Expertise",
+          definition: "Core technical skills and domain knowledge required for the role.",
+          importance: "high" as const
+        },
+        {
+          name: "Leadership & Communication",
+          definition: "Ability to lead teams and communicate effectively across stakeholders.",
+          importance: "high" as const
+        },
+        {
+          name: "Problem Solving",
+          definition: "Analytical thinking and ability to solve complex challenges.",
+          importance: "medium" as const
+        }
+      ];
+    }
+  }
+
+  private logThemes(jobId: string, themes: JobTheme[]): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const themeData = {
+        timestamp: new Date().toISOString(),
+        jobId,
+        themes,
+        extractedAt: new Date().toISOString()
+      };
+
+      const themesPath = path.join(jobDir, `themes-${timestamp}.json`);
+      fs.writeFileSync(themesPath, JSON.stringify(themeData, null, 2));
+      console.log(`📝 Themes logged to: ${themesPath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to log themes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private displayThemes(themes: JobTheme[]): void {
+    console.log('\n🎯 Priority Themes Extracted:');
+    console.log('=' .repeat(50));
+    
+    themes.forEach((theme, index) => {
+      const importanceIcon = theme.importance === 'high' ? '🔴' : 
+                           theme.importance === 'medium' ? '🟡' : '🟢';
+      
+      console.log(`\n${index + 1}. ${importanceIcon} ${theme.name} (${theme.importance.toUpperCase()})`);
+      console.log(`   ${theme.definition}`);
+    });
+    
+    console.log('\n' + '=' .repeat(50));
   }
 
 }

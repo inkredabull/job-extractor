@@ -175,3 +175,17 @@ export interface StatementResult {
   type: StatementType;
   characterCount?: number;
 }
+
+export interface JobTheme {
+  name: string;
+  definition: string;
+  importance: 'high' | 'medium' | 'low';
+}
+
+export interface ThemeExtractionResult {
+  success: boolean;
+  jobId: string;
+  themes?: JobTheme[];
+  error?: string;
+  timestamp: string;
+}

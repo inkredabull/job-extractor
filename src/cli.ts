@@ -291,9 +291,9 @@ program
 program
   .command('prep')
   .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, or general')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, or themes')
   .argument('<jobId>', 'Job ID to generate statement for')
-  .argument('<cvFile>', 'Path to CV file')
+  .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
   .option('-i, --instructions <text>', 'Custom instructions for the material')
@@ -301,11 +301,41 @@ program
   .option('--regen', 'Force regenerate material (ignores cached content)')
   .action(async (type: string, jobId: string, cvFile: string, options) => {
     try {
-      // Validate material type
+      // Handle themes extraction separately
+      if (type === 'themes') {
+        console.log('🎯 Extracting priority themes...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log('');
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const result = await interviewPrepAgent.extractThemes(jobId);
+
+        if (result.success) {
+          console.log('\n✅ Theme Extraction Complete');
+        } else {
+          console.error(`❌ Theme extraction failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
+      // Validate material type for other types
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
-        console.error(`Valid types: ${validTypes.join(', ')}`);
+        console.error(`Valid types: ${validTypes.join(', ')}, themes`);
+        process.exit(1);
+      }
+
+      // CV file is required for non-themes types
+      if (!cvFile) {
+        console.error(`❌ CV file is required for ${type} generation`);
         process.exit(1);
       }
 
