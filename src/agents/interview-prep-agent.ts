@@ -1,5 +1,5 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -937,6 +937,399 @@ function cmf2() {
 
   getProfileConfig(): ProfileConfig {
     return { ...this.profileConfig };
+  }
+
+  async extractProject(jobId: string, projectIndex: number): Promise<ProjectExtractionResult> {
+    try {
+      // Load themes data for the job
+      const themesData = this.loadThemesData(jobId);
+      if (!themesData) {
+        return {
+          success: false,
+          error: 'No themes data found for this job ID. Run theme extraction first.'
+        };
+      }
+
+      // Extract project from examples
+      const project = this.extractProjectFromExamples(themesData, projectIndex);
+      if (!project) {
+        return {
+          success: false,
+          error: `Project ${projectIndex} not found in themes data. Available projects: ${this.getAvailableProjectsCount(themesData)}`
+        };
+      }
+
+      // Format for form fields
+      const formattedOutput = this.formatProjectForForm(project);
+
+      return {
+        success: true,
+        project,
+        formattedOutput
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  private loadThemesData(jobId: string): any {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const themeFiles = files
+        .filter(file => file.startsWith('themes-') && file.endsWith('.json'))
+        .sort()
+        .reverse();
+
+      if (themeFiles.length === 0) {
+        return null;
+      }
+
+      const themeFilePath = path.join(jobDir, themeFiles[0]);
+      const themeData = JSON.parse(fs.readFileSync(themeFilePath, 'utf-8'));
+
+      return themeData;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private extractProjectFromExamples(themesData: any, projectIndex: number): ProjectInfo | null {
+    const allExamples: (ThemeExample & { themeName?: string })[] = [];
+    
+    // Collect all examples from all themes
+    if (themesData.themes) {
+      themesData.themes.forEach((theme: JobTheme) => {
+        if (theme.examples) {
+          theme.examples.forEach((example: ThemeExample) => {
+            allExamples.push({
+              ...example,
+              themeName: theme.name
+            });
+          });
+        }
+      });
+    }
+
+    // Add highlighted examples
+    if (themesData.highlightedExamples) {
+      themesData.highlightedExamples.forEach((example: ThemeExample) => {
+        allExamples.push({
+          ...example,
+          isHighlighted: true
+        });
+      });
+    }
+
+    if (projectIndex < 1 || projectIndex > allExamples.length) {
+      return null;
+    }
+
+    const selectedExample = allExamples[projectIndex - 1];
+    return this.convertExampleToProject(selectedExample);
+  }
+
+  private convertExampleToProject(example: ThemeExample & { themeName?: string }): ProjectInfo {
+    // Parse company and role from source field
+    const sourceMatch = example.source.match(/(.*?)\s*@\s*(.*)/);
+    const role = sourceMatch ? sourceMatch[1].trim() : 'Senior Engineer';
+    const company = sourceMatch ? sourceMatch[2].trim() : example.source;
+
+    // Generate project components
+    const title = this.generateProjectTitle(example.text);
+    const industry = this.mapToIndustry(company, example.text);
+    const projectType = this.mapToProjectType(example.text);
+    const duration = this.mapToDuration(example.text);
+    const organizationSize = this.estimateOrganizationSize(example.text, company);
+    const functionArea = this.mapToFunction(role, example.text);
+    const location = this.estimateLocation(company);
+    
+    // Parse Problem-Action-Result structure
+    const { problem, action, result } = this.parseProjectSummary(example.text, example.impact);
+
+    return {
+      title,
+      industry,
+      projectType,
+      duration,
+      organizationSize,
+      function: functionArea,
+      location,
+      problem,
+      action,
+      result
+    };
+  }
+
+  private mapToIndustry(company: string, text: string): string {
+    const companyLower = company.toLowerCase();
+    const textLower = text.toLowerCase();
+    
+    // SaaS/Technology companies
+    if (companyLower.includes('myna') || companyLower.includes('coursekey') || 
+        textLower.includes('saas') || textLower.includes('platform')) {
+      return 'Technology/SaaS';
+    }
+    
+    // E-commerce/Retail
+    if (companyLower.includes('decorist') || textLower.includes('marketplace') ||
+        textLower.includes('e-commerce') || textLower.includes('retail')) {
+      return 'E-commerce/Retail';
+    }
+    
+    // AI/Machine Learning
+    if (textLower.includes('ai') || textLower.includes('llm') || textLower.includes('genai')) {
+      return 'Artificial Intelligence';
+    }
+    
+    // Default
+    return 'Technology';
+  }
+
+  private mapToProjectType(text: string): string {
+    const textLower = text.toLowerCase();
+    
+    if (textLower.includes('transform') || textLower.includes('restructur') || textLower.includes('organization')) {
+      return 'Organizational Transformation';
+    } else if (textLower.includes('ai') || textLower.includes('llm') || textLower.includes('genai')) {
+      return 'Technology Implementation';
+    } else if (textLower.includes('platform') || textLower.includes('system') || textLower.includes('architecture')) {
+      return 'Platform Development';
+    } else if (textLower.includes('security') || textLower.includes('cve')) {
+      return 'Security Enhancement';
+    } else if (textLower.includes('team') || textLower.includes('leadership') || textLower.includes('scale')) {
+      return 'Team Development';
+    } else if (textLower.includes('process') || textLower.includes('workflow') || textLower.includes('efficiency')) {
+      return 'Process Improvement';
+    } else {
+      return 'Strategic Initiative';
+    }
+  }
+
+  private mapToDuration(text: string): '0-6 Months' | '6-12 Months' | '12-24 Months' | '24+ Months' {
+    const textLower = text.toLowerCase();
+    
+    // Look for specific time indicators
+    if (textLower.includes('quarter') || textLower.includes('3 month')) {
+      return '0-6 Months';
+    } else if (textLower.includes('year') || textLower.includes('12 month')) {
+      return '6-12 Months';
+    } else if (textLower.includes('18 month') || textLower.includes('2 year')) {
+      return '12-24 Months';
+    } else if (textLower.includes('multi-year') || textLower.includes('long-term')) {
+      return '24+ Months';
+    }
+    
+    // Default based on project complexity
+    if (textLower.includes('transform') || textLower.includes('restructur')) {
+      return '6-12 Months';
+    } else {
+      return '0-6 Months';
+    }
+  }
+
+  private estimateOrganizationSize(text: string, company: string): string {
+    const textLower = text.toLowerCase();
+    const companyLower = company.toLowerCase();
+    
+    // Look for team size indicators
+    if (textLower.includes('32') || textLower.includes('50')) {
+      return 'Large (1000+ employees)';
+    } else if (textLower.includes('19') || textLower.includes('20')) {
+      return 'Medium (100-999 employees)';
+    } else if (companyLower.includes('startup') || companyLower.includes('seed') || textLower.includes('small team')) {
+      return 'Small (10-99 employees)';
+    }
+    
+    // Company-specific knowledge
+    if (companyLower.includes('myna') || companyLower.includes('coursekey')) {
+      return 'Small (10-99 employees)';
+    } else if (companyLower.includes('decorist')) {
+      return 'Medium (100-999 employees)';
+    }
+    
+    return 'Medium (100-999 employees)';
+  }
+
+  private mapToFunction(role: string, text: string): string {
+    const roleLower = role.toLowerCase();
+    const textLower = text.toLowerCase();
+    
+    if (roleLower.includes('cto') || roleLower.includes('chief')) {
+      return 'Executive Leadership';
+    } else if (roleLower.includes('vp') || roleLower.includes('vice president')) {
+      return 'Senior Management';
+    } else if (roleLower.includes('director') || roleLower.includes('head')) {
+      return 'Management';
+    } else if (textLower.includes('engineering') || textLower.includes('technical')) {
+      return 'Engineering';
+    } else if (textLower.includes('product')) {
+      return 'Product Management';
+    } else {
+      return 'Technology';
+    }
+  }
+
+  private estimateLocation(company: string): string {
+    // For now, default to remote/hybrid as that's common for tech roles
+    // Could be enhanced with company-specific data
+    return 'Remote/Hybrid';
+  }
+
+  private parseProjectSummary(text: string, impact: string): { problem: string; action: string; result: string } {
+    // Try to parse the example text into Problem-Action-Result structure
+    const textLower = text.toLowerCase();
+    
+    let problem = '';
+    let action = '';
+    let result = impact;
+    
+    // Identify problem indicators
+    if (textLower.includes('transform') || textLower.includes('restructur')) {
+      problem = 'Organization structure was inefficient and limiting productivity';
+      action = text;
+    } else if (textLower.includes('security') || textLower.includes('cve')) {
+      problem = 'Security vulnerabilities needed systematic remediation';
+      action = text;
+    } else if (textLower.includes('ai') || textLower.includes('llm') || textLower.includes('genai')) {
+      problem = 'Manual processes required automation to improve efficiency';
+      action = text;
+    } else if (textLower.includes('platform') || textLower.includes('system')) {
+      problem = 'System architecture needed modernization for scale';
+      action = text;
+    } else {
+      // Generic case
+      problem = 'Organization needed technical leadership to drive strategic initiatives';
+      action = text;
+    }
+    
+    return { problem, action, result };
+  }
+
+  private generateProjectTitle(text: string): string {
+    // Try to extract a meaningful title from the text
+    if (text.includes('LLM') || text.includes('GenAI') || text.includes('AI')) {
+      return 'AI/LLM Implementation Project';
+    } else if (text.includes('transform') || text.includes('restructur')) {
+      return 'Engineering Transformation Initiative';
+    } else if (text.includes('platform') || text.includes('system')) {
+      return 'Platform Development Project';
+    } else if (text.includes('security') || text.includes('CVE')) {
+      return 'Security Enhancement Project';
+    } else if (text.includes('team') || text.includes('organization')) {
+      return 'Team Leadership & Scaling';
+    } else {
+      return 'Strategic Engineering Initiative';
+    }
+  }
+
+
+  private getAvailableProjectsCount(themesData: any): number {
+    let count = 0;
+    
+    if (themesData.themes) {
+      themesData.themes.forEach((theme: JobTheme) => {
+        if (theme.examples) {
+          count += theme.examples.length;
+        }
+      });
+    }
+
+    if (themesData.highlightedExamples) {
+      count += themesData.highlightedExamples.length;
+    }
+
+    return count;
+  }
+
+  private formatProjectForForm(project: ProjectInfo): string {
+    return `Project Title:
+${project.title}
+
+Industry:
+${project.industry}
+
+Project Type:
+${project.projectType}
+
+Project Duration:
+${project.duration}
+
+Size of Organization:
+${project.organizationSize}
+
+Function:
+${project.function}
+
+Location:
+${project.location}
+
+Project Summary Problem:
+${project.problem}
+
+Project Summary Action:
+${project.action}
+
+Project Summary Result:
+${project.result}`;
+  }
+
+  async listAvailableProjects(jobId: string): Promise<{ success: boolean; projects?: string[]; count?: number; error?: string }> {
+    try {
+      const themesData = this.loadThemesData(jobId);
+      if (!themesData) {
+        return {
+          success: false,
+          error: 'No themes data found for this job ID. Run theme extraction first.'
+        };
+      }
+
+      const projects: string[] = [];
+      let index = 1;
+
+      // List examples from themes
+      if (themesData.themes) {
+        themesData.themes.forEach((theme: JobTheme) => {
+          if (theme.examples) {
+            theme.examples.forEach((example: ThemeExample) => {
+              const title = this.generateProjectTitle(example.text);
+              const company = example.source.includes('@') ? example.source.split('@')[1].trim() : example.source;
+              projects.push(`${index}. ${title} (${company})`);
+              index++;
+            });
+          }
+        });
+      }
+
+      // List highlighted examples
+      if (themesData.highlightedExamples) {
+        themesData.highlightedExamples.forEach((example: ThemeExample) => {
+          const title = this.generateProjectTitle(example.text);
+          const company = example.source.includes('@') ? example.source.split('@')[1].trim() : example.source;
+          projects.push(`${index}. ${title} (${company}) [HIGHLIGHTED]`);
+          index++;
+        });
+      }
+
+      return {
+        success: true,
+        projects,
+        count: projects.length
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
 }

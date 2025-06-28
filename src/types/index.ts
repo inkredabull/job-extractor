@@ -223,3 +223,23 @@ export interface ProfileResult {
   googleScript?: string;
   error?: string;
 }
+
+export interface ProjectInfo {
+  title: string;
+  industry: string;
+  projectType: string;
+  duration: '0-6 Months' | '6-12 Months' | '12-24 Months' | '24+ Months';
+  organizationSize: string;
+  function: string;
+  location: string;
+  problem: string;
+  action: string;
+  result: string;
+}
+
+export interface ProjectExtractionResult {
+  success: boolean;
+  project?: ProjectInfo;
+  formattedOutput?: string;
+  error?: string;
+}

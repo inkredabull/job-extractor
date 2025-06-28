@@ -291,7 +291,7 @@ program
 program
   .command('prep')
   .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, or profile')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, profile, project, or list-projects')
   .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
   .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
@@ -299,6 +299,7 @@ program
   .option('-i, --instructions <text>', 'Custom instructions for the material')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
+  .option('-p, --project <number>', 'Project number to extract (for project type)', '1')
   .action(async (type: string, jobId: string, cvFile: string, options) => {
     try {
       // Handle themes extraction separately
@@ -407,11 +408,87 @@ program
         return;
       }
 
+      // Handle project listing
+      if (type === 'list-projects') {
+        if (!jobId) {
+          console.error('❌ Job ID is required for listing projects');
+          process.exit(1);
+        }
+        console.log('📋 Listing available projects...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log('');
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const result = await interviewPrepAgent.listAvailableProjects(jobId);
+
+        if (result.success) {
+          console.log('✅ Available Projects');
+          console.log('=' .repeat(50));
+          console.log(`\n📊 Found ${result.count} projects:`);
+          result.projects?.forEach(project => {
+            console.log(`   ${project}`);
+          });
+          console.log('\n💡 Use: prep project <jobId> -p <number> to extract a specific project');
+        } else {
+          console.error(`❌ Project listing failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
+      // Handle project extraction
+      if (type === 'project') {
+        if (!jobId) {
+          console.error('❌ Job ID is required for project extraction');
+          process.exit(1);
+        }
+        
+        const projectNumber = parseInt(options.project, 10);
+        if (isNaN(projectNumber) || projectNumber < 1) {
+          console.error('❌ Invalid project number. Use -p <number> where number >= 1');
+          process.exit(1);
+        }
+
+        console.log('📋 Extracting project information...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log(`🔢 Project: ${projectNumber}`);
+        console.log('');
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const result = await interviewPrepAgent.extractProject(jobId, projectNumber);
+
+        if (result.success) {
+          console.log('✅ Project Extraction Complete');
+          console.log('=' .repeat(50));
+          console.log('\n📋 Copy-Paste Ready Format:');
+          console.log('=' .repeat(30));
+          console.log(result.formattedOutput);
+          console.log('=' .repeat(30));
+          console.log('\n💡 Copy the above text and paste into your Catalant modal form');
+        } else {
+          console.error(`❌ Project extraction failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
       // Validate material type for other types
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
-        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories, profile`);
+        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories, profile, project, list-projects`);
         process.exit(1);
       }
 
