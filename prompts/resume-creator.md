@@ -28,7 +28,7 @@ Lead with "<CANDIDATE NAME> : ROLE" where role is the role from the job descript
 
 ## Contact Information
 
-San Francisco, CA | +1 415-269-4893 | anthony at bluxomelabs.com | linkedin.com/in/anthony-bull
+<CITY> | <PHONE> | <EMAIL> | <LINKEDIN>
 
 ## Summary
 
