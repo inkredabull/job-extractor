@@ -1,9 +1,11 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export class InterviewPrepAgent extends ClaudeBaseAgent {
+  private currentJobId: string = '';
+
   constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
     super(claudeApiKey, model, maxTokens);
   }
@@ -25,6 +27,8 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     contentOnly: boolean = false
   ): Promise<StatementResult> {
     try {
+      // Store jobId for use in sub-methods
+      this.currentJobId = jobId;
       let content: string;
       
       // If content-only mode and not regenerating, just find the most recent statement file
@@ -140,7 +144,11 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     // For about-me type, check if themes exist and include them
     if (type === 'about-me') {
       const themes = await this.getOrExtractThemes(job);
-      promptTemplate = this.injectThemesIntoPrompt(promptTemplate, themes);
+      const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job);
+      // Get jobId from the generateMaterial caller context
+      const actualJobId = this.currentJobId;
+      await this.updateThemesWithExamples(job, themesWithExamples, actualJobId);
+      promptTemplate = this.injectThemesIntoPrompt(promptTemplate, themesWithExamples);
     }
     
     // Build the complete prompt
@@ -567,19 +575,209 @@ Please respond in the following JSON format:
     }
   }
 
+  private async enrichThemesWithExamples(themes: JobTheme[], cvContent: string, job: JobListing): Promise<JobTheme[]> {
+    console.log('🔍 Analyzing CV examples for each theme...');
+    
+    const prompt = `Analyze the provided CV content and identify 1-2 specific, quantifiable examples for each theme that demonstrate the candidate's relevant experience. For each example, extract:
+
+1. The specific text/achievement from the CV
+2. The source section (which job/project it came from)
+3. The quantified impact/result
+
+Additionally, identify the 2-3 BEST examples overall that demonstrate the highest professional impact and would make compelling interview stories.
+
+Themes to match:
+${themes.map((theme, index) => `${index + 1}. **${theme.name}**: ${theme.definition}`).join('\n')}
+
+CV Content:
+${cvContent}
+
+Respond in this JSON format:
+{
+  "themeExamples": [
+    {
+      "themeName": "Theme Name",
+      "examples": [
+        {
+          "text": "Specific achievement from CV",
+          "source": "Company/Role where this happened",
+          "impact": "Quantified result (e.g., '35% improvement', '$1M revenue')"
+        }
+      ]
+    }
+  ],
+  "highlightedExamples": [
+    {
+      "text": "Most impactful achievement",
+      "source": "Source role/company",
+      "impact": "Quantified impact",
+      "isHighlighted": true
+    }
+  ],
+  "interviewStories": [
+    "Brief story description suitable for STAR method interview response..."
+  ]
+}`;
+
+    const response = await this.makeClaudeRequest(prompt);
+    
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn('⚠️  Failed to extract examples, using themes without examples');
+        return themes;
+      }
+      
+      const parsedResponse = JSON.parse(jsonMatch[0]);
+      
+      // Merge examples back into themes
+      const enrichedThemes = themes.map(theme => {
+        const themeData = parsedResponse.themeExamples?.find(
+          (te: any) => te.themeName === theme.name
+        );
+        
+        return {
+          ...theme,
+          examples: themeData?.examples || []
+        };
+      });
+      
+      // Store highlighted examples and stories for later use
+      this.tempHighlightedExamples = parsedResponse.highlightedExamples || [];
+      this.tempInterviewStories = parsedResponse.interviewStories || [];
+      
+      return enrichedThemes;
+    } catch (parseError) {
+      console.warn('⚠️  Failed to parse examples response, using themes without examples');
+      return themes;
+    }
+  }
+
+  private tempHighlightedExamples: ThemeExample[] = [];
+  private tempInterviewStories: string[] = [];
+
+  private async updateThemesWithExamples(job: JobListing, themesWithExamples: JobTheme[], actualJobId?: string): Promise<void> {
+    try {
+      const jobId = actualJobId || this.currentJobId;
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      // Find the most recent themes file
+      const files = fs.readdirSync(jobDir);
+      const themeFiles = files
+        .filter(file => file.startsWith('themes-') && file.endsWith('.json'))
+        .sort()
+        .reverse();
+
+      if (themeFiles.length > 0) {
+        // Update the most recent themes file
+        const themeFilePath = path.join(jobDir, themeFiles[0]);
+        const existingData = JSON.parse(fs.readFileSync(themeFilePath, 'utf-8'));
+        
+        const updatedData = {
+          ...existingData,
+          themes: themesWithExamples,
+          highlightedExamples: this.tempHighlightedExamples,
+          interviewStories: this.tempInterviewStories,
+          lastEnrichedAt: new Date().toISOString()
+        };
+        
+        fs.writeFileSync(themeFilePath, JSON.stringify(updatedData, null, 2));
+        console.log(`📝 Updated themes file with examples: ${themeFilePath}`);
+      } else {
+        // Create new themes file with examples
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const themeData = {
+          timestamp: new Date().toISOString(),
+          jobId,
+          themes: themesWithExamples,
+          highlightedExamples: this.tempHighlightedExamples,
+          interviewStories: this.tempInterviewStories,
+          extractedAt: new Date().toISOString()
+        };
+
+        const themesPath = path.join(jobDir, `themes-${timestamp}.json`);
+        fs.writeFileSync(themesPath, JSON.stringify(themeData, null, 2));
+        console.log(`📝 Created themes file with examples: ${themesPath}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to update themes with examples: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private getJobIdFromJob(job: JobListing): string {
+    // Try to derive jobId from the job data
+    // This is a simple approach - in practice, you might want to store jobId with the job data
+    const crypto = require('crypto');
+    const jobString = `${job.title}-${job.company}`;
+    return crypto.createHash('md5').update(jobString).digest('hex').substring(0, 8);
+  }
+
   private injectThemesIntoPrompt(promptTemplate: string, themes: JobTheme[]): string {
-    // Create a formatted list of themes to inject
+    // Create a formatted list of themes to inject, including examples
     const themesList = themes
-      .map((theme, index) => `${index + 1}. **${theme.name}**: ${theme.definition}`)
-      .join('\n');
+      .map((theme, index) => {
+        let themeText = `${index + 1}. **${theme.name}**: ${theme.definition}`;
+        
+        if (theme.examples && theme.examples.length > 0) {
+          themeText += '\n   Examples from CV:';
+          theme.examples.forEach((example, exIndex) => {
+            themeText += `\n   - ${example.text} (${example.impact})`;
+          });
+        }
+        
+        return themeText;
+      })
+      .join('\n\n');
     
     // Replace the line about extracting themes with a directive to use the provided themes
     const updatedPrompt = promptTemplate.replace(
-      '1. Extract 2-4 priority themes from the job description',
-      `1. Use the following priority themes that have been extracted from the job description:\n\n${themesList}\n\nFocus on the themes marked as "high" importance first, then include medium importance themes if space allows.`
+      '1. Use the priority themes provided (these have been automatically extracted from the job description)',
+      `1. Use the following priority themes and their associated examples from the candidate's CV:\n\n${themesList}\n\nUse the provided examples to craft compelling bullet points. Focus on the themes marked as "high" importance first, then include medium importance themes if space allows.`
     );
     
     return updatedPrompt;
+  }
+
+  async getInterviewStories(jobId: string): Promise<{ success: boolean; stories?: string[]; highlightedExamples?: ThemeExample[]; error?: string }> {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return { success: false, error: 'Job directory not found' };
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const themeFiles = files
+        .filter(file => file.startsWith('themes-') && file.endsWith('.json'))
+        .sort()
+        .reverse();
+
+      if (themeFiles.length === 0) {
+        return { success: false, error: 'No themes file found. Run theme extraction first.' };
+      }
+
+      const themeFilePath = path.join(jobDir, themeFiles[0]);
+      const themeData = JSON.parse(fs.readFileSync(themeFilePath, 'utf-8'));
+
+      if (!themeData.interviewStories && !themeData.highlightedExamples) {
+        return { success: false, error: 'No interview stories found. Run about-me generation to extract stories.' };
+      }
+
+      return {
+        success: true,
+        stories: themeData.interviewStories || [],
+        highlightedExamples: themeData.highlightedExamples || []
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
 }

@@ -291,7 +291,7 @@ program
 program
   .command('prep')
   .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, or themes')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, or stories')
   .argument('<jobId>', 'Job ID to generate statement for')
   .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
@@ -325,16 +325,62 @@ program
         return;
       }
 
+      // Handle interview stories extraction
+      if (type === 'stories') {
+        console.log('📚 Extracting interview stories...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log('');
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const result = await interviewPrepAgent.getInterviewStories(jobId);
+
+        if (result.success) {
+          console.log('✅ Interview Stories Retrieved');
+          console.log('=' .repeat(50));
+          
+          if (result.highlightedExamples && result.highlightedExamples.length > 0) {
+            console.log('\n🌟 Highlighted Professional Impact Examples:');
+            result.highlightedExamples.forEach((example, index) => {
+              console.log(`\n${index + 1}. ${example.text}`);
+              console.log(`   Source: ${example.source}`);
+              console.log(`   Impact: ${example.impact}`);
+            });
+          }
+          
+          if (result.stories && result.stories.length > 0) {
+            console.log('\n📖 Interview Story Suggestions:');
+            result.stories.forEach((story, index) => {
+              console.log(`\n${index + 1}. ${story}`);
+            });
+          }
+          
+          if ((!result.stories || result.stories.length === 0) && 
+              (!result.highlightedExamples || result.highlightedExamples.length === 0)) {
+            console.log('\n💡 No stories found. Run "prep about-me" first to generate interview stories.');
+          }
+        } else {
+          console.error(`❌ Story extraction failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
       // Validate material type for other types
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
-        console.error(`Valid types: ${validTypes.join(', ')}, themes`);
+        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories`);
         process.exit(1);
       }
 
-      // CV file is required for non-themes types
-      if (!cvFile) {
+      // CV file is required for non-themes/stories types
+      if (!cvFile && type !== 'stories') {
         console.error(`❌ CV file is required for ${type} generation`);
         process.exit(1);
       }

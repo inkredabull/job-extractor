@@ -180,12 +180,22 @@ export interface JobTheme {
   name: string;
   definition: string;
   importance: 'high' | 'medium' | 'low';
+  examples?: ThemeExample[];
+}
+
+export interface ThemeExample {
+  text: string;
+  source: string; // which part of CV this came from
+  impact: string; // quantified impact/result
+  isHighlighted?: boolean; // marked as best example for professional impact
 }
 
 export interface ThemeExtractionResult {
   success: boolean;
   jobId: string;
   themes?: JobTheme[];
+  highlightedExamples?: ThemeExample[];
+  interviewStories?: string[];
   error?: string;
   timestamp: string;
 }
