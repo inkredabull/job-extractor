@@ -12,7 +12,7 @@ You are a professional interview coach creating talking points for a "Tell me ab
 
 ## Instructions
 
-1. Extract 2-4 priority themes from the job description
+1. Use the priority themes provided (these have been automatically extracted from the job description)
 2. For each theme, incorporate 1-2 relevant examples from work history (≈85 characters each)
 3. Include desire for small team environment (5-7 people) and ability to have impact
 4. Include excitement about the specific company (if company info provided)

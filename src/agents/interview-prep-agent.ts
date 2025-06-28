@@ -135,7 +135,13 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     cvContent: string,
     options: StatementOptions
   ): Promise<string> {
-    const promptTemplate = this.loadPromptTemplate(type);
+    let promptTemplate = this.loadPromptTemplate(type);
+    
+    // For about-me type, check if themes exist and include them
+    if (type === 'about-me') {
+      const themes = await this.getOrExtractThemes(job);
+      promptTemplate = this.injectThemesIntoPrompt(promptTemplate, themes);
+    }
     
     // Build the complete prompt
     const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options);
@@ -498,6 +504,82 @@ Please respond in the following JSON format:
     });
     
     console.log('\n' + '=' .repeat(50));
+  }
+
+  private async getOrExtractThemes(job: JobListing): Promise<JobTheme[]> {
+    // First, check if themes already exist for this job
+    const existingThemes = this.loadExistingThemes(job.title, job.company);
+    
+    if (existingThemes && existingThemes.length > 0) {
+      console.log('📋 Using existing themes for about-me generation');
+      return existingThemes;
+    }
+    
+    // If no existing themes, extract them
+    console.log('🎯 No existing themes found, extracting themes for about-me generation...');
+    return await this.extractJobThemes(job);
+  }
+
+  private loadExistingThemes(jobTitle: string, jobCompany: string): JobTheme[] | null {
+    try {
+      // Look for theme files that match this job (by checking all job directories)
+      const logsDir = path.resolve('logs');
+      if (!fs.existsSync(logsDir)) {
+        return null;
+      }
+
+      const jobDirs = fs.readdirSync(logsDir);
+      
+      for (const jobDir of jobDirs) {
+        const jobDirPath = path.join(logsDir, jobDir);
+        if (!fs.statSync(jobDirPath).isDirectory()) continue;
+
+        // Check if this directory has theme files
+        const files = fs.readdirSync(jobDirPath);
+        const themeFiles = files
+          .filter(file => file.startsWith('themes-') && file.endsWith('.json'))
+          .sort()
+          .reverse(); // Most recent first
+
+        if (themeFiles.length > 0) {
+          // Load the most recent theme file and check if it matches this job
+          const themeFilePath = path.join(jobDirPath, themeFiles[0]);
+          const themeData = JSON.parse(fs.readFileSync(themeFilePath, 'utf-8'));
+          
+          // Check if we can find a job file in the same directory to compare
+          const jobFiles = files.filter(file => file.startsWith('job-') && file.endsWith('.json'));
+          if (jobFiles.length > 0) {
+            const jobFilePath = path.join(jobDirPath, jobFiles[0]);
+            const jobData = JSON.parse(fs.readFileSync(jobFilePath, 'utf-8'));
+            
+            // If title and company match, use these themes
+            if (jobData.title === jobTitle && jobData.company === jobCompany) {
+              return themeData.themes;
+            }
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn('⚠️  Failed to load existing themes, will extract new ones');
+      return null;
+    }
+  }
+
+  private injectThemesIntoPrompt(promptTemplate: string, themes: JobTheme[]): string {
+    // Create a formatted list of themes to inject
+    const themesList = themes
+      .map((theme, index) => `${index + 1}. **${theme.name}**: ${theme.definition}`)
+      .join('\n');
+    
+    // Replace the line about extracting themes with a directive to use the provided themes
+    const updatedPrompt = promptTemplate.replace(
+      '1. Extract 2-4 priority themes from the job description',
+      `1. Use the following priority themes that have been extracted from the job description:\n\n${themesList}\n\nFocus on the themes marked as "high" importance first, then include medium importance themes if space allows.`
+    );
+    
+    return updatedPrompt;
   }
 
 }
