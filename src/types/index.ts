@@ -3,6 +3,8 @@ export interface JobListing {
   company: string;
   location: string;
   description: string;
+  applicantCount?: number;
+  competitionLevel?: 'low' | 'medium' | 'high' | 'extreme';
   salary?: {
     min?: string;
     max?: string;
@@ -21,6 +23,11 @@ export interface ExtractorResult {
   success: boolean;
   data?: JobListing;
   error?: string;
+  competitionReason?: {
+    applicantCount: number;
+    threshold: number;
+    competitionLevel: 'low' | 'medium' | 'high' | 'extreme';
+  };
 }
 
 export interface JobCriteria {

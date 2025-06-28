@@ -12,12 +12,32 @@ export class JobExtractorAgent extends BaseAgent {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
       
+      // Check applicant count first - early exit if too competitive
+      const applicantInfo = this.extractApplicantCount(html);
+      if (applicantInfo.shouldExit) {
+        console.log(`🚫 Job has ${applicantInfo.count} applicants (>${applicantInfo.threshold}) - skipping due to high competition`);
+        return {
+          success: false,
+          error: `Too many applicants (${applicantInfo.count}) - competition level too high`,
+          competitionReason: {
+            applicantCount: applicantInfo.count,
+            threshold: applicantInfo.threshold,
+            competitionLevel: applicantInfo.competitionLevel
+          }
+        };
+      }
+      
+      // If applicant count detected but within threshold, log it
+      if (applicantInfo.count > 0) {
+        console.log(`👥 ${applicantInfo.count} applicants detected - competition level: ${applicantInfo.competitionLevel}`);
+      }
+      
       // First, try to extract structured data (JSON-LD)
       const structuredData = WebScraper.extractStructuredData(html);
       
       if (structuredData) {
         console.log('🎯 Using structured data (JSON-LD)');
-        const jobData = this.parseStructuredData(structuredData);
+        const jobData = this.parseStructuredData(structuredData, applicantInfo);
         return {
           success: true,
           data: jobData,
@@ -35,7 +55,7 @@ export class JobExtractorAgent extends BaseAgent {
       const response = await this.makeOpenAIRequest(prompt);
 
       // Parse JSON response
-      const jobData = this.parseJobData(response);
+      const jobData = this.parseJobData(response, applicantInfo);
 
       return {
         success: true,
@@ -79,7 +99,84 @@ ${html.slice(0, 8000)}...
 JSON:`;
   }
 
-  private parseStructuredData(jsonLd: any): JobListing {
+  private extractApplicantCount(html: string): { count: number; shouldExit: boolean; threshold: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' } {
+    const threshold = 200;
+    let count = 0;
+    let competitionLevel: 'low' | 'medium' | 'high' | 'extreme' = 'low';
+
+    // Look for applicant count in HTML
+
+    // patterns - enhanced with more variations
+    const sourcePatterns = [
+      /(\d{1,3}(?:,\d{3})*)\s+(?:candidates?\s+who\s+)?clicked\s+apply/i,
+      /(\d{1,3}(?:,\d{3})*)\s+applicants?/i,
+      /Over\s+(\d{1,3}(?:,\d{3})*)\s+(?:candidates?\s+who\s+)?clicked\s+apply/i,
+      /(\d{1,3}(?:,\d{3})*)\s+people\s+clicked\s+apply/i,
+      /Be\s+among\s+the\s+first\s+(\d+)\s+applicants?/i,
+      /(\d{1,3}(?:,\d{3})*)\s+candidates?/i,
+      /(\d{1,3}(?:,\d{3})*)\s+(?:people\s+)?applied/i
+    ];
+    
+    // Special handling for "Over X" cases - treat as minimum estimate
+    const overPattern = /Over\s+(\d{1,3}(?:,\d{3})*)\s+(?:appli|candidate)/i;
+    const overMatch = html.match(overPattern);
+    if (overMatch && overMatch[1]) {
+      const overCount = parseInt(overMatch[1].replace(/,/g, ''), 10);
+      if (!isNaN(overCount)) {
+        // For "Over X" cases, multiply by a conservative factor to estimate real count
+        // "Over 200" likely means 300-2000+ applicants, so use conservative 2x multiplier
+        count = Math.max(overCount * 2, 300); 
+        console.log(`📊 Detected "Over ${overCount}" → estimated ${count} applicants (high competition)`);
+      }
+    }
+
+    // Indeed patterns
+    const indeedPatterns = [
+      /(\d{1,3}(?:,\d{3})*)\s+applicants?/i,
+      /Applied\s+by\s+(\d{1,3}(?:,\d{3})*)\s+people/i
+    ];
+
+    // Try all patterns only if we haven't found an "Over X" case
+    if (count === 0) {
+      const allPatterns = [...sourcePatterns, ...indeedPatterns];
+      
+      for (let i = 0; i < allPatterns.length; i++) {
+        const pattern = allPatterns[i];
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          const foundCount = parseInt(match[1].replace(/,/g, ''), 10);
+          if (!isNaN(foundCount)) {
+            count = foundCount;
+            break;
+          }
+        }
+      }
+    }
+
+    // Determine competition level
+    if (count === 0) {
+      competitionLevel = 'low';
+    } else if (count <= 50) {
+      competitionLevel = 'low';
+    } else if (count <= 200) {
+      competitionLevel = 'medium';
+    } else if (count <= 500) {
+      competitionLevel = 'high';
+    } else {
+      competitionLevel = 'extreme';
+    }
+
+    const shouldExit = count > threshold;
+
+    return {
+      count,
+      shouldExit,
+      threshold,
+      competitionLevel
+    };
+  }
+
+  private parseStructuredData(jsonLd: any, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): JobListing {
     try {
       // Extract fields from JSON-LD JobPosting
       const jobData: JobListing = {
@@ -88,6 +185,12 @@ JSON:`;
         location: this.extractLocation(jsonLd.jobLocation),
         description: jsonLd.description || '',
       };
+
+      // Add applicant information if available
+      if (applicantInfo && applicantInfo.count > 0) {
+        jobData.applicantCount = applicantInfo.count;
+        jobData.competitionLevel = applicantInfo.competitionLevel;
+      }
 
       // Extract salary if available in structured data
       if (jsonLd.baseSalary || jsonLd.salary) {
@@ -178,7 +281,7 @@ JSON:`;
     return null;
   }
 
-  private parseJobData(response: string): JobListing {
+  private parseJobData(response: string, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): JobListing {
     try {
       // Clean the response to extract JSON
       const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -192,6 +295,12 @@ JSON:`;
       // Validate required fields
       if (!parsed.title || !parsed.company || !parsed.location || !parsed.description) {
         throw new Error('Missing required fields in extracted data');
+      }
+
+      // Add applicant information if available
+      if (applicantInfo && applicantInfo.count > 0) {
+        parsed.applicantCount = applicantInfo.count;
+        parsed.competitionLevel = applicantInfo.competitionLevel;
       }
 
       return parsed as JobListing;
