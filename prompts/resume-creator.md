@@ -12,6 +12,8 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 - Use keywords from the job description where appropriate
 - Maintain all factual information - do not fabricate anything
 
+{{recommendationsSection}}
+
 ## General Structure
 
 The general structure should be:
@@ -89,8 +91,6 @@ Description: {{job.description}}
 
 Current CV Content:
 {{cvContent}}
-
-{{recommendationsSection}}
 
 ## Output Format
 

@@ -5,7 +5,7 @@ import { JobExtractorAgent } from './agents/job-extractor-agent';
 import { JobScorerAgent } from './agents/job-scorer-agent';
 import { ResumeCreatorAgent } from './agents/resume-creator-agent';
 import { ResumeCriticAgent } from './agents/resume-critic-agent';
-import { StatementAgent } from './agents/statement-agent';
+import { InterviewPrepAgent } from './agents/interview-prep-agent';
 import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -289,51 +289,51 @@ program
   });
 
 program
-  .command('statement')
-  .description('Generate various types of statements (cover letter, endorsement, about me, general)')
+  .command('prep')
+  .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
   .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, or general')
   .argument('<jobId>', 'Job ID to generate statement for')
   .argument('<cvFile>', 'Path to CV file')
-  .option('-e, --emphasis <text>', 'Special emphasis or instructions for the statement')
-  .option('-c, --company-info <text>', 'Additional company information (for about-me statements)')
-  .option('-i, --instructions <text>', 'Custom instructions for the statement')
-  .option('--content', 'Output only the statement content without formatting')
-  .option('--regen', 'Force regenerate statement (ignores cached content)')
+  .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
+  .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
+  .option('-i, --instructions <text>', 'Custom instructions for the material')
+  .option('--content', 'Output only the material content without formatting')
+  .option('--regen', 'Force regenerate material (ignores cached content)')
   .action(async (type: string, jobId: string, cvFile: string, options) => {
     try {
-      // Validate statement type
+      // Validate material type
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
-        console.error(`❌ Invalid statement type: ${type}`);
+        console.error(`❌ Invalid material type: ${type}`);
         console.error(`Valid types: ${validTypes.join(', ')}`);
         process.exit(1);
       }
 
       if (!options.content) {
-        console.log('📝 Generating statement...');
+        console.log('📝 Generating interview material...');
         console.log(`📊 Type: ${type}`);
         console.log(`📊 Job ID: ${jobId}`);
         console.log(`📋 CV File: ${cvFile}`);
       }
 
       const config = getAnthropicConfig();
-      const statementAgent = new StatementAgent(
+      const interviewPrepAgent = new InterviewPrepAgent(
         config.anthropicApiKey,
         config.model,
         config.maxTokens
       );
       
-      const statementOptions = {
+      const materialOptions = {
         emphasis: options.emphasis,
         companyInfo: options.companyInfo,
         customInstructions: options.instructions
       };
 
-      const result = await statementAgent.generateStatement(
+      const result = await interviewPrepAgent.generateMaterial(
         type as StatementType,
         jobId,
         cvFile,
-        statementOptions,
+        materialOptions,
         !!options.regen, // Force regeneration if --regen flag is provided, otherwise use cache
         !!options.content // Content-only mode - find most recent statement file
       );
@@ -343,16 +343,16 @@ program
           // Just output the content without any formatting
           console.log(result.content);
         } else {
-          console.log('✅ Statement Generation Complete');
+          console.log('✅ Interview Material Generation Complete');
           console.log('=' .repeat(50));
           console.log(`📝 Type: ${result.type.replace('-', ' ').toUpperCase()}`);
           console.log(`📊 Character Count: ${result.characterCount}`);
           console.log('');
-          console.log('📄 Generated Statement:');
+          console.log('📄 Generated Material:');
           console.log(result.content);
         }
       } else {
-        console.error(`❌ Statement generation failed: ${result.error}`);
+        console.error(`❌ Interview material generation failed: ${result.error}`);
         process.exit(1);
       }
       

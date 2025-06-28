@@ -3,20 +3,20 @@ import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResu
 import * as fs from 'fs';
 import * as path from 'path';
 
-export class StatementAgent extends ClaudeBaseAgent {
+export class InterviewPrepAgent extends ClaudeBaseAgent {
   constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
     super(claudeApiKey, model, maxTokens);
   }
 
   async extract(): Promise<never> {
-    throw new Error('StatementAgent does not implement extract method. Use generateStatement instead.');
+    throw new Error('InterviewPrepAgent does not implement extract method. Use generateMaterial instead.');
   }
 
   async createResume(): Promise<never> {
-    throw new Error('StatementAgent does not implement createResume method. Use generateStatement instead.');
+    throw new Error('InterviewPrepAgent does not implement createResume method. Use generateMaterial instead.');
   }
 
-  async generateStatement(
+  async generateMaterial(
     type: StatementType,
     jobId: string,
     cvFilePath: string,
@@ -29,7 +29,7 @@ export class StatementAgent extends ClaudeBaseAgent {
       
       // If content-only mode and not regenerating, just find the most recent statement file
       if (contentOnly && !regenerate) {
-        const mostRecentContent = this.loadMostRecentStatement(jobId, type);
+        const mostRecentContent = this.loadMostRecentMaterial(jobId, type);
         if (mostRecentContent) {
           return {
             success: true,
@@ -39,7 +39,7 @@ export class StatementAgent extends ClaudeBaseAgent {
           };
         } else {
           // No existing statement found, fall through to generate new one
-          console.log(`📋 No existing ${type.replace('-', ' ')} statement found for job ${jobId}, generating...`);
+          console.log(`📋 No existing ${type.replace('-', ' ')} material found for job ${jobId}, generating...`);
         }
       }
       
@@ -49,24 +49,24 @@ export class StatementAgent extends ClaudeBaseAgent {
       
       // Check if we should use cached content or regenerate
       if (!regenerate && !contentOnly) {
-        const cachedContent = this.loadCachedStatement(jobId, type, cvFilePath, options);
+        const cachedContent = this.loadCachedMaterial(jobId, type, cvFilePath, options);
         if (cachedContent) {
-          console.log(`📋 Using cached ${type.replace('-', ' ')} statement for job ${jobId}`);
+          console.log(`📋 Using cached ${type.replace('-', ' ')} material for job ${jobId}`);
           content = cachedContent;
         } else {
-          console.log(`📋 No cached ${type.replace('-', ' ')} statement found for job ${jobId}, generating...`);
-          content = await this.createStatement(type, jobData, cvContent, options);
+          console.log(`📋 No cached ${type.replace('-', ' ')} material found for job ${jobId}, generating...`);
+          content = await this.createMaterial(type, jobData, cvContent, options);
           // Cache the newly generated content
-          this.cacheStatement(jobId, type, content, cvFilePath, options);
+          this.cacheMaterial(jobId, type, content, cvFilePath, options);
         }
       } else {
         // Regenerate content or content-only mode with no existing file
         if (regenerate) {
-          console.log(`🔄 Regenerating ${type.replace('-', ' ')} statement for job ${jobId}`);
+          console.log(`🔄 Regenerating ${type.replace('-', ' ')} material for job ${jobId}`);
         }
-        content = await this.createStatement(type, jobData, cvContent, options);
+        content = await this.createMaterial(type, jobData, cvContent, options);
         // Cache the regenerated content
-        this.cacheStatement(jobId, type, content, cvFilePath, options);
+        this.cacheMaterial(jobId, type, content, cvFilePath, options);
       }
       
       return {
@@ -129,7 +129,7 @@ export class StatementAgent extends ClaudeBaseAgent {
     }
   }
 
-  private async createStatement(
+  private async createMaterial(
     type: StatementType,
     job: JobListing,
     cvContent: string,
@@ -141,7 +141,7 @@ export class StatementAgent extends ClaudeBaseAgent {
     const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options);
     
     // Log the prompt
-    console.log(`📝 Generating ${type.replace('-', ' ')} statement...`);
+    console.log(`📝 Generating ${type.replace('-', ' ')} material...`);
     
     const response = await this.makeClaudeRequest(prompt);
     
@@ -222,7 +222,7 @@ export class StatementAgent extends ClaudeBaseAgent {
     return Math.abs(hash).toString(16).substring(0, 8);
   }
 
-  private loadMostRecentStatement(jobId: string, type: StatementType): string | null {
+  private loadMostRecentMaterial(jobId: string, type: StatementType): string | null {
     try {
       const jobDir = path.resolve('logs', jobId);
       
@@ -232,16 +232,16 @@ export class StatementAgent extends ClaudeBaseAgent {
       
       const files = fs.readdirSync(jobDir);
       
-      // Find all statement files for this type and get the most recent one
-      const statementFiles = files
+      // Find all interview prep files for this type and get the most recent one
+      const materialFiles = files
         .filter(file => 
-          file.startsWith(`statement-${type}-`) && 
+          file.startsWith(`interview-prep-${type}-`) && 
           file.endsWith('.json')
         )
         .sort()
         .reverse(); // Most recent first
       
-      const mostRecentFile = statementFiles[0];
+      const mostRecentFile = materialFiles[0];
       
       if (!mostRecentFile) {
         return null;
@@ -263,7 +263,7 @@ export class StatementAgent extends ClaudeBaseAgent {
     }
   }
 
-  private loadCachedStatement(
+  private loadCachedMaterial(
     jobId: string,
     type: StatementType,
     cvFilePath: string,
@@ -279,10 +279,10 @@ export class StatementAgent extends ClaudeBaseAgent {
       const cacheKey = this.generateCacheKey(type, cvFilePath, options);
       const files = fs.readdirSync(jobDir);
       
-      // Look for cached statement files and get the most recent one
+      // Look for cached interview prep files and get the most recent one
       const cacheFiles = files
         .filter(file => 
-          file.startsWith(`statement-${type}-${cacheKey}-`) && 
+          file.startsWith(`interview-prep-${type}-${cacheKey}-`) && 
           file.endsWith('.json')
         )
         .sort()
@@ -312,7 +312,7 @@ export class StatementAgent extends ClaudeBaseAgent {
     }
   }
 
-  private cacheStatement(
+  private cacheMaterial(
     jobId: string,
     type: StatementType,
     content: string,
@@ -339,11 +339,11 @@ export class StatementAgent extends ClaudeBaseAgent {
         cacheKey
       };
 
-      const cachePath = path.join(jobDir, `statement-${type}-${cacheKey}-${timestamp}.json`);
+      const cachePath = path.join(jobDir, `interview-prep-${type}-${cacheKey}-${timestamp}.json`);
       fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
-      console.log(`📝 Statement cached to: ${cachePath}`);
+      console.log(`📝 Interview material cached to: ${cachePath}`);
     } catch (error) {
-      console.warn(`⚠️  Failed to cache statement: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn(`⚠️  Failed to cache interview material: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
