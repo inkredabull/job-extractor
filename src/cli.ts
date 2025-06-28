@@ -291,8 +291,8 @@ program
 program
   .command('prep')
   .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, or stories')
-  .argument('<jobId>', 'Job ID to generate statement for')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, or profile')
+  .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
   .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
@@ -303,6 +303,10 @@ program
     try {
       // Handle themes extraction separately
       if (type === 'themes') {
+        if (!jobId) {
+          console.error('❌ Job ID is required for themes extraction');
+          process.exit(1);
+        }
         console.log('🎯 Extracting priority themes...');
         console.log(`📊 Job ID: ${jobId}`);
         console.log('');
@@ -327,6 +331,10 @@ program
 
       // Handle interview stories extraction
       if (type === 'stories') {
+        if (!jobId) {
+          console.error('❌ Job ID is required for stories extraction');
+          process.exit(1);
+        }
         console.log('📚 Extracting interview stories...');
         console.log(`📊 Job ID: ${jobId}`);
         console.log('');
@@ -371,16 +379,50 @@ program
         return;
       }
 
+      // Handle profile generation
+      if (type === 'profile') {
+        console.log('👤 Generating profile and Google Apps Script...');
+        console.log('');
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const result = await interviewPrepAgent.createProfile();
+
+        if (result.success) {
+          console.log('✅ Profile Generation Complete');
+          console.log('=' .repeat(50));
+          console.log('\n📝 Generated Profile:');
+          console.log(result.profile);
+          console.log('\n📄 Google Apps Script generated and saved to logs/');
+          console.log('💡 Copy the .js file content to Google Apps Script for use in Sheets');
+        } else {
+          console.error(`❌ Profile generation failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
       // Validate material type for other types
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
-        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories`);
+        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories, profile`);
         process.exit(1);
       }
 
-      // CV file is required for non-themes/stories types
-      if (!cvFile && type !== 'stories') {
+      // Job ID is required for statement types
+      if (!jobId) {
+        console.error(`❌ Job ID is required for ${type} generation`);
+        process.exit(1);
+      }
+
+      // CV file is required for statement types
+      if (!cvFile) {
         console.error(`❌ CV file is required for ${type} generation`);
         process.exit(1);
       }

@@ -1,13 +1,33 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export class InterviewPrepAgent extends ClaudeBaseAgent {
   private currentJobId: string = '';
+  private profileConfig: ProfileConfig = {
+    location: "hybrid in/near SF",
+    role: "I'm a hands-on leader who still builds",
+    preferredStack: ["React", "Python", "TypeScript", "GCP"],
+    teamSize: "3-5 Sr. EM/Staff-level full-stack direct reports",
+    domains: ["MarTech", "FinTech", "ClimateTech"],
+    domainOfExcellence: "SaaS and data-driven products"
+  };
 
   constructor(claudeApiKey: string, model?: string, maxTokens?: number) {
     super(claudeApiKey, model, maxTokens);
+  }
+
+  private getMinSalary(): number {
+    const envSalary = process.env.MIN_SALARY;
+    if (envSalary) {
+      const parsedSalary = parseInt(envSalary, 10);
+      if (!isNaN(parsedSalary)) {
+        return parsedSalary;
+      }
+    }
+    // Fallback to a default if not set in environment
+    return 245000;
   }
 
   async extract(): Promise<never> {
@@ -778,6 +798,145 @@ Respond in this JSON format:
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
+  }
+
+  // Profile Generation Methods (TypeScript versions of Google Apps Script)
+  
+  private where(): string {
+    return this.profileConfig.location;
+  }
+
+  private who(): string {
+    return this.profileConfig.role;
+  }
+
+  private focus(): string {
+    return [
+      "My track record is in",
+      this.profileConfig.domainOfExcellence,
+      "but I've been self-teaching around GenAI and am excited about",
+      this.profileConfig.domains.join('/') + "."
+    ].join(' ');
+  }
+
+  private why(): string {
+    return [
+      `Ideal team-size is ${this.profileConfig.teamSize}.`,
+      `Ideal stack includes ${this.profileConfig.preferredStack.join('/')} on ${this.profileConfig.preferredStack.includes('GCP') ? 'GCP' : 'cloud'}.`
+    ].join(" ");
+  }
+
+  private whatAndWhere(): string {
+    const minSalary = this.getMinSalary();
+    return [
+      "looking for a full-time role ",
+      "leading full-stack development as CTO/HoE/VPE at Seed/Series A or as DIR/Sr. EM at later stage",
+      ", preferably " + this.where() + ". ",
+      `Min base salary of $${(minSalary / 1000)}K; more if 5d/in-office. `,
+      this.focus(), " "
+    ].join('');
+  }
+
+  private generateProfile(): string {
+    let result = '';
+    result += this.who() + " ";
+    result += this.whatAndWhere() + " ";
+    result += this.why() + " ";
+    return result.trim();
+  }
+
+  async createProfile(): Promise<ProfileResult> {
+    try {
+      const profile = this.generateProfile();
+      const googleScript = this.transpileToGoogleScript();
+      
+      // Save to file
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const profilePath = path.resolve('logs', `profile-${timestamp}.txt`);
+      const scriptPath = path.resolve('logs', `google-script-${timestamp}.js`);
+      
+      fs.writeFileSync(profilePath, profile);
+      fs.writeFileSync(scriptPath, googleScript);
+      
+      console.log(`📝 Profile saved to: ${profilePath}`);
+      console.log(`📄 Google Script saved to: ${scriptPath}`);
+      console.log('📋 Google Script ready to copy-paste into Apps Script');
+      
+      return {
+        success: true,
+        profile,
+        googleScript
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  private transpileToGoogleScript(): string {
+    const config = this.profileConfig;
+    const minSalary = this.getMinSalary();
+    
+    return `function where() {
+  return "${config.location}";
+}
+
+function who() {
+  return "${config.role}";
+}
+
+function whatAndWhere() {
+  return [
+    "looking for a full-time role ", 
+    "leading full-stack development as CTO/HoE/VPE at Seed/Series A or as DIR/Sr. EM at later stage",
+    ", preferably " + where() + ". ",
+    "Min base salary of $${(minSalary / 1000)}K; more if 5d/in-office. ",
+    focus(), " "
+  ].join('');
+}
+
+function why() {
+  return [
+    "Ideal team-size is ${config.teamSize}.",
+    "Ideal stack includes ${config.preferredStack.join('/')} on ${config.preferredStack.includes('GCP') ? 'GCP' : 'cloud'}."
+  ].join(" ");
+}
+
+const DOMAINS = [
+  ${config.domains.map(d => `'${d}'`).join(',\n  ')}
+];
+
+// const domainOfExcellence = "${config.domainOfExcellence}";
+
+function focus() {
+  return [
+    "My track record is in",
+    domainOfExcellence,
+    "but I've been self-teaching around GenAI and am excited about",
+    DOMAINS.join('/') + "."
+  ].join(' ');
+}
+
+function cmf2() {
+  var result = '';
+  
+  result += who() + " ";
+  result += whatAndWhere() + " ";
+  result += why() + " ";
+  
+  console.log(result);
+  return result;
+}`;
+  }
+
+  updateProfileConfig(config: Partial<ProfileConfig>): void {
+    this.profileConfig = { ...this.profileConfig, ...config };
+  }
+
+  getProfileConfig(): ProfileConfig {
+    return { ...this.profileConfig };
   }
 
 }

@@ -206,3 +206,20 @@ export interface ThemeExtractionResult {
   error?: string;
   timestamp: string;
 }
+
+export interface ProfileConfig {
+  location: string;
+  role: string;
+  minSalary?: number; // Optional - will be read from environment
+  preferredStack: string[];
+  teamSize: string;
+  domains: string[];
+  domainOfExcellence: string;
+}
+
+export interface ProfileResult {
+  success: boolean;
+  profile?: string;
+  googleScript?: string;
+  error?: string;
+}
