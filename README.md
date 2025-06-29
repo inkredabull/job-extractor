@@ -13,7 +13,8 @@ A TypeScript CLI tool that extracts and automatically scores job information fro
 - 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
 - 🤖 **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
 - 🔍 **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
-- 📝 **Statement Generation**: Create personalized cover letters, endorsements, interview talking points, and general statements
+- 📝 **Interview Preparation**: Create personalized cover letters, endorsements, interview talking points, theme extraction, and project showcases
+- 🎯 **Intelligent Project Extraction**: Extract and format project information from themes for easy copy-paste into application forms
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -46,6 +47,12 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 # Optional: Auto-resume generation settings
 AUTO_RESUME_THRESHOLD=85
 AUTO_RESUME_CV_PATH=./sample-cv.txt
+
+# Profile Configuration (sensitive information)
+MIN_SALARY=225000
+
+# Resume Output Configuration
+RESUME_OUTPUT_DIR=~/Google Drive/My Drive/Professional/Job Search/Applications/Resumes
 ```
 
 5. Install pandoc (required for PDF generation):
@@ -195,37 +202,52 @@ job-extractor critique "4c32e01e"
 This resume demonstrates solid technical competency and relevant experience...
 ```
 
-#### Statement Generation
+#### Interview Preparation
 
-Generate various types of personalized statements for job applications:
+Generate comprehensive interview preparation materials for job applications:
 
 ```bash
 # Generate a cover letter
-job-extractor statement cover-letter "4c32e01e" cv.txt
+job-extractor prep cover-letter "4c32e01e" cv.txt
 
 # Generate a cover letter with special emphasis
-job-extractor statement cover-letter "4c32e01e" cv.txt --emphasis "Focus on AI/ML and technical architecture experience"
+job-extractor prep cover-letter "4c32e01e" cv.txt --emphasis "Focus on AI/ML and technical architecture experience"
 
 # Generate an endorsement (third-person recommendation)
-job-extractor statement endorsement "4c32e01e" cv.txt
+job-extractor prep endorsement "4c32e01e" cv.txt
 
 # Generate "about me" talking points for interviews
-job-extractor statement about-me "4c32e01e" cv.txt --company-info "the innovative AI platform and strong engineering culture"
+job-extractor prep about-me "4c32e01e" cv.txt --company-info "the innovative AI platform and strong engineering culture"
 
 # Generate a general statement
-job-extractor statement general "4c32e01e" cv.txt
+job-extractor prep general "4c32e01e" cv.txt
+
+# Extract priority themes from job description
+job-extractor prep themes "4c32e01e"
+
+# Get interview stories and highlighted examples
+job-extractor prep stories "4c32e01e"
+
+# Generate personal profile and Google Apps Script
+job-extractor prep profile
+
+# List available projects for extraction
+job-extractor prep list-projects "4c32e01e"
+
+# Extract specific project information for application forms
+job-extractor prep project "4c32e01e" 2
 
 # Get just the content without formatting (useful for copying)
-job-extractor statement cover-letter "4c32e01e" cv.txt --content
+job-extractor prep cover-letter "4c32e01e" cv.txt --content
 
 # Force regenerate statement (ignoring cache)
-job-extractor statement endorsement "4c32e01e" cv.txt --regen
+job-extractor prep endorsement "4c32e01e" cv.txt --regen
 
 # Combine flags
-job-extractor statement about-me "4c32e01e" cv.txt --regen --content
+job-extractor prep about-me "4c32e01e" cv.txt --regen --content
 ```
 
-**Statement Types:**
+**Interview Preparation Types:**
 
 1. **Cover Letter** (600-850 characters)
    - Informal tone with "Greetings:" and "Regards, Anthony" format
@@ -247,6 +269,28 @@ job-extractor statement about-me "4c32e01e" cv.txt --regen --content
    - Third-person career summary
    - References entire work history, not just recent roles
    - Emphasizes end-user and infrastructure experience
+
+5. **Themes** (Analysis)
+   - Extracts priority themes from job description
+   - Identifies high, medium, and low importance themes
+   - Provides examples from CV matching each theme
+   - Creates highlighted examples for interview stories
+
+6. **Stories** (Interview Preparation)
+   - Returns highlighted professional impact examples
+   - Provides interview story suggestions based on themes
+   - Ready-to-use examples for STAR method responses
+
+7. **Profile** (Personal Branding)
+   - Generates personal profile statement
+   - Creates Google Apps Script for spreadsheet integration
+   - Uses configurable profile settings from environment
+
+8. **Project** (Application Forms)
+   - Extracts project information from themes
+   - Formats for Catalant and similar application forms
+   - Includes Problem-Action-Result structure
+   - Maps to standard form fields (title, industry, duration, etc.)
 
 **Statement Options:**
 - `-e, --emphasis <text>`: Special instructions (useful for cover letters)
@@ -435,7 +479,7 @@ The scoring system uses a configurable `criteria.json` file. You can customize i
     "vp": 15
   },
   "salary_range": {
-    "min": 245000,
+    "min": 225000,
     "max": 400000,
     "currency": "USD"
   },
@@ -656,6 +700,7 @@ The ResumeCreatorAgent follows a 4-step process:
 - **Markdown intermediate**: Allows for easy customization and review
 - **Change tracking**: Reports what modifications were made
 - **Smart caching**: Automatically caches tailored content to avoid redundant LLM calls
+- **Auto-critique**: Automatically runs resume critique after first-time generation for feedback
 
 #### Smart Caching System
 
@@ -762,6 +807,7 @@ src/
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
 │   ├── resume-creator-agent.ts # AI-powered resume generation and PDF creation
 │   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
+│   ├── interview-prep-agent.ts # Interview preparation materials and project extraction
 │   └── index.ts               # Agent exports
 ├── types/
 │   └── index.ts               # TypeScript type definitions
@@ -817,11 +863,18 @@ The project follows a modular architecture with smart extraction and scoring str
    - Provides structured feedback with strengths, weaknesses, and recommendations
    - Rates resumes on a 1-10 scale with detailed analysis
    - Logs critique results for tracking improvement over time
-6. **WebScraper**: Utility for:
+6. **InterviewPrepAgent**: Claude 3.5 Sonnet-powered interview preparation system:
+   - Generates cover letters, endorsements, and interview talking points
+   - Extracts priority themes from job descriptions with CV examples
+   - Creates interview stories and highlighted professional impact examples
+   - Generates personal profiles with Google Apps Script integration
+   - Extracts project information formatted for application forms
+   - Supports configurable profile settings and caching
+7. **WebScraper**: Utility for:
    - HTML fetching with proper headers
    - JSON-LD structured data extraction
    - HTML simplification for AI processing
-7. **CLI**: Commander.js interface with automatic logging to unique files
+8. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Environment Variables
 
@@ -836,6 +889,8 @@ The project follows a modular architecture with smart extraction and scoring str
 | `ANTHROPIC_MAX_TOKENS` | Maximum tokens in response | `4000` |
 | `AUTO_RESUME_THRESHOLD` | Score threshold for automatic resume generation (0-100) | `80` |
 | `AUTO_RESUME_CV_PATH` | Path to CV file for automatic resume generation | - |
+| `MIN_SALARY` | Minimum salary requirement for profile generation | `225000` |
+| `RESUME_OUTPUT_DIR` | Default directory for saving generated resume PDFs | `~/Google Drive/My Drive/Professional/Job Search/Applications/Resumes` |
 
 ## Testing
 

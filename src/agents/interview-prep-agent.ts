@@ -27,7 +27,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
       }
     }
     // Fallback to a default if not set in environment
-    return 245000;
+    return 225000;
   }
 
   async extract(): Promise<never> {
