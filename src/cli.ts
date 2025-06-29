@@ -294,13 +294,13 @@ program
   .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, profile, project, or list-projects')
   .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
   .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
+  .argument('[projectNumber]', 'Project number to extract (for project type only)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
   .option('-i, --instructions <text>', 'Custom instructions for the material')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
-  .option('-p, --project <number>', 'Project number to extract (for project type)', '1')
-  .action(async (type: string, jobId: string, cvFile: string, options) => {
+  .action(async (type: string, jobId: string, cvFile: string, projectNumber: string, options) => {
     try {
       // Handle themes extraction separately
       if (type === 'themes') {
@@ -434,7 +434,7 @@ program
           result.projects?.forEach(project => {
             console.log(`   ${project}`);
           });
-          console.log('\n💡 Use: prep project <jobId> -p <number> to extract a specific project');
+          console.log('\n💡 Use: prep project <jobId> <projectNumber> to extract a specific project');
         } else {
           console.error(`❌ Project listing failed: ${result.error}`);
           process.exit(1);
@@ -449,15 +449,24 @@ program
           process.exit(1);
         }
         
-        const projectNumber = parseInt(options.project, 10);
-        if (isNaN(projectNumber) || projectNumber < 1) {
-          console.error('❌ Invalid project number. Use -p <number> where number >= 1');
+        // For project extraction, if cvFile is a number and projectNumber is undefined,
+        // then cvFile is actually the project number
+        let projectNum = 1;
+        if (projectNumber) {
+          projectNum = parseInt(projectNumber, 10);
+        } else if (cvFile && !isNaN(parseInt(cvFile, 10))) {
+          // cvFile is actually the project number
+          projectNum = parseInt(cvFile, 10);
+        }
+        
+        if (isNaN(projectNum) || projectNum < 1) {
+          console.error('❌ Invalid project number. Provide project number as: prep project <jobId> <projectNumber>');
           process.exit(1);
         }
 
         console.log('📋 Extracting project information...');
         console.log(`📊 Job ID: ${jobId}`);
-        console.log(`🔢 Project: ${projectNumber}`);
+        console.log(`🔢 Project: ${projectNum}`);
         console.log('');
 
         const config = getAnthropicConfig();
@@ -467,7 +476,7 @@ program
           config.maxTokens
         );
 
-        const result = await interviewPrepAgent.extractProject(jobId, projectNumber);
+        const result = await interviewPrepAgent.extractProject(jobId, projectNum);
 
         if (result.success) {
           console.log('✅ Project Extraction Complete');
