@@ -243,3 +243,25 @@ export interface ProjectExtractionResult {
   formattedOutput?: string;
   error?: string;
 }
+
+export interface LinkedInConnection {
+  name: string;
+  title: string;
+  profileUrl: string;
+  connectionDegree: '1st' | '2nd';
+  mutualConnection?: string; // For 2nd degree connections
+  location?: string;
+  company: string;
+}
+
+export interface OutreachResult {
+  success: boolean;
+  company?: string;
+  companyUrl?: string;
+  connections?: LinkedInConnection[];
+  totalConnections?: number;
+  firstDegreeCount?: number;
+  secondDegreeCount?: number;
+  error?: string;
+  timestamp: string;
+}

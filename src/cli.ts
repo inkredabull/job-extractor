@@ -6,6 +6,7 @@ import { JobScorerAgent } from './agents/job-scorer-agent';
 import { ResumeCreatorAgent } from './agents/resume-creator-agent';
 import { ResumeCriticAgent } from './agents/resume-critic-agent';
 import { InterviewPrepAgent } from './agents/interview-prep-agent';
+import { OutreachAgent } from './agents/outreach-agent';
 import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -557,6 +558,79 @@ program
         }
       } else {
         console.error(`❌ Interview material generation failed: ${result.error}`);
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('outreach')
+  .description('Find LinkedIn connections at target companies')
+  .argument('<action>', 'Action: search, list')
+  .argument('<jobId>', 'Job ID to find connections for')
+  .action(async (action: string, jobId: string) => {
+    try {
+      const outreachAgent = new OutreachAgent();
+      
+      if (action === 'search') {
+        console.log('🔍 Searching for LinkedIn connections...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log('');
+        
+        const result = await outreachAgent.findConnections(jobId);
+        
+        if (result.success) {
+          console.log('✅ LinkedIn Search Setup Complete');
+          console.log('=' .repeat(50));
+          console.log(`🏢 Company: ${result.company}`);
+          console.log('📋 Follow the generated instructions to manually collect connection data');
+          console.log('💡 Run "outreach list" after updating the connections template');
+        } else {
+          console.error(`❌ Outreach search failed: ${result.error}`);
+          process.exit(1);
+        }
+      } else if (action === 'list') {
+        console.log('📋 Loading LinkedIn connections...');
+        console.log(`📊 Job ID: ${jobId}`);
+        console.log('');
+        
+        const result = await outreachAgent.listConnections(jobId);
+        
+        if (result.success) {
+          console.log('✅ LinkedIn Connections');
+          console.log('=' .repeat(50));
+          console.log(result.summary);
+          
+          if (result.connections && result.connections.length > 0) {
+            console.log('\n📋 Connection Details:');
+            console.log('-' .repeat(50));
+            
+            result.connections.forEach((connection, index) => {
+              console.log(`\n${index + 1}. ${connection.name}`);
+              console.log(`   Title: ${connection.title}`);
+              console.log(`   Company: ${connection.company}`);
+              console.log(`   Connection: ${connection.connectionDegree} degree`);
+              if (connection.connectionDegree === '2nd' && connection.mutualConnection) {
+                console.log(`   Through: ${connection.mutualConnection}`);
+              }
+              if (connection.location) {
+                console.log(`   Location: ${connection.location}`);
+              }
+              console.log(`   Profile: ${connection.profileUrl}`);
+            });
+            
+            console.log('\n💡 Use these connections for targeted outreach and networking');
+          }
+        } else {
+          console.error(`❌ Failed to load connections: ${result.error}`);
+          process.exit(1);
+        }
+      } else {
+        console.error('❌ Invalid action. Use: search or list');
         process.exit(1);
       }
       
