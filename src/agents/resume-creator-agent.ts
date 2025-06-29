@@ -2,14 +2,18 @@ import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { execSync } from 'child_process';
+import { ResumeCriticAgent } from './resume-critic-agent';
 
 export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private maxRoles: number;
+  private claudeApiKey: string;
 
   constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 3) {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
+    this.claudeApiKey = claudeApiKey;
   }
 
   async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true): Promise<ResumeResult> {
@@ -47,6 +51,9 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       
       // Create PDF
       const pdfPath = await this.generatePDF(tailoredContent, jobData, outputPath, jobId);
+      
+      // Check if recommendations.txt exists for this job, if not, run critique automatically
+      await this.checkAndRunCritique(jobId);
       
       return {
         success: true,
@@ -583,18 +590,29 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
     const markdownPath = path.join(outputsDir, markdownFileName);
     fs.writeFileSync(markdownPath, content.markdownContent, 'utf-8');
     
-    // Determine final PDF path - save to job subdirectory if jobId provided
+    // Determine final PDF path - save to configured location by default
     let finalPath: string;
     if (outputPath) {
       finalPath = outputPath;
-    } else if (jobId) {
-      const jobDir = path.resolve('logs', jobId);
-      if (!fs.existsSync(jobDir)) {
-        fs.mkdirSync(jobDir, { recursive: true });
-      }
-      finalPath = path.join(jobDir, pdfFileName);
     } else {
-      finalPath = path.join('logs', pdfFileName);
+      // Get resume output directory from environment variable
+      const resumeOutputDir = this.getResumeOutputDir();
+      
+      // Create the directory if it doesn't exist
+      if (!fs.existsSync(resumeOutputDir)) {
+        fs.mkdirSync(resumeOutputDir, { recursive: true });
+      }
+      
+      finalPath = path.join(resumeOutputDir, pdfFileName);
+      
+      // Also save a copy to the job logs directory if jobId is provided
+      if (jobId) {
+        const jobDir = path.resolve('logs', jobId);
+        if (!fs.existsSync(jobDir)) {
+          fs.mkdirSync(jobDir, { recursive: true });
+        }
+        // We'll create a second copy after PDF generation
+      }
     }
     
     try {
@@ -603,6 +621,18 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       execSync(pandocCommand, { stdio: 'pipe' });
       
       console.log(`✅ Resume generated: ${finalPath}`);
+      
+      // Also save a copy to the job logs directory if jobId is provided
+      if (jobId && !outputPath) {
+        const jobDir = path.resolve('logs', jobId);
+        const logsCopyPath = path.join(jobDir, pdfFileName);
+        try {
+          fs.copyFileSync(finalPath, logsCopyPath);
+          console.log(`📄 Copy saved to logs: ${logsCopyPath}`);
+        } catch (copyError) {
+          console.warn(`⚠️  Failed to copy resume to logs directory: ${copyError instanceof Error ? copyError.message : 'Unknown error'}`);
+        }
+      }
       
       // Clean up temporary markdown file
       fs.unlinkSync(markdownPath);
@@ -615,6 +645,72 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       }
       
       throw new Error(`Failed to generate PDF with pandoc: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private getResumeOutputDir(): string {
+    const envDir = process.env.RESUME_OUTPUT_DIR;
+    if (envDir) {
+      // Handle tilde expansion for home directory
+      if (envDir.startsWith('~/')) {
+        const homeDir = os.homedir();
+        return path.join(homeDir, envDir.slice(2));
+      }
+      return envDir;
+    }
+    
+    // Fallback to default Google Drive location
+    const homeDir = os.homedir();
+    return path.join(homeDir, 'Google Drive', 'My Drive', 'Professional', 'Job Search', 'Applications', 'Resumes');
+  }
+
+  private async checkAndRunCritique(jobId: string): Promise<void> {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return;
+      }
+
+      // Check if recommendations.txt exists
+      const recommendationsPath = path.join(jobDir, 'recommendations.txt');
+      if (fs.existsSync(recommendationsPath)) {
+        console.log(`📋 Recommendations already exist for job ${jobId}, skipping auto-critique`);
+        return;
+      }
+
+      // Check if any critique files exist
+      const files = fs.readdirSync(jobDir);
+      const critiqueFiles = files.filter(file => file.startsWith('critique-') && file.endsWith('.json'));
+      
+      if (critiqueFiles.length > 0) {
+        console.log(`📋 Critique already exists for job ${jobId}, skipping auto-critique`);
+        return;
+      }
+
+      console.log(`🔍 No recommendations found for job ${jobId}, running automatic critique...`);
+      
+      // Create ResumeCriticAgent and run critique
+      const critic = new ResumeCriticAgent(
+        this.claudeApiKey,
+        this.model,
+        this.maxTokens
+      );
+      
+      const result = await critic.critiqueResume(jobId);
+      
+      if (result.success) {
+        console.log(`✅ Auto-critique completed for job ${jobId}`);
+        console.log(`⭐ Overall Rating: ${result.overallRating}/10`);
+        
+        if (result.recommendations && result.recommendations.length > 0) {
+          console.log(`💡 Generated ${result.recommendations.length} recommendations for future iterations`);
+        }
+      } else {
+        console.warn(`⚠️  Auto-critique failed for job ${jobId}: ${result.error}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to run auto-critique for job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }
