@@ -214,19 +214,43 @@ export class JobScorerAgent extends BaseAgent {
     
     if (jobMin === 0 && jobMax === 0) return { score: 0.5, explanation: 'Salary range not specified' };
     
-    const jobAvg = jobMax > 0 ? (jobMin + jobMax) / 2 : jobMin;
     const salaryRange = jobMax > 0 ? `$${jobMin.toLocaleString()}-$${jobMax.toLocaleString()}` : `$${jobMin.toLocaleString()}`;
     const criteriaRange = `$${criteriaMin.toLocaleString()}-$${criteriaMax.toLocaleString()}`;
     
-    if (jobAvg >= criteriaMin && jobAvg <= criteriaMax) {
-      return { score: 1, explanation: `Salary ${salaryRange} fits within target range ${criteriaRange}` };
+    // Use the effective job max (or min if no max specified)
+    const effectiveJobMax = jobMax > 0 ? jobMax : jobMin;
+    
+    // Check for range overlap
+    const hasOverlap = jobMin <= criteriaMax && effectiveJobMax >= criteriaMin;
+    
+    if (hasOverlap) {
+      // Calculate overlap quality
+      const overlapMin = Math.max(jobMin, criteriaMin);
+      const overlapMax = Math.min(effectiveJobMax, criteriaMax);
+      const overlapSize = overlapMax - overlapMin;
+      const criteriaSize = criteriaMax - criteriaMin;
+      const jobSize = effectiveJobMax - jobMin;
+      
+      // Score based on how much of the target range is covered
+      const overlapRatio = overlapSize / Math.min(criteriaSize, jobSize);
+      const score = Math.min(1, overlapRatio * 1.2); // Slight bonus for overlap
+      
+      if (jobMin >= criteriaMin && effectiveJobMax <= criteriaMax) {
+        return { score: 1, explanation: `Salary ${salaryRange} fits entirely within target range ${criteriaRange}` };
+      } else {
+        return { score, explanation: `Salary ${salaryRange} overlaps with target range ${criteriaRange}` };
+      }
     }
-    if (jobAvg < criteriaMin) {
-      const score = Math.max(0, jobAvg / criteriaMin);
+    
+    // No overlap - determine if above or below
+    if (effectiveJobMax < criteriaMin) {
+      const score = Math.max(0, effectiveJobMax / criteriaMin * 0.8); // Penalty for being below
       return { score, explanation: `Salary ${salaryRange} below target range ${criteriaRange}` };
+    } else {
+      // Job min is above criteria max
+      const score = Math.max(0, 1 - (jobMin - criteriaMax) / criteriaMax * 0.5); // Less penalty for being above
+      return { score, explanation: `Salary ${salaryRange} above target range ${criteriaRange}` };
     }
-    const score = Math.max(0, 1 - (jobAvg - criteriaMax) / criteriaMax);
-    return { score, explanation: `Salary ${salaryRange} above target range ${criteriaRange}` };
   }
 
   private scoreLocation(job: JobListing): { score: number; explanation: string } {
