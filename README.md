@@ -2,6 +2,55 @@
 
 A TypeScript CLI tool that extracts and automatically scores job information from job posting URLs using dual extraction strategies. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction and job matching.
 
+Table of Contents
+=================
+
+* [Job Extractor](#job-extractor)
+   * [Features](#features)
+   * [Installation](#installation)
+   * [Usage](#usage)
+      * [Command Line Interface](#command-line-interface)
+         * [Job Extraction (with Automatic Scoring)](#job-extraction-with-automatic-scoring)
+         * [Manual Job Scoring](#manual-job-scoring)
+         * [Resume Generation](#resume-generation)
+         * [Auto-Resume Generation](#auto-resume-generation)
+         * [Resume Critique](#resume-critique)
+         * [Interview Preparation](#interview-preparation)
+         * [Statement Caching](#statement-caching)
+      * [Examples](#examples)
+   * [Output Schemas](#output-schemas)
+      * [Job Extraction Schema](#job-extraction-schema)
+      * [Job Scoring Schema](#job-scoring-schema)
+      * [Criteria Configuration](#criteria-configuration)
+         * [Basic Example (Simple Criteria)](#basic-example-simple-criteria)
+         * [Advanced Example (Comprehensive Criteria)](#advanced-example-comprehensive-criteria)
+         * [Creating Your Own Criteria](#creating-your-own-criteria)
+         * [Criteria Fields Explained](#criteria-fields-explained)
+      * [Resume Generation Schema](#resume-generation-schema)
+         * [CV File Format](#cv-file-format)
+      * [Resume Critique Schema](#resume-critique-schema)
+   * [How It Works](#how-it-works)
+      * [Dual Extraction Strategy](#dual-extraction-strategy)
+      * [Salary Extraction Patterns](#salary-extraction-patterns)
+      * [Job Scoring Algorithm](#job-scoring-algorithm)
+      * [Resume Generation Process](#resume-generation-process)
+         * [Smart Caching System](#smart-caching-system)
+      * [Automatic Logging](#automatic-logging)
+   * [Development](#development)
+      * [Scripts](#scripts)
+      * [Project Structure](#project-structure)
+      * [Architecture](#architecture)
+      * [Environment Variables](#environment-variables)
+   * [Testing](#testing)
+   * [Contributing](#contributing)
+   * [License](#license)
+   * [Troubleshooting](#troubleshooting)
+      * [Common Issues](#common-issues)
+      * [Getting Help](#getting-help)
+      * [Misc](#misc)
+
+<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
+
 ## Features
 
 - 🎯 **Smart Dual Extraction Strategy:**
