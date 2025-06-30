@@ -389,9 +389,9 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
       .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
       .trim();
 
-    // For about-me type, preserve bullet formatting
+    // For about-me type, convert markdown bullets to unicode
     if (type === 'about-me') {
-      return cleaned;
+      return this.convertMarkdownToUnicode(cleaned);
     }
 
     // For other types, ensure single paragraph format if needed
@@ -400,6 +400,17 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     }
 
     return cleaned;
+  }
+
+  private convertMarkdownToUnicode(text: string): string {
+    // Convert markdown bullet points to Mac Notes-compatible format
+    return text
+      // Convert main bullets (- or * at start of line) to bullet points
+      .replace(/^[\-\*]\s+(.+)$/gm, '• $1')
+      // Convert nested bullets (2+ spaces + - or *) to tab-indented sub-bullets
+      .replace(/^  [\-\*]\s+(.+)$/gm, '\t• $1')
+      // Convert deeper nested bullets (4+ spaces + - or *) to double-tab indented
+      .replace(/^    [\-\*]\s+(.+)$/gm, '\t\t• $1');
   }
 
   async extractThemes(jobId: string): Promise<ThemeExtractionResult> {

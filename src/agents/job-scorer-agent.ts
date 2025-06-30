@@ -207,8 +207,9 @@ export class JobScorerAgent extends BaseAgent {
   private scoreSalary(job: JobListing): { score: number; explanation: string } {
     if (!job.salary) return { score: 0.5, explanation: 'No salary information provided' };
     
-    const jobMin = parseInt(job.salary.min?.replace(/[$,]/g, '') || '0');
-    const jobMax = parseInt(job.salary.max?.replace(/[$,]/g, '') || '0');
+    // Handle both string and number salary values
+    const jobMin = typeof job.salary.min === 'number' ? job.salary.min : parseInt(job.salary.min?.replace(/[$,]/g, '') || '0');
+    const jobMax = typeof job.salary.max === 'number' ? job.salary.max : parseInt(job.salary.max?.replace(/[$,]/g, '') || '0');
     const criteriaMin = this.criteria.salary_range.min;
     const criteriaMax = this.criteria.salary_range.max;
     
