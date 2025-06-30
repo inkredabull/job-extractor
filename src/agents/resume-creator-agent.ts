@@ -10,7 +10,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private maxRoles: number;
   private claudeApiKey: string;
 
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 3) {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 4) {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
@@ -604,15 +604,6 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       }
       
       finalPath = path.join(resumeOutputDir, pdfFileName);
-      
-      // Also save a copy to the job logs directory if jobId is provided
-      if (jobId) {
-        const jobDir = path.resolve('logs', jobId);
-        if (!fs.existsSync(jobDir)) {
-          fs.mkdirSync(jobDir, { recursive: true });
-        }
-        // We'll create a second copy after PDF generation
-      }
     }
     
     try {
@@ -621,18 +612,6 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       execSync(pandocCommand, { stdio: 'pipe' });
       
       console.log(`✅ Resume generated: ${finalPath}`);
-      
-      // Also save a copy to the job logs directory if jobId is provided
-      if (jobId && !outputPath) {
-        const jobDir = path.resolve('logs', jobId);
-        const logsCopyPath = path.join(jobDir, pdfFileName);
-        try {
-          fs.copyFileSync(finalPath, logsCopyPath);
-          console.log(`📄 Copy saved to logs: ${logsCopyPath}`);
-        } catch (copyError) {
-          console.warn(`⚠️  Failed to copy resume to logs directory: ${copyError instanceof Error ? copyError.message : 'Unknown error'}`);
-        }
-      }
       
       // Clean up temporary markdown file
       fs.unlinkSync(markdownPath);
