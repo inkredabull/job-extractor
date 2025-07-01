@@ -69,6 +69,7 @@ Table of Contents
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
 - 🧪 **Comprehensive Testing**: Full unit test coverage with mocking for external dependencies
 - 🔧 **TypeScript**: Full type safety and modern development experience
+- 📊 **LangSmith Evaluation**: Comprehensive LLM evaluation, monitoring, and performance analysis
 
 ## Installation
 
@@ -93,6 +94,9 @@ cp .env.example .env
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
+# Optional: LangSmith evaluation and monitoring
+LANGSMITH_API_KEY=your_langsmith_api_key_here
+
 # Optional: Auto-resume generation settings
 AUTO_RESUME_THRESHOLD=85
 AUTO_RESUME_CV_PATH=./sample-cv.txt
@@ -115,7 +119,28 @@ sudo apt-get install pandoc
 # Windows (download from https://pandoc.org/installing.html)
 ```
 
-6. Build the project:
+6. Install evaluation dependencies (optional, for evaluation features):
+```bash
+# Evaluation setup with LangSmith
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Test the installation
+python -c "import langsmith; print('✅ LangSmith evaluation framework ready!')"
+
+# Advanced: If you specifically need openai-evals (has complex dependencies)
+# Install in dedicated environment due to TensorFlow conflicts
+python3 -m venv evals_env
+source evals_env/bin/activate
+pip install --no-deps git+https://github.com/openai/evals.git
+pip install openai numpy pandas
+
+# To deactivate virtual environment when done:
+# deactivate
+```
+
+7. Build the project:
 ```bash
 npm run build
 ```
@@ -883,6 +908,13 @@ logs/                          # Auto-generated job extraction and scoring logs
     ├── tailored-*.json        # Cached metadata (changes, timestamps)
     └── tailored-*.md          # Editable tailored resume markdown
 
+examples/                      # Evaluation and example scripts
+└── langsmith_evaluation.py    # LangSmith evaluation example
+
+data/                          # Evaluation data (created by extract-for-eval)
+├── index.jsonl                # Job index with required terms
+└── jd_*.txt                   # Job description text files
+
 criteria.json                  # Configurable job scoring criteria
 sample-cv.txt                  # Example CV format for resume generation
 ```
@@ -925,6 +957,58 @@ The project follows a modular architecture with smart extraction and scoring str
    - HTML simplification for AI processing
 8. **CLI**: Commander.js interface with automatic logging to unique files
 
+### Python Dependencies (Optional)
+
+For evaluation and testing features, this project includes Python dependencies. Due to modern Python environment management, these should be installed in a virtual environment:
+
+```bash
+# LangSmith evaluation setup (recommended)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Included tools:
+# - langsmith: Comprehensive LLM evaluation, monitoring, and tracing ✅ Ready to use
+# - openai: For custom evaluation scripts and API access
+
+# Advanced: openai-evals (optional, complex dependencies)
+# If needed, install in separate environment due to TensorFlow conflicts
+
+# When finished with Python evaluation work:
+deactivate
+```
+
+**LangSmith Evaluation Use Cases:**
+- **Job Extraction Accuracy**: Test extraction performance against known datasets
+- **Prompt Quality Assessment**: Evaluate prompt effectiveness for resume generation
+- **AI Agent Performance Monitoring**: Track and analyze agent behavior
+- **Error Analysis**: Trace and debug LLM interactions
+- **A/B Testing**: Compare different prompts and model configurations
+- **Production Monitoring**: Real-time performance tracking of deployed agents
+
+**Getting Started with LangSmith Evaluation:**
+```bash
+# Add your LangSmith API key to .env file:
+# LANGSMITH_API_KEY=your_api_key_here
+# Get your API key from: https://smith.langchain.com/
+
+# Run the example evaluation script
+source venv/bin/activate
+python examples/langsmith_evaluation.py
+
+# This will analyze your extracted job data and provide metrics on:
+# - Required terms extraction quality
+# - Job data completeness
+# - Coverage and accuracy statistics
+# - LangSmith API connection status
+```
+
+**Virtual Environment Notes:**
+- The `venv/` directory will be created in your project root
+- Always activate the virtual environment before running Python evaluation tools
+- Add `venv/` to your `.gitignore` if contributing to the project
+- These dependencies are optional and only needed for evaluation work
+
 ### Environment Variables
 
 | Variable | Description | Default |
@@ -936,6 +1020,7 @@ The project follows a modular architecture with smart extraction and scoring str
 | `ANTHROPIC_API_KEY` | Anthropic API key (required for resume generation) | - |
 | `ANTHROPIC_MODEL` | Anthropic model to use | `claude-3-5-sonnet-20241022` |
 | `ANTHROPIC_MAX_TOKENS` | Maximum tokens in response | `4000` |
+| `LANGSMITH_API_KEY` | LangSmith API key (optional, for evaluation and monitoring) | - |
 | `AUTO_RESUME_THRESHOLD` | Score threshold for automatic resume generation (0-100) | `80` |
 | `AUTO_RESUME_CV_PATH` | Path to CV file for automatic resume generation | - |
 | `MIN_SALARY` | Minimum salary requirement for profile generation | `225000` |

@@ -1,0 +1,21 @@
+# Evaluation and testing dependencies
+langsmith>=0.1.0
+python-dotenv>=1.0.0  # For loading .env files in evaluation scripts
+
+# Optional: Pin to specific versions for reproducibility
+# langsmith==0.1.17
+# python-dotenv==1.0.0
+
+# Note: langsmith is the primary evaluation framework for this project
+# It provides comprehensive LLM evaluation, monitoring, and tracing capabilities
+
+# Additional evaluation dependencies (optional)
+openai>=1.0.0  # For custom evaluation scripts
+
+# Note: openai-evals has complex TensorFlow dependencies that may conflict
+# For most evaluation needs, langsmith is sufficient and recommended
+# 
+# If you need openai-evals specifically, install in a separate virtual environment
+
+# Note: Use a virtual environment to install these dependencies
+# See setup instructions in README.md
