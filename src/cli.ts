@@ -65,14 +65,8 @@ program
       await fs.writeFile(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
-      // Create project-level data subdirectory and save job description as txt file
-      const dataDir = path.join(process.cwd(), 'data');
-      await fs.mkdir(dataDir, { recursive: true });
-      
-      const txtFileName = `jd_${jobId}.txt`;
-      const txtFilePath = path.join(dataDir, txtFileName);
-      await fs.writeFile(txtFilePath, result.data.description, 'utf-8');
-      console.log(`📄 Job description saved to ${txtFilePath}`);
+      // Process job description with required terms extraction and index update
+      await agent.processJobDescription(jobId, result.data.description);
 
       // Automatically score the job unless --no-score is specified
       if (options.score !== false) {
@@ -197,16 +191,110 @@ program
         process.exit(1);
       }
 
-      // Create project-level data subdirectory and save job description as txt file
-      const dataDir = path.join(process.cwd(), 'data');
-      await fs.mkdir(dataDir, { recursive: true });
+      // Use JobExtractorAgent to process the description with required terms extraction
+      const config = getConfig();
+      const agent = new JobExtractorAgent(config);
       
-      const txtFileName = `jd_${jobId}.txt`;
-      const txtFilePath = path.join(dataDir, txtFileName);
-      await fs.writeFile(txtFilePath, jobData.description, 'utf-8');
+      await agent.processJobDescription(jobId, jobData.description);
       
       console.log(`✅ Job description extracted from: ${jobFilePath}`);
-      console.log(`📄 Job description saved to: ${txtFilePath}`);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('list')
+  .description('List all job IDs (subdirectories under logs)')
+  .option('-v, --verbose', 'Show additional details for each job')
+  .action(async (options) => {
+    try {
+      const logsDir = path.join(process.cwd(), 'logs');
+      
+      // Check if logs directory exists
+      try {
+        await fs.access(logsDir);
+      } catch {
+        console.log('📁 No logs directory found - no jobs extracted yet');
+        return;
+      }
+
+      // Read subdirectories
+      const entries = await fs.readdir(logsDir, { withFileTypes: true });
+      const jobIds = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort();
+
+      if (jobIds.length === 0) {
+        console.log('📁 No job directories found in logs');
+        return;
+      }
+
+      console.log(`📋 Found ${jobIds.length} job${jobIds.length === 1 ? '' : 's'}:`);
+      console.log('=' .repeat(50));
+
+      if (options.verbose) {
+        // Show details for each job
+        for (const jobId of jobIds) {
+          const jobDir = path.join(logsDir, jobId);
+          
+          try {
+            // Find job JSON file to get basic info
+            const files = await fs.readdir(jobDir);
+            const jobFiles = files
+              .filter(file => file.startsWith('job-') && file.endsWith('.json'))
+              .sort()
+              .reverse(); // Most recent first
+
+            if (jobFiles.length > 0) {
+              const jobFilePath = path.join(jobDir, jobFiles[0]);
+              const jobDataRaw = await fs.readFile(jobFilePath, 'utf-8');
+              const jobData = JSON.parse(jobDataRaw);
+              
+              console.log(`\n📊 ${jobId}`);
+              console.log(`   Company: ${jobData.company || 'Unknown'}`);
+              console.log(`   Title: ${jobData.title || 'Unknown'}`);
+              console.log(`   Location: ${jobData.location || 'Unknown'}`);
+              if (jobData.salary) {
+                const salaryStr = jobData.salary.min && jobData.salary.max 
+                  ? `${jobData.salary.min} - ${jobData.salary.max} ${jobData.salary.currency || ''}`
+                  : jobData.salary.min || jobData.salary.max || 'Not specified';
+                console.log(`   Salary: ${salaryStr}`);
+              }
+              
+              // Check what files exist
+              const hasScore = files.some(f => f.startsWith('score-'));
+              const hasResume = files.some(f => f.endsWith('.pdf'));
+              const hasCritique = files.some(f => f.startsWith('critique-'));
+              
+              const status = [];
+              if (hasScore) status.push('scored');
+              if (hasResume) status.push('resume');
+              if (hasCritique) status.push('critiqued');
+              
+              if (status.length > 0) {
+                console.log(`   Status: ${status.join(', ')}`);
+              }
+            } else {
+              console.log(`\n📊 ${jobId} (no job data found)`);
+            }
+          } catch (error) {
+            console.log(`\n📊 ${jobId} (error reading job data)`);
+          }
+        }
+      } else {
+        // Simple list
+        jobIds.forEach((jobId, index) => {
+          console.log(`${index + 1}. ${jobId}`);
+        });
+      }
+
+      console.log('');
+      console.log('💡 Use --verbose (-v) flag for detailed information');
+      console.log('💡 Use individual commands like "score <jobId>" or "resume <jobId> <cvFile>" to work with specific jobs');
       
     } catch (error) {
       console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');

@@ -1,6 +1,8 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class JobExtractorAgent extends BaseAgent {
   constructor(config: AgentConfig) {
@@ -313,6 +315,129 @@ JSON:`;
       return parsed as JobListing;
     } catch (error) {
       throw new Error(`Failed to parse job data: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
+    }
+  }
+
+  async extractRequiredTerms(description: string): Promise<string[]> {
+    try {
+      const prompt = `Analyze the following job description and extract 10-15 key terms and phrases that are essential requirements for this role. Focus on:
+- Technical skills and technologies
+- Programming languages and frameworks
+- Tools and platforms
+- Methodologies and practices
+- Certifications or specific knowledge areas
+- Years of experience requirements
+- Key responsibilities that are critical
+
+Return ONLY a JSON array of strings, with each string being a key term or phrase. Be specific and avoid generic terms.
+
+Job Description:
+${description}
+
+Response format: ["term1", "term2", "term3", ...]`;
+
+      const response = await this.makeOpenAIRequest(prompt);
+      
+      // Extract JSON array from response
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        throw new Error('No JSON array found in response');
+      }
+
+      const terms = JSON.parse(jsonMatch[0]);
+      
+      // Validate and limit to 15 terms
+      if (!Array.isArray(terms)) {
+        throw new Error('Response is not an array');
+      }
+      
+      return terms.slice(0, 15).map(term => String(term).trim());
+    } catch (error) {
+      console.warn('Failed to extract required terms:', error instanceof Error ? error.message : 'Unknown error');
+      return []; // Return empty array as fallback
+    }
+  }
+
+  async upsertJobIndex(jobId: string, jdFileName: string, requiredTerms: string[]): Promise<void> {
+    const indexPath = path.join(process.cwd(), 'data', 'index.jsonl');
+    
+    try {
+      // Read existing index entries
+      const existingEntries: any[] = [];
+      let foundExisting = false;
+
+      if (fs.existsSync(indexPath)) {
+        const content = fs.readFileSync(indexPath, 'utf-8');
+        const lines = content.trim().split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            const entry = JSON.parse(line);
+            if (entry.job_id === jobId) {
+              // Update existing entry
+              entry.jd_file = jdFileName;
+              entry.required_terms = requiredTerms;
+              entry.updated_at = new Date().toISOString();
+              foundExisting = true;
+            }
+            existingEntries.push(entry);
+          } catch (parseError) {
+            console.warn('Skipping invalid JSONL line:', line);
+          }
+        }
+      }
+
+      // Add new entry if not found
+      if (!foundExisting) {
+        existingEntries.push({
+          job_id: jobId,
+          jd_file: jdFileName,
+          required_terms: requiredTerms,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      // Write back to file
+      const newContent = existingEntries.map(entry => JSON.stringify(entry)).join('\n') + '\n';
+      fs.writeFileSync(indexPath, newContent, 'utf-8');
+      
+    } catch (error) {
+      throw new Error(`Failed to update job index: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async processJobDescription(jobId: string, description: string): Promise<void> {
+    try {
+      // Extract required terms
+      console.log('🔍 Extracting required terms...');
+      const requiredTerms = await this.extractRequiredTerms(description);
+      
+      if (requiredTerms.length === 0) {
+        console.log('⚠️  No required terms extracted, proceeding without terms');
+      } else {
+        console.log(`📝 Extracted ${requiredTerms.length} required terms`);
+      }
+
+      // Create data directory if it doesn't exist
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+
+      // Save job description to txt file
+      const jdFileName = `jd_${jobId}.txt`;
+      const txtFilePath = path.join(dataDir, jdFileName);
+      fs.writeFileSync(txtFilePath, description, 'utf-8');
+
+      // Update index
+      await this.upsertJobIndex(jobId, jdFileName, requiredTerms);
+      
+      console.log(`📄 Job description saved to: ${txtFilePath}`);
+      console.log(`📋 Index updated in: ${path.join(dataDir, 'index.jsonl')}`);
+      
+    } catch (error) {
+      throw new Error(`Failed to process job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }
