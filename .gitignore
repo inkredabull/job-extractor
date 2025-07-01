@@ -116,4 +116,3 @@ jspm_packages/
 !requirements.txt
 !examples/**/*.py
 data/
-examples/
