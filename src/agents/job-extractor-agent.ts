@@ -440,4 +440,99 @@ Response format: ["term1", "term2", "term3", ...]`;
       throw new Error(`Failed to process job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  async extractForEval(): Promise<{ processed: number; errors: number; skipped: number }> {
+    const logsDir = path.join(process.cwd(), 'logs');
+    const results = { processed: 0, errors: 0, skipped: 0 };
+
+    try {
+      // Check if logs directory exists
+      if (!fs.existsSync(logsDir)) {
+        console.log('📁 No logs directory found - no jobs to process');
+        return results;
+      }
+
+      // Get all job subdirectories
+      const entries = fs.readdirSync(logsDir, { withFileTypes: true });
+      const jobIds = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort();
+
+      if (jobIds.length === 0) {
+        console.log('📁 No job directories found in logs');
+        return results;
+      }
+
+      console.log(`🔄 Processing ${jobIds.length} job directories...`);
+      console.log('');
+
+      for (let i = 0; i < jobIds.length; i++) {
+        const jobId = jobIds[i];
+        const jobDir = path.join(logsDir, jobId);
+        
+        console.log(`📊 [${i + 1}/${jobIds.length}] Processing job ${jobId}...`);
+
+        try {
+          // Find the most recent job JSON file
+          const files = fs.readdirSync(jobDir);
+          const jobFiles = files
+            .filter(file => file.startsWith('job-') && file.endsWith('.json'))
+            .sort()
+            .reverse(); // Most recent first
+
+          if (jobFiles.length === 0) {
+            console.log(`   ⚠️  No job JSON files found - skipping`);
+            results.skipped++;
+            continue;
+          }
+
+          const jobFilePath = path.join(jobDir, jobFiles[0]);
+          
+          // Read and parse the job JSON file
+          const jobDataRaw = fs.readFileSync(jobFilePath, 'utf-8');
+          const jobData = JSON.parse(jobDataRaw);
+
+          if (!jobData.description) {
+            console.log(`   ⚠️  No description field found - skipping`);
+            results.skipped++;
+            continue;
+          }
+
+          // Check if txt file already exists to avoid reprocessing
+          const dataDir = path.join(process.cwd(), 'data');
+          const txtFileName = `jd_${jobId}.txt`;
+          const txtFilePath = path.join(dataDir, txtFileName);
+          
+          if (fs.existsSync(txtFilePath)) {
+            // Check if description has changed by comparing content
+            const existingContent = fs.readFileSync(txtFilePath, 'utf-8');
+            if (existingContent.trim() === jobData.description.trim()) {
+              console.log(`   ✅ Already processed (content unchanged) - skipping`);
+              results.skipped++;
+              continue;
+            }
+          }
+
+          // Process the job description
+          await this.processJobDescription(jobId, jobData.description);
+          console.log(`   ✅ Processed successfully`);
+          results.processed++;
+
+          // Small delay to avoid overwhelming the API
+          if (i < jobIds.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+        } catch (error) {
+          console.log(`   ❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          results.errors++;
+        }
+      }
+
+      return results;
+    } catch (error) {
+      throw new Error(`Failed to extract for eval: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }

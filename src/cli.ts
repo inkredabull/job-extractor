@@ -303,6 +303,43 @@ program
   });
 
 program
+  .command('extract-for-eval')
+  .description('Extract descriptions from all job directories to data/ and update index.jsonl')
+  .action(async () => {
+    try {
+      console.log('🔄 Bulk extracting job descriptions for evaluation...');
+      console.log('');
+
+      const config = getConfig();
+      const agent = new JobExtractorAgent(config);
+      
+      const results = await agent.extractForEval();
+      
+      console.log('');
+      console.log('✅ Bulk extraction complete');
+      console.log('=' .repeat(50));
+      console.log(`📊 Summary:`);
+      console.log(`   Processed: ${results.processed} jobs`);
+      console.log(`   Skipped: ${results.skipped} jobs (already processed or no description)`);
+      console.log(`   Errors: ${results.errors} jobs`);
+      console.log('');
+      
+      if (results.processed > 0 || results.skipped > 0) {
+        console.log(`📄 Job descriptions saved to: data/jd_*.txt`);
+        console.log(`📋 Index updated in: data/index.jsonl`);
+      }
+      
+      if (results.errors > 0) {
+        console.log(`⚠️  ${results.errors} job(s) encountered errors during processing`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
   .command('score')
   .description('Score a job posting against criteria')
   .argument('<jobId>', 'Job ID to score (from the log filename)')
