@@ -11,6 +11,7 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 - Be sure to include metrics to quantify team size, project scope, and business impact
 - Use keywords from the job description where appropriate
 - Maintain all factual information - do not fabricate anything
+- Include 'Career Break' as role
 
 {{recommendationsSection}}
 
@@ -50,7 +51,7 @@ Include at least one improvement metric (e.g. 'Increased profits by 25-26%')
 Include only up to the most recent {{maxRoles}} roles. 
 Always include dates for roles on the same line as title and company name. 
 For each role, include an overview of the role of between 110 and 180 characters, being sure to include specific, quantitative metrics where referenced.
-Include 5 bullet points for the most recent role, 3-4 for the next role, and 2-3 for each role after that. 
+Include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that. 
 Each bullet point should be between 80 and 95 characters.
 If an input contains the name of the company from the job description, be sure to include it.
 Be sure bullets reflect the verbiage used in the job description.

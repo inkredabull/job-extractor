@@ -1,5 +1,6 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeCritique, ResumeResult } from '../types';
+import { getResumeOutputDir } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -61,31 +62,80 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
   }
 
   private findMostRecentResume(jobId: string): string | null {
-    const jobDir = path.resolve('logs', jobId);
-    if (!fs.existsSync(jobDir)) {
-      return null;
+    const allResumeFiles: Array<{name: string, path: string, mtime: Date}> = [];
+
+    // Load job data to get company and role info for matching
+    let jobData: JobListing | null = null;
+    try {
+      jobData = this.loadJobData(jobId);
+    } catch (error) {
+      console.warn(`Could not load job data for ${jobId}:`, error);
     }
 
-    const files = fs.readdirSync(jobDir);
-    const resumeFiles = files
-      .filter(file => {
-        return file.endsWith('.pdf') && (
-          file.startsWith('resume-') || // Old timestamp-based format
-          (!file.startsWith('job-') && !file.startsWith('score-') && !file.startsWith('critique-') && !file.startsWith('tailored-') && !file.startsWith('prompt-')) // New meaningful format (exclude other log files)
-        );
-      })
-      .map(file => {
-        const fullPath = path.join(jobDir, file);
-        const stats = fs.statSync(fullPath);
-        return {
-          name: file,
-          path: fullPath,
-          mtime: stats.mtime
-        };
-      })
-      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime()); // Sort by modification time, most recent first
+    // Search in logs directory (legacy location)
+    const jobDir = path.resolve('logs', jobId);
+    if (fs.existsSync(jobDir)) {
+      const files = fs.readdirSync(jobDir);
+      const logResumeFiles = files
+        .filter(file => {
+          return file.endsWith('.pdf') && (
+            file.startsWith('resume-') || // Old timestamp-based format
+            (!file.startsWith('job-') && !file.startsWith('score-') && !file.startsWith('critique-') && !file.startsWith('tailored-') && !file.startsWith('prompt-')) // New meaningful format (exclude other log files)
+          );
+        })
+        .map(file => {
+          const fullPath = path.join(jobDir, file);
+          const stats = fs.statSync(fullPath);
+          return {
+            name: file,
+            path: fullPath,
+            mtime: stats.mtime
+          };
+        });
+      allResumeFiles.push(...logResumeFiles);
+    }
 
-    return resumeFiles.length > 0 ? resumeFiles[0].path : null;
+    // Search in RESUME_OUTPUT_DIR (current location)
+    const resumeOutputDir = getResumeOutputDir();
+    if (fs.existsSync(resumeOutputDir)) {
+      const files = fs.readdirSync(resumeOutputDir);
+      const outputResumeFiles = files
+        .filter(file => {
+          if (!file.endsWith('.pdf')) return false;
+          
+          // First try to match by job ID (if filename contains it)
+          if (file.includes(jobId)) return true;
+          
+          // If we have job data, try to match by company and role
+          if (jobData) {
+            const lowerFileName = file.toLowerCase();
+            const lowerCompany = jobData.company.toLowerCase();
+            const lowerTitle = jobData.title.toLowerCase();
+            
+            // Check if filename contains both company and role
+            return lowerFileName.includes(lowerCompany) && 
+                   (lowerFileName.includes(lowerTitle) || 
+                    lowerTitle.split(' ').some(word => word.length > 3 && lowerFileName.includes(word)));
+          }
+          
+          return false;
+        })
+        .map(file => {
+          const fullPath = path.join(resumeOutputDir, file);
+          const stats = fs.statSync(fullPath);
+          return {
+            name: file,
+            path: fullPath,
+            mtime: stats.mtime
+          };
+        });
+      allResumeFiles.push(...outputResumeFiles);
+    }
+
+    // Sort all found files by modification time, most recent first
+    allResumeFiles.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+
+    return allResumeFiles.length > 0 ? allResumeFiles[0].path : null;
   }
 
   private loadJobData(jobId: string): JobListing {

@@ -428,6 +428,20 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       .trim();
   }
 
+  private formatCVForPrompt(text: string): string {
+    // Format CV content preserving structure for better readability in logs
+    return text
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ') // Replace control characters with spaces
+      .replace(/\r\n/g, '\n') // Normalize line endings
+      .replace(/\r/g, '\n') // Convert remaining carriage returns
+      .replace(/\t/g, '    ') // Convert tabs to spaces
+      .split('\n')
+      .map(line => line.trim()) // Clean up each line
+      .filter(line => line.length > 0) // Remove empty lines
+      .join('\n') // Rejoin with clean newlines
+      .trim();
+  }
+
   private loadPromptTemplate(variables: {
     job: JobListing;
     cvContent: string;
@@ -458,14 +472,14 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         .replace(/{{job\.title}}/g, this.escapeForPrompt(variables.job.title))
         .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
         .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
-        .replace(/{{cvContent}}/g, this.escapeForPrompt(variables.cvContent))
+        .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
         .replace(/{{recommendationsSection}}/g, variables.recommendationsSection);
       
       return prompt;
     } catch (error) {
       console.warn(`⚠️  Failed to load prompt template, using fallback: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Fallback to a minimal prompt if template loading fails
-      return `You are a professional resume writer. Create a tailored resume for this job:\n\nJob: ${variables.job.title} at ${variables.job.company}\nDescription: ${variables.job.description}\n\nCV Content:\n${variables.cvContent}\n\nReturn JSON with markdownContent and changes array.`;
+      return `You are a professional resume writer. Create a tailored resume for this job:\n\nJob: ${variables.job.title} at ${variables.job.company}\nDescription: ${variables.job.description}\n\nCV Content:\n${this.formatCVForPrompt(variables.cvContent)}\n\nReturn JSON with markdownContent and changes array.`;
     }
   }
 
@@ -480,8 +494,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     let recommendationsSection = '';
     if (recommendations.length > 0) {
       recommendationsSection = `
-## Previous Recommendations
-Based on previous critiques, please also incorporate these specific recommendations:
+Please also incorporate these specific recommendations based on previous critiques:
 ${recommendations.map(rec => `- ${rec}`).join('\n')}
 `;
     }
