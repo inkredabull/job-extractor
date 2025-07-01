@@ -37,15 +37,22 @@ export class JobExtractorAgent extends BaseAgent {
       
       if (structuredData) {
         console.log('🎯 Using structured data (JSON-LD)');
-        const jobData = this.parseStructuredData(structuredData, applicantInfo);
-        return {
-          success: true,
-          data: jobData,
-        };
+        try {
+          const jobData = this.parseStructuredData(structuredData, applicantInfo);
+          return {
+            success: true,
+            data: jobData,
+          };
+        } catch (error) {
+          console.log('⚠️  Structured data parsing failed:', error instanceof Error ? error.message : 'Unknown error');
+          console.log('📄 Falling back to HTML scraping');
+        }
+      } else {
+        // Fallback to HTML scraping if no structured data
+        console.log('📄 Falling back to HTML scraping');
       }
       
-      // Fallback to HTML scraping if no structured data
-      console.log('📄 Falling back to HTML scraping');
+      // HTML scraping fallback logic
       const simplifiedHtml = WebScraper.simplifyHtml(html);
 
       // Create prompt for LLM

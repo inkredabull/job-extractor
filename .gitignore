@@ -107,3 +107,4 @@ jspm_packages/
 !package-lock.json
 !tsconfig.json
 !jest.config.js
+data/

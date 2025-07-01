@@ -65,6 +65,15 @@ program
       await fs.writeFile(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
+      // Create project-level data subdirectory and save job description as txt file
+      const dataDir = path.join(process.cwd(), 'data');
+      await fs.mkdir(dataDir, { recursive: true });
+      
+      const txtFileName = `jd_${jobId}.txt`;
+      const txtFilePath = path.join(dataDir, txtFileName);
+      await fs.writeFile(txtFilePath, result.data.description, 'utf-8');
+      console.log(`📄 Job description saved to ${txtFilePath}`);
+
       // Automatically score the job unless --no-score is specified
       if (options.score !== false) {
         console.log('');
@@ -144,6 +153,66 @@ program
 //   
 //   return output;
 // }
+
+program
+  .command('extract-description')
+  .description('Extract job description from existing job JSON file to data subdirectory')
+  .argument('<jobId>', 'Job ID to extract description for')
+  .action(async (jobId: string) => {
+    try {
+      console.log('📄 Extracting job description...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const jobDir = path.join('logs', jobId);
+      
+      // Check if job directory exists
+      try {
+        await fs.access(jobDir);
+      } catch {
+        console.error(`❌ Job directory not found: ${jobDir}`);
+        process.exit(1);
+      }
+
+      // Find the most recent job JSON file
+      const files = await fs.readdir(jobDir);
+      const jobFiles = files
+        .filter(file => file.startsWith('job-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+
+      if (jobFiles.length === 0) {
+        console.error(`❌ No job JSON files found in ${jobDir}`);
+        process.exit(1);
+      }
+
+      const jobFilePath = path.join(jobDir, jobFiles[0]);
+      
+      // Read and parse the job JSON file
+      const jobDataRaw = await fs.readFile(jobFilePath, 'utf-8');
+      const jobData = JSON.parse(jobDataRaw);
+
+      if (!jobData.description) {
+        console.error('❌ No description field found in job data');
+        process.exit(1);
+      }
+
+      // Create project-level data subdirectory and save job description as txt file
+      const dataDir = path.join(process.cwd(), 'data');
+      await fs.mkdir(dataDir, { recursive: true });
+      
+      const txtFileName = `jd_${jobId}.txt`;
+      const txtFilePath = path.join(dataDir, txtFileName);
+      await fs.writeFile(txtFilePath, jobData.description, 'utf-8');
+      
+      console.log(`✅ Job description extracted from: ${jobFilePath}`);
+      console.log(`📄 Job description saved to: ${txtFilePath}`);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
 
 program
   .command('score')
