@@ -21,45 +21,52 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Load job data
       const jobData = this.loadJobData(jobId);
       
-      let tailoredContent: { markdownContent: string; changes: string[] };
+      // Check if this is the first time creating a resume or if we should regenerate
+      const isFirstGeneration = this.isFirstGeneration(jobId);
       
-      // Check if we should use cached content or regenerate
-      if (!regenerate) {
-        const cachedContent = this.loadMostRecentTailoredContent(jobId);
-        if (cachedContent) {
-          console.log(`📋 Using most recent tailored content for job ${jobId}`);
-          tailoredContent = cachedContent;
-        } else {
-          console.log(`📋 No cached content found for job ${jobId}, regenerating...`);
-          const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-          const scopedCvContent = this.scopeCVContent(cvContent);
-          tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+      if (isFirstGeneration) {
+        console.log(`🎯 First time generating resume for job ${jobId} - will critique and regenerate automatically`);
+        
+        // First generation: create initial resume
+        const initialResult = await this.generateInitialResume(jobId, cvFilePath, outputPath, jobData);
+        if (!initialResult.success) {
+          return initialResult;
+        }
+        
+        // Run critique automatically 
+        console.log(`🔍 Running automatic critique for first-time generation...`);
+        const critiqueResult = await this.runCritique(jobId);
+        
+        if (critiqueResult && critiqueResult.recommendations && critiqueResult.recommendations.length > 0) {
+          console.log(`💡 Received ${critiqueResult.recommendations.length} recommendations from critique`);
           
-          // Cache the newly generated content
-          this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+          // Delete the initial tailored markdown files
+          this.cleanupTailoredFiles(jobId);
+          
+          // Regenerate with recommendations
+          console.log(`🔄 Regenerating resume with critique recommendations...`);
+          const finalResult = await this.generateImprovedResume(jobId, cvFilePath, outputPath, jobData);
+          
+          if (finalResult.success) {
+            console.log(`✅ Resume regenerated successfully with improvements`);
+            return {
+              ...finalResult,
+              improvedWithCritique: true,
+              critiqueRating: critiqueResult.overallRating
+            };
+          }
+          
+          // If regeneration fails, return initial result
+          console.warn(`⚠️  Failed to regenerate with recommendations, keeping initial version`);
+          return initialResult;
+        } else {
+          console.log(`📋 No recommendations received from critique, keeping initial version`);
+          return initialResult;
         }
       } else {
-        // Regenerate tailored content
-        console.log(`🔄 Regenerating tailored content for job ${jobId}`);
-        const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-        const scopedCvContent = this.scopeCVContent(cvContent);
-        tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
-        
-        // Cache the tailored content
-        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+        // Not first generation - use existing logic
+        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath);
       }
-      
-      // Create PDF
-      const pdfPath = await this.generatePDF(tailoredContent, jobData, outputPath, jobId);
-      
-      // Check if recommendations.txt exists for this job, if not, run critique automatically
-      await this.checkAndRunCritique(jobId);
-      
-      return {
-        success: true,
-        pdfPath,
-        tailoringChanges: tailoredContent.changes
-      };
     } catch (error) {
       return {
         success: false,
@@ -84,6 +91,182 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
+  }
+
+  private isFirstGeneration(jobId: string): boolean {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return true;
+      }
+      
+      // Check for existing PDF files in the configured resume output directory
+      const resumeOutputDir = this.getResumeOutputDir();
+      if (fs.existsSync(resumeOutputDir)) {
+        const files = fs.readdirSync(resumeOutputDir);
+        const jobData = this.loadJobData(jobId);
+        const candidateName = 'Resume'; // We'll extract this properly in the actual generation
+        
+        // Look for any PDF files that might be for this job
+        const hasPdf = files.some(file => 
+          file.endsWith('.pdf') && 
+          (file.includes(jobData.company) || file.includes(jobData.title))
+        );
+        
+        if (hasPdf) {
+          return false;
+        }
+      }
+      
+      // Check for existing tailored content files
+      const files = fs.readdirSync(jobDir);
+      const hasTailoredContent = files.some(file => 
+        file.startsWith('tailored-') && (file.endsWith('.json') || file.endsWith('.md'))
+      );
+      
+      return !hasTailoredContent;
+    } catch (error) {
+      // If we can't determine, assume it's first generation
+      return true;
+    }
+  }
+
+  private async generateInitialResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing): Promise<ResumeResult> {
+    const job = jobData || this.loadJobData(jobId);
+    
+    console.log(`🔄 Generating initial resume for job ${jobId}`);
+    const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+    const scopedCvContent = this.scopeCVContent(cvContent);
+    const tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
+    
+    // Cache the tailored content
+    this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+    
+    // Create PDF
+    const pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
+    
+    return {
+      success: true,
+      pdfPath,
+      tailoringChanges: tailoredContent.changes
+    };
+  }
+
+  private async generateImprovedResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing): Promise<ResumeResult> {
+    const job = jobData || this.loadJobData(jobId);
+    
+    console.log(`🔄 Generating improved resume for job ${jobId} with critique recommendations`);
+    const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+    const scopedCvContent = this.scopeCVContent(cvContent);
+    const tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
+    
+    // Cache the tailored content
+    this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+    
+    // Create PDF
+    const pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
+    
+    return {
+      success: true,
+      pdfPath,
+      tailoringChanges: tailoredContent.changes
+    };
+  }
+
+  private async generateStandardResume(jobId: string, cvFilePath: string, jobData: JobListing, regenerate: boolean, outputPath?: string): Promise<ResumeResult> {
+    let tailoredContent: { markdownContent: string; changes: string[] };
+    
+    // Check if we should use cached content or regenerate
+    if (!regenerate) {
+      const cachedContent = this.loadMostRecentTailoredContent(jobId);
+      if (cachedContent) {
+        console.log(`📋 Using most recent tailored content for job ${jobId}`);
+        tailoredContent = cachedContent;
+      } else {
+        console.log(`📋 No cached content found for job ${jobId}, regenerating...`);
+        const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+        const scopedCvContent = this.scopeCVContent(cvContent);
+        tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+        
+        // Cache the newly generated content
+        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+      }
+    } else {
+      // Regenerate tailored content
+      console.log(`🔄 Regenerating tailored content for job ${jobId}`);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const scopedCvContent = this.scopeCVContent(cvContent);
+      tailoredContent = await this.generateTailoredContent(jobData, scopedCvContent, jobId);
+      
+      // Cache the tailored content
+      this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+    }
+    
+    // Create PDF
+    const pdfPath = await this.generatePDF(tailoredContent, jobData, outputPath, jobId);
+    
+    // Check if recommendations.txt exists for this job, if not, run critique automatically
+    await this.checkAndRunCritique(jobId);
+    
+    return {
+      success: true,
+      pdfPath,
+      tailoringChanges: tailoredContent.changes
+    };
+  }
+
+  private async runCritique(jobId: string): Promise<any> {
+    try {
+      // Create ResumeCriticAgent and run critique
+      const critic = new ResumeCriticAgent(
+        this.claudeApiKey,
+        this.model,
+        this.maxTokens
+      );
+      
+      const result = await critic.critiqueResume(jobId);
+      
+      if (result.success) {
+        console.log(`✅ Critique completed for job ${jobId}`);
+        console.log(`⭐ Overall Rating: ${result.overallRating}/10`);
+        
+        if (result.recommendations && result.recommendations.length > 0) {
+          console.log(`💡 Generated ${result.recommendations.length} recommendations`);
+        }
+        
+        return result;
+      } else {
+        console.warn(`⚠️  Critique failed for job ${jobId}: ${result.error}`);
+        return null;
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to run critique for job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  private cleanupTailoredFiles(jobId: string): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return;
+      }
+      
+      const files = fs.readdirSync(jobDir);
+      const tailoredFiles = files.filter(file => 
+        file.startsWith('tailored-') && (file.endsWith('.json') || file.endsWith('.md'))
+      );
+      
+      for (const file of tailoredFiles) {
+        const filePath = path.join(jobDir, file);
+        fs.unlinkSync(filePath);
+        console.log(`🗑️  Deleted ${file} to prepare for regeneration`);
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to cleanup tailored files for job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private loadMostRecentTailoredContent(jobId: string): { markdownContent: string; changes: string[] } | null {

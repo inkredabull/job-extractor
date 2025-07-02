@@ -152,6 +152,8 @@ export interface ResumeResult {
   pdfPath?: string;
   error?: string;
   tailoringChanges?: string[];
+  improvedWithCritique?: boolean;
+  critiqueRating?: number;
 }
 
 export interface ResumeCritique {
