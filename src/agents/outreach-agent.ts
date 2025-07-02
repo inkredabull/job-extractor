@@ -14,11 +14,19 @@ export class OutreachAgent {
       const jobData = this.loadJobData(jobId);
       const company = jobData.company;
       
-      console.log(`🔍 Finding LinkedIn connections at ${company}...`);
+      // Check for custom LinkedIn company slug, fall back to company name
+      const linkedInSlug = (jobData as any).linked_in;
+      const companyIdentifier = linkedInSlug || company;
+      
+      if (linkedInSlug) {
+        console.log(`🔍 Finding LinkedIn connections at ${company} (using custom slug: ${linkedInSlug})...`);
+      } else {
+        console.log(`🔍 Finding LinkedIn connections at ${company}...`);
+      }
       
       // For now, this will be a manual process with guidance
       // In a full implementation, this would integrate with LinkedIn's API
-      const result = await this.searchLinkedInConnections(company, jobId);
+      const result = await this.searchLinkedInConnections(company, companyIdentifier, linkedInSlug, jobId);
       
       // Save results to file
       this.saveConnectionsResult(jobId, result);
@@ -51,16 +59,19 @@ export class OutreachAgent {
     return JSON.parse(jobData);
   }
 
-  private async searchLinkedInConnections(company: string, jobId: string): Promise<OutreachResult> {
+  private async searchLinkedInConnections(company: string, companyIdentifier: string, isCustomSlug: boolean, jobId: string): Promise<OutreachResult> {
     // Since LinkedIn doesn't allow automated scraping, we'll provide manual search guidance
     // and create a template for manual data entry
     
-    const searchUrl = this.generateLinkedInSearchUrl(company);
+    const searchUrl = this.generateLinkedInSearchUrl(companyIdentifier, isCustomSlug);
     const timestamp = new Date().toISOString();
     
     // Automatically open the LinkedIn URL in Chrome
     try {
       console.log(`🔗 Opening LinkedIn company page for ${company}...`);
+      if (isCustomSlug) {
+        console.log(`🏷️  Using custom LinkedIn slug: ${companyIdentifier}`);
+      }
       console.log(`📱 URL: ${searchUrl}`);
       this.openUrlInChrome(searchUrl);
       console.log(`✅ LinkedIn page opened in Chrome`);
@@ -70,7 +81,7 @@ export class OutreachAgent {
     }
     
     // Create instructions file for manual search
-    const instructions = this.generateSearchInstructions(company, searchUrl, jobId);
+    const instructions = this.generateSearchInstructions(company, searchUrl, jobId, isCustomSlug ? companyIdentifier : undefined);
     const instructionsPath = this.saveInstructions(jobId, instructions);
     
     console.log(`\n📋 LinkedIn Search Instructions:`);
@@ -96,9 +107,9 @@ export class OutreachAgent {
     };
   }
 
-  private generateLinkedInSearchUrl(company: string): string {
+  private generateLinkedInSearchUrl(companyIdentifier: string, isCustomSlug: boolean = false): string {
     // Create LinkedIn company people search URL with network filter for 1st and 2nd degree connections
-    const companySlug = this.convertToLinkedInSlug(company);
+    const companySlug = isCustomSlug ? companyIdentifier : this.convertToLinkedInSlug(companyIdentifier);
     return `https://www.linkedin.com/company/${companySlug}/people/?facetNetwork=F,S`;
   }
 
@@ -133,16 +144,17 @@ export class OutreachAgent {
     }
   }
 
-  private generateSearchInstructions(company: string, searchUrl: string, jobId: string): string {
+  private generateSearchInstructions(company: string, searchUrl: string, jobId: string, customSlug?: string): string {
+    const slugInfo = customSlug ? `\n## LinkedIn Slug: ${customSlug} (custom)` : '';
     return `# LinkedIn Outreach Instructions for ${company}
 
-## Job ID: ${jobId}
+## Job ID: ${jobId}${slugInfo}
 ## Generated: ${new Date().toLocaleDateString()}
 
 ### Step 1: Search for Connections
 1. Open this URL: ${searchUrl}
 2. This will show people at ${company} who are your 1st or 2nd degree connections
-3. Review each result carefully
+3. Review each result carefully${customSlug ? `\n\nNote: Using custom LinkedIn company slug: ${customSlug}` : ''}
 
 ### Step 2: Collect Information
 For each relevant connection, collect:
@@ -175,6 +187,20 @@ Consider mentioning:
 - Check "All filters" for more options
 - Look at company page for additional insights
 - Review recent company posts for context
+
+### Custom LinkedIn Company Slug:
+If the automatically generated LinkedIn URL doesn't work (404 error), you can:
+1. Find the correct LinkedIn company page manually
+2. Extract the company slug from the URL (e.g., "microsoft" from linkedin.com/company/microsoft/)
+3. Add a "linked_in" field to your job JSON file with the correct slug:
+   \`\`\`json
+   {
+     "company": "Microsoft Corporation",
+     "linked_in": "microsoft",
+     ...
+   }
+   \`\`\`
+4. Re-run the outreach search command to use the custom slug
 `;
   }
 
