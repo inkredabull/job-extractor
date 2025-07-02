@@ -303,6 +303,44 @@ program
   });
 
 program
+  .command('create-job')
+  .description('Create a new job ID and empty job JSON file for manual population')
+  .option('-c, --company <company>', 'Company name (optional)')
+  .option('-t, --title <title>', 'Job title (optional)')
+  .action(async (options) => {
+    try {
+      console.log('📁 Creating new job entry...');
+      if (options.company || options.title) {
+        console.log(`🏢 Company: ${options.company || 'Not specified'}`);
+        console.log(`📋 Title: ${options.title || 'Not specified'}`);
+      }
+      console.log('');
+
+      const config = getConfig();
+      const agent = new JobExtractorAgent(config);
+      
+      const result = await agent.createJob(options.company, options.title);
+      
+      console.log('✅ Job creation complete');
+      console.log('=' .repeat(50));
+      console.log(`📊 Job ID: ${result.jobId}`);
+      console.log(`📄 File: ${result.filePath}`);
+      console.log('');
+      console.log('📝 Next steps:');
+      console.log('1. Edit the JSON file to add job details');
+      console.log(`2. Run: npm run dev extract-description ${result.jobId}`);
+      console.log(`3. Run: npm run dev score ${result.jobId}`);
+      console.log('');
+      console.log('💡 Usage tip: Use -- to pass options correctly:');
+      console.log('   npm run dev create-job -- --company "Company Name" --title "Job Title"');
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
   .command('extract-for-eval')
   .description('Extract descriptions from all job directories to data/ and update index.jsonl')
   .action(async () => {

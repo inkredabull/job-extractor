@@ -60,8 +60,8 @@ export class JobExtractorAgent extends BaseAgent {
       // Create prompt for LLM
       const prompt = this.createExtractionPrompt(simplifiedHtml);
 
-      // Get LLM response
-      const response = await this.makeOpenAIRequest(prompt);
+      // Get LLM response with higher token limit for job extraction
+      const response = await this.makeOpenAIRequest(prompt, 4000);
 
       // Parse JSON response
       const jobData = this.parseJobData(response, applicantInfo);
@@ -201,20 +201,41 @@ JSON:`;
         jobData.competitionLevel = applicantInfo.competitionLevel;
       }
 
+      // Always include salary structure, even if empty
+      let salaryFound = false;
+      
       // Extract salary if available in structured data
       if (jsonLd.baseSalary || jsonLd.salary) {
         const salaryData = jsonLd.baseSalary || jsonLd.salary;
-        jobData.salary = {
-          min: salaryData.value?.minValue || salaryData.minValue,
-          max: salaryData.value?.maxValue || salaryData.maxValue,
-          currency: salaryData.currency || 'USD',
-        };
-      } else {
+        const minValue = salaryData.value?.minValue || salaryData.minValue;
+        const maxValue = salaryData.value?.maxValue || salaryData.maxValue;
+        
+        if (minValue || maxValue) {
+          jobData.salary = {
+            min: minValue || '',
+            max: maxValue || '',
+            currency: salaryData.currency || 'USD',
+          };
+          salaryFound = true;
+        }
+      }
+      
+      if (!salaryFound) {
         // Fallback: try to extract salary from description text
         const salaryFromDescription = this.extractSalaryFromText(jobData.description);
         if (salaryFromDescription) {
           jobData.salary = salaryFromDescription;
+          salaryFound = true;
         }
+      }
+      
+      // If no salary found, include empty salary structure
+      if (!salaryFound) {
+        jobData.salary = {
+          min: '',
+          max: '',
+          currency: 'USD'
+        };
       }
 
       // Validate required fields
@@ -292,18 +313,66 @@ JSON:`;
 
   private parseJobData(response: string, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): JobListing {
     try {
-      // Clean the response to extract JSON
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      // Clean the response to extract JSON - try multiple approaches
+      let jsonStr = '';
+      
+      // Approach 1: Look for complete JSON object with balanced braces
+      const braceMatch = this.extractBalancedJson(response);
+      if (braceMatch) {
+        jsonStr = braceMatch;
+      } else {
+        // Approach 2: Try to fix incomplete JSON by finding opening brace and attempting repair
+        const openBraceIndex = response.indexOf('{');
+        if (openBraceIndex !== -1) {
+          let jsonPart = response.substring(openBraceIndex);
+          
+          // If JSON appears truncated (no closing brace), try to complete it
+          if (!jsonPart.includes('}')) {
+            // Add missing closing braces for common truncation patterns
+            const fieldCount = (jsonPart.match(/"/g) || []).length / 2; // Rough estimate of field count
+            if (fieldCount >= 4) { // If we have at least 2 complete fields
+              jsonPart += '"}'; // Close the last field and object
+            }
+          }
+          
+          jsonStr = jsonPart;
+        } else {
+          // Approach 3: Look for JSON between ```json blocks
+          const codeBlockMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+          if (codeBlockMatch) {
+            jsonStr = codeBlockMatch[1];
+          } else {
+            console.log('🔍 LLM Response for debugging:', response.substring(0, 800));
+            throw new Error('No JSON found in response');
+          }
+        }
       }
 
-      const jsonStr = jsonMatch[0];
-      const parsed = JSON.parse(jsonStr);
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseError) {
+        // If JSON parsing fails, try to extract partial data
+        console.log('⚠️  JSON parsing failed, attempting partial extraction...');
+        console.log('📄 Raw JSON string:', jsonStr.substring(0, 300));
+        
+        // Try to extract at least title, company, location from partial JSON
+        const partialData = this.extractPartialJobData(jsonStr);
+        if (partialData) {
+          parsed = partialData;
+        } else {
+          throw parseError;
+        }
+      }
 
       // Validate required fields
-      if (!parsed.title || !parsed.company || !parsed.location || !parsed.description) {
+      if (!parsed.title || !parsed.company || !parsed.location) {
         throw new Error('Missing required fields in extracted data');
+      }
+
+      // Ensure description exists, even if partial
+      if (!parsed.description) {
+        parsed.description = 'Job description not fully extracted due to response truncation.';
       }
 
       // Add applicant information if available
@@ -312,10 +381,90 @@ JSON:`;
         parsed.competitionLevel = applicantInfo.competitionLevel;
       }
 
+      // Ensure salary structure always exists, even if empty
+      if (!parsed.salary) {
+        parsed.salary = {
+          min: '',
+          max: '',
+          currency: 'USD'
+        };
+      }
+
       return parsed as JobListing;
     } catch (error) {
       throw new Error(`Failed to parse job data: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
     }
+  }
+
+  private extractBalancedJson(text: string): string | null {
+    // Find the first opening brace
+    const startIndex = text.indexOf('{');
+    if (startIndex === -1) return null;
+
+    let braceCount = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = startIndex; i < text.length; i++) {
+      const char = text[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') {
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            // Found the closing brace
+            return text.substring(startIndex, i + 1);
+          }
+        }
+      }
+    }
+
+    return null; // No balanced JSON found
+  }
+
+  private extractPartialJobData(jsonStr: string): JobListing | null {
+    try {
+      // Try to extract key fields using regex patterns even from broken JSON
+      const titleMatch = jsonStr.match(/"title"\s*:\s*"([^"]+)"/);
+      const companyMatch = jsonStr.match(/"company"\s*:\s*"([^"]+)"/);
+      const locationMatch = jsonStr.match(/"location"\s*:\s*"([^"]+)"/);
+      const descriptionMatch = jsonStr.match(/"description"\s*:\s*"([^"]*)/);
+
+      if (titleMatch && companyMatch && locationMatch) {
+        return {
+          title: titleMatch[1],
+          company: companyMatch[1],
+          location: locationMatch[1],
+          description: descriptionMatch ? descriptionMatch[1] : 'Description truncated due to response limit.',
+          salary: {
+            min: '',
+            max: '',
+            currency: 'USD'
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to extract partial job data:', error);
+    }
+    
+    return null;
   }
 
   async extractRequiredTerms(description: string): Promise<string[]> {
@@ -534,5 +683,58 @@ Response format: ["term1", "term2", "term3", ...]`;
     } catch (error) {
       throw new Error(`Failed to extract for eval: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  async createJob(company?: string, title?: string): Promise<{ jobId: string; filePath: string }> {
+    try {
+      // Generate unique job ID
+      const jobId = this.generateJobId();
+      
+      // Create logs directory structure
+      const logsDir = path.join(process.cwd(), 'logs');
+      const jobDir = path.join(logsDir, jobId);
+      
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
+      
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      // Create empty job JSON template
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `job-${timestamp}.json`;
+      const filePath = path.join(jobDir, fileName);
+      
+      const emptyJobData = {
+        title: title || "",
+        company: company || "",
+        location: "",
+        description: "",
+        source: "manual",
+        salary: {
+          min: "",
+          max: "",
+          currency: "USD"
+        }
+      };
+
+      fs.writeFileSync(filePath, JSON.stringify(emptyJobData, null, 2), 'utf-8');
+      
+      console.log(`📁 Created job directory: logs/${jobId}`);
+      console.log(`📄 Created empty job file: ${fileName}`);
+      console.log(`✏️  Edit the file to add job details, then run:`);
+      console.log(`   npm run dev extract-description ${jobId}`);
+      
+      return { jobId, filePath };
+    } catch (error) {
+      throw new Error(`Failed to create job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private generateJobId(): string {
+    // Generate 8-character hex ID similar to existing pattern
+    return Math.random().toString(16).substring(2, 10);
   }
 }

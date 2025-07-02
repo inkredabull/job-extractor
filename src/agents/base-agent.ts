@@ -12,7 +12,7 @@ export abstract class BaseAgent {
     });
   }
 
-  protected async makeOpenAIRequest(prompt: string): Promise<string> {
+  protected async makeOpenAIRequest(prompt: string, maxTokens?: number): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
         model: this.config.model || 'gpt-3.5-turbo',
@@ -23,7 +23,7 @@ export abstract class BaseAgent {
           },
         ],
         temperature: this.config.temperature || 0.3,
-        max_tokens: this.config.maxTokens || 2000,
+        max_tokens: maxTokens || this.config.maxTokens || 2000,
       });
 
       return response.choices[0]?.message?.content || '';
