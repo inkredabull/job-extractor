@@ -58,13 +58,24 @@ export class OutreachAgent {
     const searchUrl = this.generateLinkedInSearchUrl(company);
     const timestamp = new Date().toISOString();
     
+    // Automatically open the LinkedIn URL in Chrome
+    try {
+      console.log(`🔗 Opening LinkedIn company page for ${company}...`);
+      console.log(`📱 URL: ${searchUrl}`);
+      this.openUrlInChrome(searchUrl);
+      console.log(`✅ LinkedIn page opened in Chrome`);
+    } catch (error) {
+      console.log(`⚠️  Could not automatically open Chrome: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.log(`🔗 Please manually open: ${searchUrl}`);
+    }
+    
     // Create instructions file for manual search
     const instructions = this.generateSearchInstructions(company, searchUrl, jobId);
     const instructionsPath = this.saveInstructions(jobId, instructions);
     
     console.log(`\n📋 LinkedIn Search Instructions:`);
     console.log(`==========================================`);
-    console.log(`1. Open this URL in your browser: ${searchUrl}`);
+    console.log(`1. Chrome should have opened the LinkedIn company page automatically`);
     console.log(`2. Review the search results for 1st and 2nd degree connections`);
     console.log(`3. Follow the instructions in: ${instructionsPath}`);
     console.log(`4. Update the connections data manually in the generated template`);
@@ -86,9 +97,40 @@ export class OutreachAgent {
   }
 
   private generateLinkedInSearchUrl(company: string): string {
-    // Create LinkedIn search URL for company employees
-    const encodedCompany = encodeURIComponent(company);
-    return `https://www.linkedin.com/search/results/people/?currentCompany=["${encodedCompany}"]&network=["F","S"]&origin=FACETED_SEARCH`;
+    // Create LinkedIn company people search URL with network filter for 1st and 2nd degree connections
+    const companySlug = this.convertToLinkedInSlug(company);
+    return `https://www.linkedin.com/company/${companySlug}/people/?facetNetwork=F,S`;
+  }
+
+  private convertToLinkedInSlug(company: string): string {
+    // Convert company name to LinkedIn company slug format
+    // This is a best-effort conversion - some manual adjustment may be needed
+    return company
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+  }
+
+  private openUrlInChrome(url: string): void {
+    try {
+      // Use platform-specific command to open Chrome
+      const platform = process.platform;
+      
+      if (platform === 'darwin') {
+        // macOS
+        execSync(`open -a "Google Chrome" "${url}"`, { stdio: 'ignore' });
+      } else if (platform === 'win32') {
+        // Windows
+        execSync(`start chrome "${url}"`, { stdio: 'ignore' });
+      } else {
+        // Linux and others
+        execSync(`google-chrome "${url}"`, { stdio: 'ignore' });
+      }
+    } catch (error) {
+      throw new Error(`Failed to open Chrome: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private generateSearchInstructions(company: string, searchUrl: string, jobId: string): string {
