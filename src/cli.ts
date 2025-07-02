@@ -91,11 +91,15 @@ program
           console.log('');
           console.log('💡 Rationale:');
           console.log(score.rationale);
+          console.log('');
+          console.log(jobId);
           
         } catch (scoreError) {
           console.log('⚠️  Scoring failed (extraction was successful):');
           console.log(`   ${scoreError instanceof Error ? scoreError.message : 'Unknown scoring error'}`);
           console.log('   You can manually score later with: job-extractor score ' + jobId);
+          console.log('');
+          console.log(jobId);
         }
       }
 
@@ -407,6 +411,8 @@ program
       console.log('');
       console.log('💡 Rationale:');
       console.log(score.rationale);
+      console.log('');
+      console.log(jobId);
       
     } catch (error) {
       console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
