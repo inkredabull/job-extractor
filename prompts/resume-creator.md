@@ -48,9 +48,16 @@ Include at least one improvement metric (e.g. 'Increased profits by 25-26%')
 
 ## Roles
 
-Include only up to the most recent {{maxRoles}} roles. 
-Always include dates for roles on the same line as title and company name. 
+Include the most recent {{maxRoles}} roles.  
+
+For each role, always include dates on the same line as title and company name. 
+
+After the role, add a paragraph break.
+
 For each role, include an overview of the role of between 110 and 180 characters, being sure to include specific, quantitative metrics where referenced.
+
+After the overview, add a paragraph break.
+
 Include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that. 
 Each bullet point should be between 80 and 95 characters.
 If an input contains the name of the company from the job description, be sure to include it.
@@ -74,7 +81,7 @@ Each line of skills should be at maximum 95 characters long.
 
 ## Education
 
-Include an "EDUCATION" section after the SKILLS section. 
+Include an "EDUCATION" section after the SKILLS section. Use bullet points.
 
 ## Misc
 
