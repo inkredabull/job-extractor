@@ -809,6 +809,16 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       
       console.log(`✅ Resume generated: ${finalPath}`);
       
+      // Open the PDF with the default viewer
+      try {
+        const openCommand = process.platform === 'darwin' ? 'open' : 
+                           process.platform === 'win32' ? 'start' : 'xdg-open';
+        execSync(`${openCommand} "${finalPath}"`, { stdio: 'ignore' });
+        console.log(`📖 Opened PDF in default viewer: ${finalPath}`);
+      } catch (openError) {
+        console.warn(`⚠️  Failed to open PDF in default viewer: ${openError instanceof Error ? openError.message : 'Unknown error'}`);
+      }
+      
       // Clean up temporary markdown file
       fs.unlinkSync(markdownPath);
       
