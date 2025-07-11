@@ -137,7 +137,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
   }
 
   private getFallbackPrompt(type: StatementType): string {
-    const basePrompt = `You are a professional writer helping create a ${type.replace('-', ' ')} based on a job posting and work history.`;
+    const basePrompt = `You are a professional writer helping create a ${type.replace('-', ' ')} based on a job posting and work history. Be sure to use concise, inspiring, founder-caliber high-impact framing; lead with the 'so what' early.`;
     
     switch (type) {
       case 'cover-letter':
