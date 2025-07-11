@@ -740,7 +740,7 @@ program
       }
 
       // Validate material type for other types
-      const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
+      const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general', 'focus'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
         console.error(`Valid types: ${validTypes.join(', ')}, themes, stories, profile, project, list-projects`);

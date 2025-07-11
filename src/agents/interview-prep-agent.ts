@@ -46,6 +46,10 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     regenerate: boolean = false,
     contentOnly: boolean = false
   ): Promise<StatementResult> {
+    // Handle special 'focus' target
+    if (type === 'focus' as StatementType) {
+      return this.generateFocusStory(jobId, cvFilePath, regenerate);
+    }
     try {
       // Store jobId for use in sub-methods
       this.currentJobId = jobId;
@@ -1340,6 +1344,209 @@ ${project.result}`;
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
+    }
+  }
+
+  private async generateFocusStory(jobId: string, cvFilePath: string, regenerate: boolean): Promise<StatementResult> {
+    try {
+      // Check if we should use cached content or regenerate
+      if (!regenerate) {
+        const cachedContent = this.loadCachedFocusStory(jobId, cvFilePath);
+        if (cachedContent) {
+          console.log(`📋 Using cached focus story for job ${jobId}`);
+          return {
+            success: true,
+            content: cachedContent,
+            type: 'focus' as StatementType,
+            characterCount: cachedContent.length
+          };
+        }
+      }
+
+      // Load company values
+      const companyValues = this.loadCompanyValues(jobId);
+      if (!companyValues) {
+        return {
+          success: false,
+          error: 'company-values.txt not found in job directory. Please create this file with the company values.',
+          type: 'focus' as StatementType
+        };
+      }
+
+      // Load CV content
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+
+      // Generate the focus story
+      console.log(`🎯 Generating focus story for job ${jobId} based on company values...`);
+      const focusStory = await this.createFocusStory(companyValues, cvContent, jobId);
+
+      // Cache the generated story
+      this.cacheFocusStory(jobId, focusStory, cvFilePath);
+
+      return {
+        success: true,
+        content: focusStory,
+        type: 'focus' as StatementType,
+        characterCount: focusStory.length
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        type: 'focus' as StatementType
+      };
+    }
+  }
+
+  private loadCompanyValues(jobId: string): string | null {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      const valuesPath = path.join(jobDir, 'company-values.txt');
+      
+      if (!fs.existsSync(valuesPath)) {
+        return null;
+      }
+
+      return fs.readFileSync(valuesPath, 'utf-8').trim();
+    } catch (error) {
+      console.warn(`⚠️  Failed to load company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  private async createFocusStory(companyValues: string, cvContent: string, jobId: string): Promise<string> {
+    const prompt = `You are an expert interview coach helping identify the single best story from a candidate's background that would most effectively highlight and demonstrate alignment with specific company values.
+
+Company Values:
+${companyValues}
+
+Candidate's Work History (CV):
+${cvContent}
+
+Your task:
+1. Analyze the candidate's CV and identify ALL possible stories/examples from their career
+2. For each company value, determine which stories best demonstrate that value
+3. Identify the ONE story that best highlights the MOST company values simultaneously
+4. Provide a detailed analysis of why this story is the optimal choice
+
+Please respond in the following format:
+
+**RECOMMENDED STORY:**
+[Brief title/description of the chosen story]
+
+**COMPANY VALUES ADDRESSED:**
+[List each company value and explain how this story demonstrates it]
+
+**STORY DETAILS:**
+[Detailed description of the story including situation, actions taken, and results achieved - suitable for STAR method interview response]
+
+**WHY THIS STORY IS OPTIMAL:**
+[Explanation of why this story was chosen over other possible examples]
+
+**ALTERNATIVE STORIES CONSIDERED:**
+[Brief list of 2-3 other stories that were considered but not chosen, with reasons why]
+
+Focus on finding a story that demonstrates multiple values simultaneously and would be most compelling to share in an interview setting.`;
+
+    const response = await this.makeClaudeRequest(prompt);
+    
+    // Log the prompt and response
+    this.logFocusStoryGeneration(jobId, prompt, response);
+    
+    return response.trim();
+  }
+
+  private loadCachedFocusStory(jobId: string, cvFilePath: string): string | null {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const focusFiles = files
+        .filter(file => file.startsWith('focus-story-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+
+      if (focusFiles.length === 0) {
+        return null;
+      }
+
+      const focusFile = focusFiles[0];
+      const focusPath = path.join(jobDir, focusFile);
+      const focusData = JSON.parse(fs.readFileSync(focusPath, 'utf-8'));
+
+      // Validate the cache is still valid (CV hasn't changed)
+      const cvStats = fs.statSync(cvFilePath);
+      if (focusData.cvTimestamp !== cvStats.mtime.toISOString()) {
+        console.log('📋 CV has changed since focus story was cached, will regenerate');
+        return null;
+      }
+
+      return focusData.content;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private cacheFocusStory(jobId: string, content: string, cvFilePath: string): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const cvStats = fs.statSync(cvFilePath);
+      
+      const focusData = {
+        timestamp: new Date().toISOString(),
+        jobId,
+        content,
+        characterCount: content.length,
+        cvFilePath: path.basename(cvFilePath),
+        cvTimestamp: cvStats.mtime.toISOString()
+      };
+
+      const focusPath = path.join(jobDir, `focus-story-${timestamp}.json`);
+      fs.writeFileSync(focusPath, JSON.stringify(focusData, null, 2));
+      console.log(`📝 Focus story cached to: ${focusPath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to cache focus story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private logFocusStoryGeneration(jobId: string, prompt: string, response: string): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const logContent = [
+        '🎯 Focus Story Generation Log',
+        '=' .repeat(80),
+        '',
+        'PROMPT:',
+        prompt,
+        '',
+        '=' .repeat(80),
+        '',
+        'RESPONSE:',
+        response,
+        '',
+        '=' .repeat(80),
+        `Generated at: ${new Date().toISOString()}`
+      ].join('\n');
+
+      const logPath = path.join(jobDir, `focus-story-log-${timestamp}.txt`);
+      fs.writeFileSync(logPath, logContent, 'utf-8');
+      console.log(`📄 Focus story generation logged to: ${logPath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to log focus story generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

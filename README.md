@@ -296,6 +296,9 @@ job-extractor prep about-me "4c32e01e" cv.txt --company-info "the innovative AI 
 # Generate a general statement
 job-extractor prep general "4c32e01e" cv.txt
 
+# Generate focus story to highlight company values
+job-extractor prep focus "4c32e01e" cv.txt
+
 # Extract priority themes from job description
 job-extractor prep themes "4c32e01e"
 
@@ -323,6 +326,8 @@ job-extractor prep about-me "4c32e01e" cv.txt --regen --content
 
 **Interview Preparation Types:**
 
+**Note:** The 'focus' target requires a `company-values.txt` file in the job directory (`logs/{jobId}/company-values.txt`) containing the company's values.
+
 1. **Cover Letter** (600-850 characters)
    - Informal tone with "Greetings:" and "Regards, Anthony" format
    - Can include special emphasis or instructions
@@ -344,23 +349,30 @@ job-extractor prep about-me "4c32e01e" cv.txt --regen --content
    - References entire work history, not just recent roles
    - Emphasizes end-user and infrastructure experience
 
-5. **Themes** (Analysis)
+5. **Focus** (Story Analysis)
+   - Analyzes company values from `company-values.txt` file
+   - Identifies the single best story that highlights the most company values
+   - Provides detailed STAR method story structure suitable for interviews
+   - Explains why this story is optimal and what values it demonstrates
+   - Includes alternative stories that were considered but not chosen
+
+6. **Themes** (Analysis)
    - Extracts priority themes from job description
    - Identifies high, medium, and low importance themes
    - Provides examples from CV matching each theme
    - Creates highlighted examples for interview stories
 
-6. **Stories** (Interview Preparation)
+7. **Stories** (Interview Preparation)
    - Returns highlighted professional impact examples
    - Provides interview story suggestions based on themes
    - Ready-to-use examples for STAR method responses
 
-7. **Profile** (Personal Branding)
+8. **Profile** (Personal Branding)
    - Generates personal profile statement
    - Creates Google Apps Script for spreadsheet integration
    - Uses configurable profile settings from environment
 
-8. **Project** (Application Forms)
+9. **Project** (Application Forms)
    - Extracts project information from themes
    - Formats for Catalant and similar application forms
    - Includes Problem-Action-Result structure
@@ -386,6 +398,34 @@ Greetings:
 I'm excited to apply my experience leading AI-powered innovation to your mission...
 
 Regards, Anthony
+```
+
+**Focus Story Example:**
+```bash
+✅ Statement Generation Complete
+==================================================
+📝 Type: FOCUS STORY
+📊 Character Count: 1247
+
+📄 Generated Focus Story:
+**RECOMMENDED STORY:**
+Engineering Transformation 
+
+**COMPANY VALUES ADDRESSED:**
+- Innovation: Implemented cutting-edge GenAI solutions for code generation
+- Customer-Centricity: Direct partnership with customers to understand needs
+- Scalability: Architected platform to handle 10x growth in user base
+- Team Excellence: Built and mentored high-performing engineering team
+
+**STORY DETAILS:**
+When I joined, the platform was struggling with technical debt and scaling challenges. I led a comprehensive transformation that involved restructuring the team, implementing new development processes, and introducing GenAI-powered tools. We reduced deployment time by 75% and improved system reliability to 99.9% uptime while scaling from 0 to 50K active users.
+
+**WHY THIS STORY IS OPTIMAL:**
+This story simultaneously demonstrates all four company values while showcasing measurable impact and leadership capability. It positions you as someone who can drive innovation while maintaining focus on customer needs and team development.
+
+**ALTERNATIVE STORIES CONSIDERED:**
+- security implementation (focused on innovation and excellence)
+- marketplace optimization (customer-centricity and scalability)
 ```
 
 #### Statement Caching
