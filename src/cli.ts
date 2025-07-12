@@ -28,6 +28,7 @@ program
   .option('-f, --format <format>', 'Output format: json or pretty', 'pretty')
   .option('-c, --criteria <file>', 'Path to criteria file for scoring', 'criteria.json')
   .option('--no-score', 'Skip automatic scoring after extraction')
+  .option('--force-extract', 'Extract job even if competition is too high')
   .action(async (url: string, options) => {
     try {
       console.log('🔍 Extracting job information...');
@@ -37,7 +38,7 @@ program
       const config = getConfig();
       const agent = new JobExtractorAgent(config);
       
-      const result = await agent.extract(url);
+      const result = await agent.extract(url, { ignoreCompetition: options.forceExtract });
 
       if (!result.success) {
         console.error('❌ Error:', result.error);

@@ -9,14 +9,14 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extract(url: string): Promise<ExtractorResult> {
+  async extract(url: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
     try {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
       
-      // Check applicant count first - early exit if too competitive
+      // Check applicant count first - early exit if too competitive (unless overridden)
       const applicantInfo = this.extractApplicantCount(html);
-      if (applicantInfo.shouldExit) {
+      if (applicantInfo.shouldExit && !options?.ignoreCompetition) {
         console.log(`🚫 Job has ${applicantInfo.count} applicants (>${applicantInfo.threshold}) - skipping due to high competition`);
         return {
           success: false,
@@ -27,6 +27,11 @@ export class JobExtractorAgent extends BaseAgent {
             competitionLevel: applicantInfo.competitionLevel
           }
         };
+      }
+      
+      // If competition would normally block extraction but was overridden, log it
+      if (applicantInfo.shouldExit && options?.ignoreCompetition) {
+        console.log(`⚠️  Job has ${applicantInfo.count} applicants (>${applicantInfo.threshold}) - extracting anyway due to --force-extract flag`);
       }
       
       // If applicant count detected but within threshold, log it
