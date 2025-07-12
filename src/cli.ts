@@ -13,6 +13,30 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 
+// Helper function to find CV file automatically
+async function findCvFile(): Promise<string> {
+  const possiblePaths = [
+    'cv.txt',
+    './cv.txt',
+    'CV.txt',
+    './CV.txt',
+    'sample-cv.txt',
+    './sample-cv.txt'
+  ];
+  
+  for (const cvPath of possiblePaths) {
+    try {
+      await fs.access(cvPath);
+      console.log(`📄 Found CV file: ${cvPath}`);
+      return cvPath;
+    } catch {
+      // File doesn't exist, continue searching
+    }
+  }
+  
+  throw new Error('CV file not found. Please create a cv.txt file in the current directory or specify the path.');
+}
+
 const program = new Command();
 
 program
@@ -425,13 +449,15 @@ program
   .command('resume')
   .description('Generate a tailored resume PDF for a specific job')
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
-  .argument('<cvFile>', 'Path to your CV/resume text file')
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Force regeneration of tailored content (skip cache)')
-  .action(async (jobId: string, cvFile: string, options) => {
+  .action(async (jobId: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
       console.log(`📊 Job ID: ${jobId}`);
+      
+      // Automatically find CV file
+      const cvFile = await findCvFile();
       console.log(`📋 CV File: ${cvFile}`);
       console.log('');
 
@@ -540,14 +566,13 @@ program
   .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
   .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, profile, project, or list-projects')
   .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
-  .argument('[cvFile]', 'Path to CV file (not required for themes extraction)')
   .argument('[projectNumber]', 'Project number to extract (for project type only)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
   .option('-i, --instructions <text>', 'Custom instructions for the material')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
-  .action(async (type: string, jobId: string, cvFile: string, projectNumber: string, options) => {
+  .action(async (type: string, jobId: string, projectNumber: string, options) => {
     try {
       // Handle themes extraction separately
       if (type === 'themes') {
@@ -696,14 +721,10 @@ program
           process.exit(1);
         }
         
-        // For project extraction, if cvFile is a number and projectNumber is undefined,
-        // then cvFile is actually the project number
+        // Parse project number
         let projectNum = 1;
         if (projectNumber) {
           projectNum = parseInt(projectNumber, 10);
-        } else if (cvFile && !isNaN(parseInt(cvFile, 10))) {
-          // cvFile is actually the project number
-          projectNum = parseInt(cvFile, 10);
         }
         
         if (isNaN(projectNum) || projectNum < 1) {
@@ -754,11 +775,8 @@ program
         process.exit(1);
       }
 
-      // CV file is required for statement types
-      if (!cvFile) {
-        console.error(`❌ CV file is required for ${type} generation`);
-        process.exit(1);
-      }
+      // Automatically find CV file for statement types
+      const cvFile = await findCvFile();
 
       if (!options.content) {
         console.log('📝 Generating interview material...');

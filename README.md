@@ -200,21 +200,23 @@ Generate a tailored PDF resume for a specific job posting:
 
 ```bash
 # Generate a tailored resume for a job (uses cache if available)
-job-extractor resume "4c32e01e" sample-cv.txt
+job-extractor resume "4c32e01e"
 
 # Force regenerate fresh content (ignores cache)
-job-extractor resume "4c32e01e" sample-cv.txt --regen
+job-extractor resume "4c32e01e" --regen
 
 # Specify custom output path
-job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf
+job-extractor resume "4c32e01e" -o tailored-resume.pdf
 
 # Force regenerate with custom output path
-job-extractor resume "4c32e01e" my-cv.txt -o tailored-resume.pdf --regen
+job-extractor resume "4c32e01e" -o tailored-resume.pdf --regen
 ```
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
 - `--regen`: Force regenerate tailored content (ignores cached content)
+
+**Note:** The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
 
 #### Auto-Resume Generation
 
@@ -291,22 +293,22 @@ Generate comprehensive interview preparation materials for job applications:
 
 ```bash
 # Generate a cover letter
-job-extractor prep cover-letter "4c32e01e" cv.txt
+job-extractor prep cover-letter "4c32e01e"
 
 # Generate a cover letter with special emphasis
-job-extractor prep cover-letter "4c32e01e" cv.txt --emphasis "Focus on AI/ML and technical architecture experience"
+job-extractor prep cover-letter "4c32e01e" --emphasis "Focus on AI/ML and technical architecture experience"
 
 # Generate an endorsement (third-person recommendation)
-job-extractor prep endorsement "4c32e01e" cv.txt
+job-extractor prep endorsement "4c32e01e"
 
 # Generate "about me" talking points for interviews
-job-extractor prep about-me "4c32e01e" cv.txt --company-info "the innovative AI platform and strong engineering culture"
+job-extractor prep about-me "4c32e01e" --company-info "the innovative AI platform and strong engineering culture"
 
 # Generate a general statement
-job-extractor prep general "4c32e01e" cv.txt
+job-extractor prep general "4c32e01e"
 
 # Generate focus story to highlight company values
-job-extractor prep focus "4c32e01e" cv.txt
+job-extractor prep focus "4c32e01e"
 
 # Extract priority themes from job description
 job-extractor prep themes "4c32e01e"
@@ -324,18 +326,20 @@ job-extractor prep list-projects "4c32e01e"
 job-extractor prep project "4c32e01e" 2
 
 # Get just the content without formatting (useful for copying)
-job-extractor prep cover-letter "4c32e01e" cv.txt --content
+job-extractor prep cover-letter "4c32e01e" --content
 
 # Force regenerate statement (ignoring cache)
-job-extractor prep endorsement "4c32e01e" cv.txt --regen
+job-extractor prep endorsement "4c32e01e" --regen
 
 # Combine flags
-job-extractor prep about-me "4c32e01e" cv.txt --regen --content
+job-extractor prep about-me "4c32e01e" --regen --content
 ```
 
 **Interview Preparation Types:**
 
-**Note:** The 'focus' target requires a `company-values.txt` file in the job directory (`logs/{jobId}/company-values.txt`) containing the company's values.
+**Notes:** 
+- The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
+- The 'focus' target requires a `company-values.txt` file in the job directory (`logs/{jobId}/company-values.txt`) containing the company's values.
 
 1. **Cover Letter** (600-850 characters)
    - Informal tone with "Greetings:" and "Regards, Anthony" format
@@ -500,16 +504,16 @@ job-extractor score "a1b2c3d4"
 job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
 
 # Generate a tailored resume for a specific job (uses cache if available)
-job-extractor resume "a1b2c3d4" my-cv.txt
+job-extractor resume "a1b2c3d4"
 
 # Force regenerate fresh content (ignores cache)
-job-extractor resume "a1b2c3d4" my-cv.txt --regen
+job-extractor resume "a1b2c3d4" --regen
 
 # Generate resume with custom output path
-job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf"
+job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf"
 
 # Generate fresh resume with custom output path
-job-extractor resume "a1b2c3d4" my-cv.txt -o "resumes/google-resume.pdf" --regen
+job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf" --regen
 
 # Critique a generated resume for feedback
 job-extractor critique "a1b2c3d4"
