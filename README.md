@@ -6,6 +6,7 @@ Table of Contents
 =================
 
 * [Job Extractor](#job-extractor)
+* [Table of Contents](#table-of-contents)
    * [Features](#features)
    * [Installation](#installation)
    * [Usage](#usage)
@@ -40,6 +41,7 @@ Table of Contents
       * [Scripts](#scripts)
       * [Project Structure](#project-structure)
       * [Architecture](#architecture)
+      * [Python Dependencies (Optional)](#python-dependencies-optional)
       * [Environment Variables](#environment-variables)
    * [Testing](#testing)
    * [Contributing](#contributing)
@@ -162,6 +164,12 @@ job-extractor extract "https://example.com/job-posting" -c my-criteria.json
 
 # Extract only (skip automatic scoring)
 job-extractor extract "https://example.com/job-posting" --no-score
+
+# Extract even if competition is too high
+job-extractor extract "https://example.com/job-posting" --force-extract
+
+# Or with npm run dev (note the -- separator)
+npm run dev -- extract "https://example.com/job-posting" --force-extract
 ```
 
 **Extract Options:**
@@ -169,6 +177,7 @@ job-extractor extract "https://example.com/job-posting" --no-score
 - `-f, --format <format>`: Output format (`json` or `pretty`, default: `pretty`)
 - `-c, --criteria <file>`: Path to criteria file for scoring (default: `criteria.json`)
 - `--no-score`: Skip automatic scoring after extraction
+- `--force-extract`: Extract job even if competition is too high
 
 #### Manual Job Scoring
 
