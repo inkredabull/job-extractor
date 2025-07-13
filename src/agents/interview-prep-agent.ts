@@ -165,6 +165,9 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
   ): Promise<string> {
     let promptTemplate = this.loadPromptTemplate(type);
     
+    // Load company values if available
+    const companyValues = this.loadCompanyValues(this.currentJobId);
+    
     // For about-me type, check if themes exist and include them
     if (type === 'about-me') {
       const themes = await this.getOrExtractThemes(job);
@@ -176,7 +179,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     }
     
     // Build the complete prompt
-    const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options);
+    const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options, companyValues);
     
     // Log the prompt
     console.log(`📝 Generating ${type.replace('-', ' ')} material...`);
@@ -192,8 +195,15 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     type: StatementType,
     job: JobListing,
     cvContent: string,
-    options: StatementOptions
+    options: StatementOptions,
+    companyValues?: string | null
   ): string {
+    // Build company values section if available
+    let companyValuesSection = '';
+    if (companyValues) {
+      companyValuesSection = `\n\nCompany Values:\n${companyValues}\n\nEnsure your response aligns with and demonstrates these company values through specific examples and language choices.`;
+    }
+
     // Replace template variables
     let prompt = template
       .replace(/{{job\.title}}/g, job.title)
@@ -202,7 +212,8 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
       .replace(/{{cvContent}}/g, cvContent)
       .replace(/{{emphasis}}/g, options.emphasis || '')
       .replace(/{{companyInfo}}/g, options.companyInfo || '')
-      .replace(/{{customInstructions}}/g, options.customInstructions || '');
+      .replace(/{{customInstructions}}/g, options.customInstructions || '')
+      .replace(/{{companyValues}}/g, companyValuesSection);
 
     // Add specific instructions based on type
     const typeInstructions = this.getTypeSpecificInstructions(type, options);

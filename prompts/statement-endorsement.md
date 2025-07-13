@@ -38,7 +38,7 @@ You are a professional writer creating a third-person endorsement based on a job
 - **Job Title**: {{job.title}}
 - **Company**: {{job.company}}
 - **Job Description**: {{job.description}}
-- **Work History**: {{cvContent}}
+- **Work History**: {{cvContent}}{{companyValues}}
 
 ## Output Format
 

@@ -32,7 +32,7 @@ You are a professional writer creating a personalized cover letter based on a jo
 - **Company**: {{job.company}}
 - **Job Description**: {{job.description}}
 - **Work History**: {{cvContent}}
-- **Special Emphasis**: {{emphasis}}
+- **Special Emphasis**: {{emphasis}}{{companyValues}}
 
 ## Output Format
 

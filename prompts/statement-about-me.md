@@ -43,7 +43,7 @@ If company information is provided, include: "I'm excited about {{companyInfo}} 
 - **Company**: {{job.company}}
 - **Job Description**: {{job.description}}
 - **Work History**: {{cvContent}}
-- **Company Info**: {{companyInfo}}
+- **Company Info**: {{companyInfo}}{{companyValues}}
 
 ## Output Format
 

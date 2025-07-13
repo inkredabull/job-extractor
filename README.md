@@ -341,7 +341,8 @@ job-extractor prep about-me "4c32e01e" --regen --content
 
 **Notes:** 
 - The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
-- The 'focus' target requires a `company-values.txt` file in the job directory (`logs/{jobId}/company-values.txt`) containing the company's values.
+- If a `company-values.txt` file exists in the job directory (`logs/{jobId}/company-values.txt`), the tool will automatically incorporate those values into all statement types to ensure alignment with company culture.
+- The 'focus' target requires a `company-values.txt` file in the job directory to identify the best story highlighting company values.
 
 1. **Cover Letter** (600-850 characters)
    - Informal tone with "Greetings:" and "Regards, Anthony" format
