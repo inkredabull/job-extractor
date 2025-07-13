@@ -13,7 +13,7 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 - Maintain all factual information - do not fabricate anything
 - Include 'Career Break' as role
 
-{{recommendationsSection}}
+{{recommendationsSection}}{{companyValuesSection}}
 
 ## General Structure
 

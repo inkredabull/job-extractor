@@ -601,6 +601,27 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     return [...new Set(recommendations)];
   }
 
+  private loadCompanyValues(jobId?: string): string | null {
+    if (!jobId) return null;
+    
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      const companyValuesFile = path.join(jobDir, 'company-values.txt');
+      
+      if (fs.existsSync(companyValuesFile)) {
+        const content = fs.readFileSync(companyValuesFile, 'utf-8').trim();
+        if (content.length > 0) {
+          console.log(`📋 Loaded company values from company-values.txt`);
+          return content;
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to load company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    return null;
+  }
+
   private escapeForPrompt(text: string): string {
     // Remove or replace problematic control characters
     return text
@@ -630,6 +651,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     cvContent: string;
     maxRoles: number;
     recommendationsSection: string;
+    companyValuesSection: string;
   }): string {
     try {
       const promptPath = path.resolve('prompts', 'resume-creator.md');
@@ -656,7 +678,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
         .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
         .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
-        .replace(/{{recommendationsSection}}/g, variables.recommendationsSection);
+        .replace(/{{recommendationsSection}}/g, variables.recommendationsSection)
+        .replace(/{{companyValuesSection}}/g, variables.companyValuesSection);
       
       return prompt;
     } catch (error) {
@@ -673,6 +696,9 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     // Load any existing recommendations
     const recommendations = this.loadRecommendations(jobId);
     
+    // Load company values if available
+    const companyValues = this.loadCompanyValues(jobId);
+    
     // Build the recommendations section for the prompt
     let recommendationsSection = '';
     if (recommendations.length > 0) {
@@ -681,12 +707,24 @@ Please also incorporate these specific recommendations based on previous critiqu
 ${recommendations.map(rec => `- ${rec}`).join('\n')}
 `;
     }
+    
+    // Build the company values section for the prompt
+    let companyValuesSection = '';
+    if (companyValues) {
+      companyValuesSection = `
+
+Additionally, align the resume content with these company values:
+${companyValues}
+
+Ensure the resume highlights experiences and achievements that demonstrate alignment with these values.`;
+    }
 
     const prompt = this.loadPromptTemplate({
       job,
       cvContent,
       maxRoles: this.maxRoles,
-      recommendationsSection
+      recommendationsSection,
+      companyValuesSection
     });
 
     // Write prompt to log file in job subdirectory

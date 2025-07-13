@@ -216,7 +216,9 @@ job-extractor resume "4c32e01e" -o tailored-resume.pdf --regen
 - `-o, --output <file>`: Output path for the generated PDF
 - `--regen`: Force regenerate tailored content (ignores cached content)
 
-**Note:** The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
+**Notes:** 
+- The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
+- If a `company-values.txt` file exists in the job directory (`logs/{jobId}/company-values.txt`), the tool will automatically incorporate those values into the resume generation to ensure alignment with company culture.
 
 #### Auto-Resume Generation
 
