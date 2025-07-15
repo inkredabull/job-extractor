@@ -17,6 +17,7 @@ Table of Contents
          * [Auto-Resume Generation](#auto-resume-generation)
          * [Resume Critique](#resume-critique)
          * [Interview Preparation](#interview-preparation)
+         * [Performance Metrics Extraction](#performance-metrics-extraction)
          * [Statement Caching](#statement-caching)
       * [Examples](#examples)
    * [Output Schemas](#output-schemas)
@@ -66,6 +67,7 @@ Table of Contents
 - 🔍 **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
 - 📝 **Interview Preparation**: Create personalized cover letters, endorsements, interview talking points, theme extraction, and project showcases
 - 🎯 **Intelligent Project Extraction**: Extract and format project information from themes for easy copy-paste into application forms
+- 📊 **Performance Metrics Extraction**: AI-powered analysis to identify likely 90-day and first-year KPIs based on job descriptions
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
@@ -397,6 +399,60 @@ job-extractor prep about-me "4c32e01e" --regen --content
 **Statement Options:**
 - `-e, --emphasis <text>`: Special instructions (useful for cover letters)
 - `-c, --company-info <text>`: Company information for excitement factor (useful for about-me)
+
+#### Performance Metrics Extraction
+
+Extract likely KPIs and performance metrics for the first 90 days and first year based on job descriptions:
+
+```bash
+# Extract performance metrics for a job
+job-extractor metrics "4c32e01e"
+```
+
+**How it works:**
+- Analyzes job posting content to identify realistic, measurable KPIs
+- Extracts both 90-day and first-year performance expectations
+- Provides specific metrics categorized by area (Team Performance, System Reliability, etc.)
+- Includes target values, measurement methods, and rationale for each KPI
+- Saves detailed metrics analysis to `logs/{jobId}/metrics-*.json`
+
+**Example output:**
+```bash
+📊 90-Day KPIs:
+==================================================
+
+1. 🔴 Team Performance: Team Velocity Baseline
+   Target: Establish baseline sprint velocity for all teams
+   Measurement: Story points completed per sprint across teams
+   Rationale: Understanding current team capacity is essential for future planning
+
+2. 🔴 System Reliability: Incident Response Process
+   Target: Document and implement incident response procedures
+   Measurement: Response time to P0/P1 incidents under 15 minutes
+   Rationale: Critical for maintaining system stability during transition period
+
+📈 First Year KPIs:
+==================================================
+
+1. 🔴 System Reliability: System Uptime
+   Target: Achieve 99.9% uptime across all critical services
+   Measurement: Monthly uptime percentage tracked via monitoring systems
+   Rationale: Reliability is fundamental to user trust and business continuity
+
+2. 🟡 Team Performance: Development Velocity
+   Target: Increase team velocity by 25% from baseline
+   Measurement: Story points or features delivered per sprint
+   Rationale: Improved velocity indicates better processes and team effectiveness
+```
+
+**Categories of metrics include:**
+- **Team Performance**: Velocity, collaboration, retention
+- **System Reliability**: Uptime, incident response, monitoring
+- **Business Impact**: User satisfaction, revenue metrics, cost optimization
+- **Process Improvement**: Development practices, deployment frequency, lead time
+- **Technical Excellence**: Code quality, security, scalability
+
+**Statement Options (continued):**
 - `-i, --instructions <text>`: Custom instructions for any statement type
 - `--content`: Output only the statement content without formatting (useful for piping or copying)
 - `--regen`: Force regenerate statement (ignores cached content)

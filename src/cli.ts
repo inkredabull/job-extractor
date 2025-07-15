@@ -7,6 +7,7 @@ import { ResumeCreatorAgent } from './agents/resume-creator-agent';
 import { ResumeCriticAgent } from './agents/resume-critic-agent';
 import { InterviewPrepAgent } from './agents/interview-prep-agent';
 import { OutreachAgent } from './agents/outreach-agent';
+import { MetricsAgent } from './agents/metrics-agent';
 import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -895,6 +896,39 @@ program
         }
       } else {
         console.error('❌ Invalid action. Use: search or list');
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('metrics')
+  .description('Extract 90-day and first-year KPIs from job description')
+  .argument('<jobId>', 'Job ID to extract metrics for')
+  .action(async (jobId: string) => {
+    try {
+      console.log('📊 Extracting performance metrics...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const anthropicConfig = getAnthropicConfig();
+      const metricsAgent = new MetricsAgent(
+        anthropicConfig.anthropicApiKey,
+        anthropicConfig.model,
+        anthropicConfig.maxTokens
+      );
+      
+      const result = await metricsAgent.extractMetrics(jobId);
+      
+      if (result.success) {
+        console.log('✅ Metrics extraction complete');
+        console.log(`📄 Results saved to logs/${jobId}/metrics-*.json`);
+      } else {
+        console.error(`❌ Metrics extraction failed: ${result.error}`);
         process.exit(1);
       }
       
