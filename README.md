@@ -369,11 +369,24 @@ job-extractor prep about-me "4c32e01e" --regen --content
 
 5. **Focus** (Story Analysis)
    - Analyzes company values from `company-values.txt` file
-   - Identifies the single best story that highlights the most company values
-   - Provides detailed STAR method story structure suitable for interviews
-   - Explains why this story is optimal and what values it demonstrates
-   - Includes alternative stories that were considered but not chosen
+   - **Parses CV line items**: Identifies specific bullet points/achievements from each role as story candidates
+   - **Reverse-engineers STAR method**: Expands the best line item into full Situation-Task-Actions-Results format
+   - Selects the single line item that demonstrates the most company values simultaneously
+   - Provides detailed explanation of why this line item is optimal for interviews
+   - **Includes alternatives**: Shows 2-3 other strong line item candidates that were considered but not chosen
    - **Interactive prompt**: Asks if you want to prioritize high-risk, time-bound project stories that demonstrate crisis management and business impact
+
+   **Example output format:**
+   ```
+   SELECTED LINE ITEM:
+   "Engineered LLM-powered description summarization workflow with LangChain, reducing catalog maintenance burden by 80%"
+
+   STAR METHOD BREAKDOWN:
+   • Situation: E-commerce platform struggled with manual catalog maintenance...
+   • Task: Needed to automate product description workflows while maintaining quality...
+   • Actions: Researched and benchmarked multiple LLM models, implemented LangChain...
+   • Results: Reduced catalog maintenance burden by 80%, improved content consistency...
+   ```
 
 6. **Themes** (Analysis)
    - Extracts priority themes from job description

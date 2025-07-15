@@ -2,6 +2,7 @@ import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as readline from 'readline';
 
 export class InterviewPrepAgent extends ClaudeBaseAgent {
   private currentJobId: string = '';
@@ -1359,24 +1360,23 @@ ${project.result}`;
   }
 
   private async askUserAboutHighRiskStories(): Promise<boolean> {
-    const readline = require('readline');
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
 
-    return new Promise((resolve) => {
-      console.log('\n🎯 Focus Story Generation');
+    return new Promise<boolean>((resolve) => {
+      console.log('\n🎯 Focus Story Generation - CV Line Item Analysis');
       console.log('=' .repeat(50));
-      rl.question('If it exists, should I take into consideration a story that highlights how you delivered high-risk, time-bound projects as if the company\'s future depended on it? (y/n): ', (answer) => {
+      rl.question('If it exists, should I take into consideration a story that highlights how you delivered high-risk, time-bound projects as if the company\'s future depended on it? (y/n): ', (answer: string) => {
         rl.close();
         const response = answer.toLowerCase().trim();
         const includeHighRisk = response === 'y' || response === 'yes';
         
         if (includeHighRisk) {
-          console.log('✅ Will prioritize high-risk, time-bound project stories');
+          console.log('✅ Will prioritize high-risk, time-bound project line items');
         } else {
-          console.log('📋 Will focus on standard story analysis');
+          console.log('📋 Will focus on standard line item analysis');
         }
         console.log('');
         
@@ -1418,7 +1418,8 @@ ${project.result}`;
       const includeHighRiskStories = await this.askUserAboutHighRiskStories();
 
       // Generate the focus story
-      console.log(`🎯 Generating focus story for job ${jobId} based on company values...`);
+      console.log(`🎯 Analyzing CV line items for focus story generation...`);
+      console.log(`📋 Parsing role-specific achievements and reverse-engineering STAR method stories...`);
       const focusStory = await this.createFocusStory(companyValues, cvContent, jobId, includeHighRiskStories);
 
       // Cache the generated story
@@ -1456,7 +1457,7 @@ ${project.result}`;
   }
 
   private async createFocusStory(companyValues: string, cvContent: string, jobId: string, includeHighRiskStories: boolean = false): Promise<string> {
-    const prompt = `You are an expert interview coach helping identify the single best story from a candidate's background that would most effectively highlight and demonstrate alignment with specific company values.
+    const prompt = `You are an expert interview coach helping identify specific line items/bullet points from the candidate's CV roles and reverse-engineering them into compelling STAR method stories that align with company values.
 
 Company Values:
 ${companyValues}
@@ -1464,37 +1465,43 @@ ${companyValues}
 Candidate's Work History (CV):
 ${cvContent}
 
-${includeHighRiskStories ? 'SPECIAL CONSIDERATION: Give extra weight to stories that highlight how the candidate delivered high-risk, time-bound projects as if the company\'s future depended on it. These types of stories often demonstrate exceptional leadership, crisis management, and business impact.' : ''}
+${includeHighRiskStories ? 'SPECIAL CONSIDERATION: Give extra weight to line items that highlight how the candidate delivered high-risk, time-bound projects as if the company\'s future depended on it. These types of stories often demonstrate exceptional leadership, crisis management, and business impact.' : ''}
 
 Your task:
-1. Analyze the candidate's CV and identify ALL possible stories/examples from their career
-2. For each company value, determine which stories best demonstrate that value
-3. Identify the ONE story that best highlights the MOST company values simultaneously${includeHighRiskStories ? ', with special consideration for high-risk, time-bound project deliveries' : ''}
-4. Provide a detailed analysis of why this story is the optimal choice
+1. **IDENTIFY LINE ITEM CANDIDATES**: Parse through each role in the CV and extract specific bullet points/achievements that could be expanded into stories
+2. **EVALUATE ALIGNMENT**: For each line item, assess how well it could demonstrate the company values
+3. **SELECT THE BEST**: Choose the single line item that has the highest potential to demonstrate the MOST company values simultaneously${includeHighRiskStories ? ', with preference for high-risk, time-bound deliveries' : ''}
+4. **REVERSE-ENGINEER STAR**: Expand the chosen line item into a full STAR method story by inferring the likely Situation, Task, Actions, and Results
+5. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
 
 Please respond in the following format:
 
-**RECOMMENDED STORY:**
-[Brief title/description of the chosen story]
+**SELECTED LINE ITEM:**
+[Quote the exact bullet point/line item from the CV that was chosen]
 
 **COMPANY VALUES ADDRESSED:**
-[List each company value and explain how this story demonstrates it]
+[List each company value and explain how this story would demonstrate it]
 
-**STORY DETAILS:**
-[Detailed description of the story including situation, actions taken, and results achieved - suitable for STAR method interview response]
+**STAR METHOD BREAKDOWN:**
+• **Situation**: [Inferred context and background circumstances]
+• **Task**: [Specific responsibility or challenge that needed to be addressed]  
+• **Actions**: [Detailed actions taken, decisions made, and approach used]
+• **Results**: [Quantified outcomes, impact, and follow-up effects]
 
-**WHY THIS STORY IS OPTIMAL:**
-[Explanation of why this story was chosen over other possible examples]
+**WHY THIS LINE ITEM IS OPTIMAL:**
+[Explanation of why this specific bullet point was chosen and its storytelling potential]
 
-**ALTERNATIVE STORIES CONSIDERED:**
-[Brief list of 2-3 other stories that were considered but not chosen, with reasons why]
+**ALTERNATIVE LINE ITEMS CONSIDERED:**
+1. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
+2. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]  
+3. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
 
-Focus on finding a story that demonstrates multiple values simultaneously and would be most compelling to share in an interview setting.`;
+Focus on line items that contain quantified achievements, leadership moments, technical innovations, or business impact that can be expanded into compelling interview stories.`;
 
     const response = await this.makeClaudeRequest(prompt);
     
-    // Log the prompt and response
-    this.logFocusStoryGeneration(jobId, prompt, response);
+    // Log the response
+    this.logFocusStoryGeneration(jobId, response);
     
     return response.trim();
   }
@@ -1561,7 +1568,7 @@ Focus on finding a story that demonstrates multiple values simultaneously and wo
     }
   }
 
-  private logFocusStoryGeneration(jobId: string, prompt: string, response: string): void {
+  private logFocusStoryGeneration(jobId: string, response: string): void {
     try {
       const jobDir = path.resolve('logs', jobId);
       if (!fs.existsSync(jobDir)) {
@@ -1570,15 +1577,9 @@ Focus on finding a story that demonstrates multiple values simultaneously and wo
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const logContent = [
-        '🎯 Focus Story Generation Log',
+        '🎯 Focus Story Generation Response',
         '=' .repeat(80),
         '',
-        'PROMPT:',
-        prompt,
-        '',
-        '=' .repeat(80),
-        '',
-        'RESPONSE:',
         response,
         '',
         '=' .repeat(80),
@@ -1587,9 +1588,9 @@ Focus on finding a story that demonstrates multiple values simultaneously and wo
 
       const logPath = path.join(jobDir, `focus-story-log-${timestamp}.txt`);
       fs.writeFileSync(logPath, logContent, 'utf-8');
-      console.log(`📄 Focus story generation logged to: ${logPath}`);
+      console.log(`📄 Focus story response logged to: ${logPath}`);
     } catch (error) {
-      console.warn(`⚠️  Failed to log focus story generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn(`⚠️  Failed to log focus story response: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
