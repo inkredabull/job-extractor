@@ -373,6 +373,7 @@ job-extractor prep about-me "4c32e01e" --regen --content
    - Provides detailed STAR method story structure suitable for interviews
    - Explains why this story is optimal and what values it demonstrates
    - Includes alternative stories that were considered but not chosen
+   - **Interactive prompt**: Asks if you want to prioritize high-risk, time-bound project stories that demonstrate crisis management and business impact
 
 6. **Themes** (Analysis)
    - Extracts priority themes from job description

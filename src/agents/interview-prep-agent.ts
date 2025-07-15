@@ -1358,6 +1358,33 @@ ${project.result}`;
     }
   }
 
+  private async askUserAboutHighRiskStories(): Promise<boolean> {
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    return new Promise((resolve) => {
+      console.log('\n🎯 Focus Story Generation');
+      console.log('=' .repeat(50));
+      rl.question('If it exists, should I take into consideration a story that highlights how you delivered high-risk, time-bound projects as if the company\'s future depended on it? (y/n): ', (answer) => {
+        rl.close();
+        const response = answer.toLowerCase().trim();
+        const includeHighRisk = response === 'y' || response === 'yes';
+        
+        if (includeHighRisk) {
+          console.log('✅ Will prioritize high-risk, time-bound project stories');
+        } else {
+          console.log('📋 Will focus on standard story analysis');
+        }
+        console.log('');
+        
+        resolve(includeHighRisk);
+      });
+    });
+  }
+
   private async generateFocusStory(jobId: string, cvFilePath: string, regenerate: boolean): Promise<StatementResult> {
     try {
       // Check if we should use cached content or regenerate
@@ -1387,9 +1414,12 @@ ${project.result}`;
       // Load CV content
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
 
+      // Ask user about including high-risk, time-bound project stories
+      const includeHighRiskStories = await this.askUserAboutHighRiskStories();
+
       // Generate the focus story
       console.log(`🎯 Generating focus story for job ${jobId} based on company values...`);
-      const focusStory = await this.createFocusStory(companyValues, cvContent, jobId);
+      const focusStory = await this.createFocusStory(companyValues, cvContent, jobId, includeHighRiskStories);
 
       // Cache the generated story
       this.cacheFocusStory(jobId, focusStory, cvFilePath);
@@ -1425,7 +1455,7 @@ ${project.result}`;
     }
   }
 
-  private async createFocusStory(companyValues: string, cvContent: string, jobId: string): Promise<string> {
+  private async createFocusStory(companyValues: string, cvContent: string, jobId: string, includeHighRiskStories: boolean = false): Promise<string> {
     const prompt = `You are an expert interview coach helping identify the single best story from a candidate's background that would most effectively highlight and demonstrate alignment with specific company values.
 
 Company Values:
@@ -1434,10 +1464,12 @@ ${companyValues}
 Candidate's Work History (CV):
 ${cvContent}
 
+${includeHighRiskStories ? 'SPECIAL CONSIDERATION: Give extra weight to stories that highlight how the candidate delivered high-risk, time-bound projects as if the company\'s future depended on it. These types of stories often demonstrate exceptional leadership, crisis management, and business impact.' : ''}
+
 Your task:
 1. Analyze the candidate's CV and identify ALL possible stories/examples from their career
 2. For each company value, determine which stories best demonstrate that value
-3. Identify the ONE story that best highlights the MOST company values simultaneously
+3. Identify the ONE story that best highlights the MOST company values simultaneously${includeHighRiskStories ? ', with special consideration for high-risk, time-bound project deliveries' : ''}
 4. Provide a detailed analysis of why this story is the optimal choice
 
 Please respond in the following format:
