@@ -5,6 +5,7 @@ import { InterviewPrepAgent } from './interview-prep-agent';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cheerio from 'cheerio';
+import { Element } from 'domhandler';
 import axios from 'axios';
 
 export class ApplicationAgent extends BaseAgent {
@@ -121,7 +122,7 @@ export class ApplicationAgent extends BaseAgent {
     }
   }
 
-  private extractFieldLabel($: cheerio.CheerioAPI, $el: cheerio.Cheerio<cheerio.Element>): string {
+  private extractFieldLabel($: cheerio.CheerioAPI, $el: cheerio.Cheerio<Element>): string {
     // Try to find label by various methods
     const id = $el.attr('id');
     if (id) {
@@ -145,7 +146,7 @@ export class ApplicationAgent extends BaseAgent {
     return $el.attr('placeholder') || $el.attr('name') || 'Unknown Field';
   }
 
-  private getElementSelector(element: cheerio.Cheerio<cheerio.Element>): string {
+  private getElementSelector(element: cheerio.Cheerio<Element>): string {
     const id = element.attr('id');
     if (id) return `#${id}`;
     
