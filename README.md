@@ -357,10 +357,24 @@ job-extractor prep about-me "4c32e01e" --regen --content
    - Tells stories about strengths and value delivered
 
 3. **About Me** (max 900 characters)
+   - **Starts with two-sentence overview**: Role-specific summary of work history and relevance
    - Two-level nested bullet list for interview responses
    - Includes priority themes from job description
    - Incorporates desire for small team environment and impact
    - Can include company-specific excitement
+
+   **Example format:**
+   ```
+   I'm a technical leader with 8+ years scaling engineering teams and delivering innovative 
+   user experiences across B2C platforms. My background combines hands-on technical expertise 
+   with proven ability to build and lead high-performing engineering organizations.
+
+   • Technical Leadership
+     • Led 32-person engineering team at Decorist, scaling from 3.5K to 5K DAUs
+     • Implemented GenAI solutions at Myna reducing dev cycles 35%
+   • Team Building
+     • Restructured 19:1 ratio to optimal 7:1 pods at CourseKey
+   ```
 
 4. **General** (250-425 characters)
    - Third-person career summary
@@ -370,14 +384,19 @@ job-extractor prep about-me "4c32e01e" --regen --content
 5. **Focus** (Story Analysis)
    - Analyzes company values from `company-values.txt` file
    - **Parses CV line items**: Identifies specific bullet points/achievements from each role as story candidates
+   - **Leads with impact**: Starts with 1-2 key quantified results to grab attention
    - **Reverse-engineers STAR method**: Expands the best line item into full Situation-Task-Actions-Results format
-   - Selects the single line item that demonstrates the most company values simultaneously
-   - Provides detailed explanation of why this line item is optimal for interviews
+   - **Recaps results**: Provides complete detailed results section expanding on the key achievements
+   - **Ties to job relevance**: Explicitly connects the story to the specific role and company requirements
    - **Includes alternatives**: Shows 2-3 other strong line item candidates that were considered but not chosen
    - **Interactive prompt**: Asks if you want to prioritize high-risk, time-bound project stories that demonstrate crisis management and business impact
 
    **Example output format:**
    ```
+   KEY RESULTS DELIVERED:
+   • Reduced catalog maintenance burden by 80%
+   • Improved content creation time by 60%
+
    SELECTED LINE ITEM:
    "Engineered LLM-powered description summarization workflow with LangChain, reducing catalog maintenance burden by 80%"
 
@@ -386,6 +405,9 @@ job-extractor prep about-me "4c32e01e" --regen --content
    • Task: Needed to automate product description workflows while maintaining quality...
    • Actions: Researched and benchmarked multiple LLM models, implemented LangChain...
    • Results: Reduced catalog maintenance burden by 80%, improved content consistency...
+
+   RELEVANCE TO THIS ROLE:
+   This story demonstrates the technical leadership and AI innovation skills needed for this Director of Engineering role...
    ```
 
 6. **Themes** (Analysis)

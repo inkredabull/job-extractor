@@ -1457,7 +1457,15 @@ ${project.result}`;
   }
 
   private async createFocusStory(companyValues: string, cvContent: string, jobId: string, includeHighRiskStories: boolean = false): Promise<string> {
+    // Load job data for relevance section
+    const jobData = this.loadJobData(jobId);
+    
     const prompt = `You are an expert interview coach helping identify specific line items/bullet points from the candidate's CV roles and reverse-engineering them into compelling STAR method stories that align with company values.
+
+Job Information:
+Title: ${jobData.title}
+Company: ${jobData.company}
+Description: ${jobData.description}
 
 Company Values:
 ${companyValues}
@@ -1469,34 +1477,40 @@ ${includeHighRiskStories ? 'SPECIAL CONSIDERATION: Give extra weight to line ite
 
 Your task:
 1. **IDENTIFY LINE ITEM CANDIDATES**: Parse through each role in the CV and extract specific bullet points/achievements that could be expanded into stories
-2. **EVALUATE ALIGNMENT**: For each line item, assess how well it could demonstrate the company values
+2. **EVALUATE ALIGNMENT**: For each line item, assess how well it could demonstrate the company values and fit the job requirements
 3. **SELECT THE BEST**: Choose the single line item that has the highest potential to demonstrate the MOST company values simultaneously${includeHighRiskStories ? ', with preference for high-risk, time-bound deliveries' : ''}
 4. **REVERSE-ENGINEER STAR**: Expand the chosen line item into a full STAR method story by inferring the likely Situation, Task, Actions, and Results
-5. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
+5. **CONNECT TO ROLE**: Explicitly tie the story back to how it demonstrates fit for this specific job and company
+6. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
 
 Please respond in the following format:
 
+**KEY RESULTS DELIVERED:**
+[Start with 1-2 most impactful, quantified results from the chosen story - these should be the headline achievements that grab attention]
+
 **SELECTED LINE ITEM:**
 [Quote the exact bullet point/line item from the CV that was chosen]
-
-**COMPANY VALUES ADDRESSED:**
-[List each company value and explain how this story would demonstrate it]
 
 **STAR METHOD BREAKDOWN:**
 • **Situation**: [Inferred context and background circumstances]
 • **Task**: [Specific responsibility or challenge that needed to be addressed]  
 • **Actions**: [Detailed actions taken, decisions made, and approach used]
-• **Results**: [Quantified outcomes, impact, and follow-up effects]
+• **Results**: [Complete recap of quantified outcomes, impact, and follow-up effects - expand on the key results mentioned at the beginning]
 
-**WHY THIS LINE ITEM IS OPTIMAL:**
-[Explanation of why this specific bullet point was chosen and its storytelling potential]
+**COMPANY VALUES ADDRESSED:**
+[List each company value and explain how this story would demonstrate it]
+
+**RELEVANCE TO THIS ROLE:**
+[Explicitly connect how this story demonstrates the candidate's fit for this specific job/company - tie the results and approach back to what the role requires and what the company values]
 
 **ALTERNATIVE LINE ITEMS CONSIDERED:**
 1. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
 2. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]  
 3. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
 
-Focus on line items that contain quantified achievements, leadership moments, technical innovations, or business impact that can be expanded into compelling interview stories.`;
+Focus on line items that contain quantified achievements, leadership moments, technical innovations, or business impact that can be expanded into compelling interview stories.
+
+IMPORTANT: Structure the story to lead with impact (key results), tell the complete STAR narrative, and explicitly connect back to this specific role's requirements and company needs. The story should feel immediately relevant and compelling to the hiring manager for this position.`;
 
     const response = await this.makeClaudeRequest(prompt);
     
