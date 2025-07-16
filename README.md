@@ -19,6 +19,7 @@ Table of Contents
          * [Interview Preparation](#interview-preparation)
          * [Performance Metrics Extraction](#performance-metrics-extraction)
          * [Statement Caching](#statement-caching)
+         * [Application Form Filling](#application-form-filling)
       * [Examples](#examples)
    * [Output Schemas](#output-schemas)
       * [Job Extraction Schema](#job-extraction-schema)
@@ -69,6 +70,7 @@ Table of Contents
 - 🎯 **Intelligent Project Extraction**: Extract and format project information from themes for easy copy-paste into application forms
 - 📊 **Performance Metrics Extraction**: AI-powered analysis to identify likely 90-day and first-year KPIs based on job descriptions
 - 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
+- 📄 **Application Form Filling**: Automated form filling using resume and interview data with human-in-the-loop verification
 - 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
 - 📋 **Structured JSON Output**: Standardized job schema with optional salary information
 - 🧪 **Comprehensive Testing**: Full unit test coverage with mocking for external dependencies
@@ -488,6 +490,65 @@ job-extractor metrics "4c32e01e"
 - **Process Improvement**: Development practices, deployment frequency, lead time
 - **Technical Excellence**: Code quality, security, scalability
 
+#### Application Form Filling
+
+Automatically fill job application forms using your resume and interview preparation data:
+
+```bash
+# Fill application form using resume and interview data
+job-extractor apply "https://company.com/apply" "4c32e01e"
+
+# The agent will:
+# 1. Parse the application form structure
+# 2. Load your resume and interview prep data for the job
+# 3. Use AI to generate appropriate responses for each field
+# 4. Display all filled values for your review
+# 5. Provide instructions for final submission
+```
+
+**How it works:**
+- **Form Analysis**: Uses cheerio to parse HTML forms and extract field information
+- **Data Integration**: Loads resume and interview prep data from previous job analysis
+- **AI Field Generation**: Uses OpenAI to generate contextually appropriate responses
+- **Human Verification**: Stops before submission to allow review of all AI-generated content
+- **Comprehensive Logging**: Saves form structure and filled data for reference
+
+**Example output:**
+```bash
+🎯 Application Form Analysis Complete
+================================================================================
+📋 Form URL: https://company.com/apply
+📊 Total Fields: 12
+✅ Filled Fields: 10
+
+📄 Field Values:
+--------------------------------------------------
+Full Name *:
+  Value: Anthony Bull
+  Type: text
+
+Email Address *:
+  Value: anthony@bluxomelabs.com
+  Type: email
+
+Why are you interested in this role?:
+  Value: I'm excited to apply my experience leading AI-powered innovation...
+  Type: textarea
+
+🚀 Submit Button Found:
+  Text: Submit Application
+  Selector: #submit-btn
+
+⚠️  IMPORTANT: Review all field values before submitting!
+```
+
+**Key Features:**
+- **Smart Field Detection**: Identifies form fields, labels, and requirements
+- **Personal Data Extraction**: Automatically uses contact information from CV
+- **Context-Aware Responses**: Generates appropriate responses based on field type and job data
+- **Validation**: Respects field constraints like character limits and dropdown options
+- **Safety First**: Never submits forms automatically - requires human verification
+
 **Statement Options (continued):**
 - `-i, --instructions <text>`: Custom instructions for any statement type
 - `--content`: Output only the statement content without formatting (useful for piping or copying)
@@ -612,6 +673,9 @@ job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf" --regen
 
 # Critique a generated resume for feedback
 job-extractor critique "a1b2c3d4"
+
+# Fill application form using resume and interview data
+job-extractor apply "https://company.com/apply" "a1b2c3d4"
 ```
 
 ## Output Schemas
@@ -862,6 +926,54 @@ Resume critique analysis produces structured feedback:
 - **Presentation (20%)**: Is the resume well-structured and professional?
 - **Keyword Optimization (15%)**: Does it include relevant keywords from the job posting?
 
+### Application Form Filling Schema
+
+Application form filling produces detailed analysis and filled field data:
+
+```json
+{
+  "success": true,
+  "formData": {
+    "url": "https://company.com/apply",
+    "fields": [
+      {
+        "name": "full_name",
+        "type": "text",
+        "label": "Full Name",
+        "required": true,
+        "placeholder": "Enter your full name",
+        "maxLength": 100
+      },
+      {
+        "name": "experience_level",
+        "type": "select",
+        "label": "Experience Level",
+        "required": true,
+        "options": ["Entry Level", "Mid Level", "Senior Level", "Executive"]
+      }
+    ],
+    "submitButton": {
+      "text": "Submit Application",
+      "selector": "#submit-btn"
+    }
+  },
+  "filledFields": {
+    "full_name": "Anthony Bull",
+    "email": "anthony@bluxomelabs.com",
+    "experience_level": "Senior Level"
+  },
+  "readyToSubmit": true,
+  "instructions": "🎯 Application Ready for Review\n\nTo complete the application:\n1. Visit: https://company.com/apply\n2. Review each field value generated by the AI\n3. Make any necessary adjustments\n4. Click the submit button when ready\n\n📋 Fields populated: 12\n⚠️  Always review AI-generated content before submitting!"
+}
+```
+
+**Application Form Field Types:**
+- **Text fields**: Name, email, phone number, location
+- **Textarea fields**: Cover letters, experience descriptions, motivations
+- **Select dropdowns**: Experience level, education, preferences
+- **Checkboxes**: Skills, certifications, availability
+- **File uploads**: Resume, portfolio (detected but not filled)
+
 ## How It Works
 
 ### Dual Extraction Strategy
@@ -1003,6 +1115,7 @@ logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 - `logs/score-a1b2c3d4-2024-06-19T15-35-22-456Z.json`
 - `logs/resume-a1b2c3d4-2024-06-19T15-40-33-789Z.pdf`
 - `logs/critique-a1b2c3d4-2024-06-19T15-45-10-123Z.json`
+- `logs/application-a1b2c3d4-2024-06-19T15-50-45-789Z.json`
 - `logs/a1b2c3d4/tailored-xyz123-2024-06-19T15-42-15-456Z.json`
 - `logs/a1b2c3d4/tailored-xyz123-2024-06-19T15-42-15-456Z.md`
 
@@ -1030,6 +1143,7 @@ src/
 │   ├── resume-creator-agent.ts # AI-powered resume generation and PDF creation
 │   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
 │   ├── interview-prep-agent.ts # Interview preparation materials and project extraction
+│   ├── application-agent.ts   # Application form filling with AI-powered field generation
 │   └── index.ts               # Agent exports
 ├── types/
 │   └── index.ts               # TypeScript type definitions
@@ -1052,6 +1166,7 @@ logs/                          # Auto-generated job extraction and scoring logs
 ├── score-*.json               # Timestamped scoring results
 ├── resume-*.pdf               # Generated tailored resumes
 ├── critique-*.json            # Resume critique analysis results
+├── application-*.json         # Application form filling results
 └── {jobId}/                   # Job-specific subdirectories
     ├── tailored-*.json        # Cached metadata (changes, timestamps)
     └── tailored-*.md          # Editable tailored resume markdown
@@ -1099,11 +1214,17 @@ The project follows a modular architecture with smart extraction and scoring str
    - Generates personal profiles with Google Apps Script integration
    - Extracts project information formatted for application forms
    - Supports configurable profile settings and caching
-7. **WebScraper**: Utility for:
+7. **ApplicationAgent**: OpenAI-powered application form filling system:
+   - Parses HTML forms to extract field structure and requirements
+   - Loads resume and interview preparation data from previous job analysis
+   - Uses AI to generate contextually appropriate responses for each field
+   - Provides human-in-the-loop verification before submission
+   - Comprehensive logging of form structure and filled data
+8. **WebScraper**: Utility for:
    - HTML fetching with proper headers
    - JSON-LD structured data extraction
    - HTML simplification for AI processing
-8. **CLI**: Commander.js interface with automatic logging to unique files
+9. **CLI**: Commander.js interface with automatic logging to unique files
 
 ### Python Dependencies (Optional)
 

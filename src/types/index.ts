@@ -267,3 +267,32 @@ export interface OutreachResult {
   error?: string;
   timestamp: string;
 }
+
+export interface ApplicationFormField {
+  name: string;
+  type: string;
+  label: string;
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+  maxLength?: number;
+  value?: string;
+}
+
+export interface ApplicationFormData {
+  url: string;
+  fields: ApplicationFormField[];
+  submitButton?: {
+    text: string;
+    selector: string;
+  };
+}
+
+export interface ApplicationResult {
+  success: boolean;
+  formData?: ApplicationFormData;
+  filledFields?: Record<string, string>;
+  error?: string;
+  readyToSubmit?: boolean;
+  instructions?: string;
+}

@@ -8,6 +8,7 @@ import { ResumeCriticAgent } from './agents/resume-critic-agent';
 import { InterviewPrepAgent } from './agents/interview-prep-agent';
 import { OutreachAgent } from './agents/outreach-agent';
 import { MetricsAgent } from './agents/metrics-agent';
+import { ApplicationAgent } from './agents/application-agent';
 import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -929,6 +930,47 @@ program
         console.log(`📄 Results saved to logs/${jobId}/metrics-*.json`);
       } else {
         console.error(`❌ Metrics extraction failed: ${result.error}`);
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('apply')
+  .description('Fill out job application form using resume and interview prep data')
+  .argument('<applicationUrl>', 'URL of the job application form')
+  .argument('<jobId>', 'Job ID to use for resume and interview prep data')
+  .action(async (applicationUrl: string, jobId: string) => {
+    try {
+      console.log('🎯 Starting job application process...');
+      console.log(`📋 Application URL: ${applicationUrl}`);
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const openaiConfig = getConfig();
+      const anthropicConfig = getAnthropicConfig();
+      const applicationAgent = new ApplicationAgent(openaiConfig, anthropicConfig.anthropicApiKey);
+      
+      const result = await applicationAgent.fillApplication(applicationUrl, jobId);
+      
+      if (result.success) {
+        console.log('\n✅ Application Form Analysis Complete');
+        console.log('=' .repeat(80));
+        console.log('🔍 Form has been parsed and fields have been filled');
+        console.log('⚠️  IMPORTANT: Review all generated content before submitting!');
+        console.log('');
+        if (result.instructions) {
+          console.log('📋 Next Steps:');
+          console.log(result.instructions);
+        }
+        console.log('');
+        console.log(`📄 Session logged to: logs/${jobId}/application-*.json`);
+      } else {
+        console.error(`❌ Application filling failed: ${result.error}`);
         process.exit(1);
       }
       
