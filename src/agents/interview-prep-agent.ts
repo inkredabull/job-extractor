@@ -1359,28 +1359,27 @@ ${project.result}`;
     }
   }
 
-  private async askUserAboutHighRiskStories(): Promise<boolean> {
+  private async askUserForTheme(): Promise<string> {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
 
-    return new Promise<boolean>((resolve) => {
+    return new Promise<string>((resolve) => {
       console.log('\n🎯 Focus Story Generation - CV Line Item Analysis');
       console.log('=' .repeat(50));
-      rl.question('If it exists, should I take into consideration a story that highlights how you delivered high-risk, time-bound projects as if the company\'s future depended on it? (y/n): ', (answer: string) => {
+      rl.question('What theme should I consider when making the focal story choice? (e.g., "customer success", "observability", "scale", "innovation"): ', (answer: string) => {
         rl.close();
-        const response = answer.toLowerCase().trim();
-        const includeHighRisk = response === 'y' || response === 'yes';
+        const theme = answer.trim();
         
-        if (includeHighRisk) {
-          console.log('✅ Will prioritize high-risk, time-bound project line items');
+        if (theme) {
+          console.log(`✅ Will focus on theme: "${theme}"`);
         } else {
-          console.log('📋 Will focus on standard line item analysis');
+          console.log('📋 Will focus on general high-impact stories');
         }
         console.log('');
         
-        resolve(includeHighRisk);
+        resolve(theme);
       });
     });
   }
@@ -1414,13 +1413,13 @@ ${project.result}`;
       // Load CV content
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
 
-      // Ask user about including high-risk, time-bound project stories
-      const includeHighRiskStories = await this.askUserAboutHighRiskStories();
+      // Ask user for theme to focus on
+      const theme = await this.askUserForTheme();
 
       // Generate the focus story
       console.log(`🎯 Analyzing CV line items for focus story generation...`);
       console.log(`📋 Parsing role-specific achievements and reverse-engineering STAR method stories...`);
-      const focusStory = await this.createFocusStory(companyValues, cvContent, jobId, includeHighRiskStories);
+      const focusStory = await this.createFocusStory(companyValues, cvContent, jobId, theme);
 
       // Cache the generated story
       this.cacheFocusStory(jobId, focusStory, cvFilePath);
@@ -1456,7 +1455,7 @@ ${project.result}`;
     }
   }
 
-  private async createFocusStory(companyValues: string, cvContent: string, jobId: string, includeHighRiskStories: boolean = false): Promise<string> {
+  private async createFocusStory(companyValues: string, cvContent: string, jobId: string, theme: string = ''): Promise<string> {
     // Load job data for relevance section
     const jobData = this.loadJobData(jobId);
     
@@ -1473,12 +1472,12 @@ ${companyValues}
 Candidate's Work History (CV):
 ${cvContent}
 
-${includeHighRiskStories ? 'SPECIAL CONSIDERATION: Give extra weight to line items that highlight how the candidate delivered high-risk, time-bound projects as if the company\'s future depended on it. These types of stories often demonstrate exceptional leadership, crisis management, and business impact.' : ''}
+${theme ? `THEME FOCUS: When evaluating line items, prioritize those that best demonstrate experience with "${theme}". Look for achievements, challenges, and outcomes that relate to this theme.` : ''}
 
 Your task:
 1. **IDENTIFY LINE ITEM CANDIDATES**: Parse through each role in the CV and extract specific bullet points/achievements that could be expanded into stories
 2. **EVALUATE ALIGNMENT**: For each line item, assess how well it could demonstrate the company values and fit the job requirements
-3. **SELECT THE BEST**: Choose the single line item that has the highest potential to demonstrate the MOST company values simultaneously${includeHighRiskStories ? ', with preference for high-risk, time-bound deliveries' : ''}
+3. **SELECT THE BEST**: Choose the single line item that has the highest potential to demonstrate the MOST company values simultaneously${theme ? `, with preference for stories that showcase "${theme}"` : ''}
 4. **REVERSE-ENGINEER STAR**: Expand the chosen line item into a full STAR method story by inferring the likely Situation, Task, Actions, and Results
 5. **CONNECT TO ROLE**: Explicitly tie the story back to how it demonstrates fit for this specific job and company
 6. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
