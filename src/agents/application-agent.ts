@@ -313,11 +313,11 @@ export class ApplicationAgent extends BaseAgent {
       console.log(`📋 Application URL: ${applicationUrl}`);
       console.log(`📊 Job ID: ${jobId}`);
 
-      // Step 1: Initialize Stagehand for browser automation
-      await this.initializeStagehand();
-      
-      // Step 2: Load existing resume and interview prep data
+      // Step 1: Load existing resume and interview prep data (generate resume if needed)
       const applicationData = await this.loadApplicationData(jobId);
+      
+      // Step 2: Initialize Stagehand for browser automation (only after resume is ready)
+      await this.initializeStagehand();
       
       // Step 3: Navigate to the application form
       await this.navigateToForm(applicationUrl);
@@ -480,6 +480,26 @@ export class ApplicationAgent extends BaseAgent {
       const resumePath = path.join(jobDir, resumeFile);
       data.resume = JSON.parse(fs.readFileSync(resumePath, 'utf-8'));
       console.log(`✅ Loaded resume from: ${resumeFile}`);
+    } else {
+      // Auto-generate resume if it doesn't exist
+      console.log('');
+      console.log('📄 No resume found for this job. Generating tailored resume...');
+      
+      try {
+        const resumeResult = await this.generateResumeForJob(jobId);
+        if (resumeResult.success) {
+          console.log(`✅ Resume generated successfully: ${resumeResult.pdfPath}`);
+          // Reload the data to include the newly generated resume
+          const reloadedData = await this.loadApplicationData(jobId);
+          Object.assign(data, reloadedData);
+        } else {
+          console.log('❌ Failed to generate resume. Application form filling will proceed without resume data.');
+        }
+      } catch (error) {
+        console.log(`❌ Error generating resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.log('Application form filling will proceed without resume data.');
+      }
+      console.log('');
     }
     
     // Load interview prep statements
@@ -515,6 +535,51 @@ export class ApplicationAgent extends BaseAgent {
     }
     
     return data;
+  }
+
+  private async generateResumeForJob(jobId: string): Promise<{ success: boolean; pdfPath?: string; error?: string }> {
+    try {
+      console.log('🔄 Generating tailored resume using ResumeCreatorAgent...');
+      
+      // Find CV file
+      const cvFiles = ['cv.txt', 'CV.txt', 'sample-cv.txt'];
+      let cvFilePath = '';
+      
+      for (const cvFile of cvFiles) {
+        if (fs.existsSync(cvFile)) {
+          cvFilePath = cvFile;
+          break;
+        }
+      }
+      
+      if (!cvFilePath) {
+        return {
+          success: false,
+          error: 'No CV file found. Please ensure cv.txt, CV.txt, or sample-cv.txt exists in the current directory.'
+        };
+      }
+      
+      // Use ResumeCreatorAgent to generate resume
+      const resumeResult = await this.resumeAgent.createResume(jobId, cvFilePath);
+      
+      if (resumeResult.success && resumeResult.pdfPath) {
+        return {
+          success: true,
+          pdfPath: resumeResult.pdfPath
+        };
+      } else {
+        return {
+          success: false,
+          error: resumeResult.error || 'Failed to generate resume'
+        };
+      }
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
   private extractPersonalInfo(): any {

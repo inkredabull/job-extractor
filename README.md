@@ -509,10 +509,23 @@ job-extractor apply "https://company.com/apply" "4c32e01e"
 ```
 
 **Prerequisites:**
-⚠️ **IMPORTANT**: You must generate interview prep statements before using the apply command:
+⚠️ **IMPORTANT**: You must extract the job before using the apply command:
 
 ```bash
-# Generate required interview prep content first
+# Extract job first (if not already done)
+job-extractor extract "https://company.com/job-posting"
+
+# The apply command will automatically:
+# 1. Generate a tailored resume if one doesn't exist
+# 2. Use existing interview prep statements if available
+# 3. Fill the application form
+job-extractor apply "https://company.com/apply" "4c32e01e"
+```
+
+**Optional but recommended:** Generate interview prep statements for better results:
+
+```bash
+# Generate interview prep content for optimal form filling
 job-extractor prep cover-letter "4c32e01e"
 job-extractor prep about-me "4c32e01e"
 
@@ -521,6 +534,7 @@ job-extractor apply "https://company.com/apply" "4c32e01e"
 ```
 
 **How it works:**
+- **Auto-Resume Generation**: Automatically generates a tailored resume if one doesn't exist
 - **Browser Automation**: Uses Stagehand to control a visible browser window
 - **Real-time Filling**: You can watch the form being filled field by field
 - **Smart Field Detection**: Automatically recognizes cover letter, summary, and experience fields
