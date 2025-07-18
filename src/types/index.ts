@@ -295,4 +295,5 @@ export interface ApplicationResult {
   error?: string;
   readyToSubmit?: boolean;
   instructions?: string;
+  submitted?: boolean;
 }

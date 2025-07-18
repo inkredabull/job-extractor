@@ -7,10 +7,13 @@ import * as path from 'path';
 import * as cheerio from 'cheerio';
 import { Element } from 'domhandler';
 import axios from 'axios';
+import { Stagehand } from '@browserbasehq/stagehand';
+import * as readline from 'readline';
 
 export class ApplicationAgent extends BaseAgent {
   private resumeAgent: ResumeCreatorAgent;
   private interviewAgent: InterviewPrepAgent;
+  private stagehand: Stagehand | null = null;
 
   constructor(config: AgentConfig, anthropicApiKey: string) {
     super(config);
@@ -23,32 +26,329 @@ export class ApplicationAgent extends BaseAgent {
     throw new Error('ApplicationAgent does not implement extract method. Use fillApplication instead.');
   }
 
+  private async initializeStagehand(): Promise<void> {
+    console.log('🎭 Initializing Stagehand browser automation...');
+    
+    this.stagehand = new Stagehand({
+      env: 'LOCAL',
+      logger: (message: any) => {
+        console.log(`🎭 Stagehand: ${message}`);
+      }
+    });
+    
+    await this.stagehand.init();
+  }
+
+  private async cleanupStagehand(): Promise<void> {
+    if (this.stagehand) {
+      console.log('🧹 Cleaning up Stagehand...');
+      await this.stagehand.close();
+      this.stagehand = null;
+    }
+  }
+
+  private async navigateToForm(url: string): Promise<void> {
+    if (!this.stagehand) {
+      throw new Error('Stagehand not initialized');
+    }
+    
+    console.log(`🌐 Navigating to: ${url}`);
+    await this.stagehand.page.goto(url);
+    
+    // Wait for page to load
+    await this.stagehand.page.waitForLoadState('networkidle');
+    console.log('✅ Page loaded successfully');
+  }
+
+  private async extractFormDataFromPage(url: string): Promise<ApplicationFormData> {
+    if (!this.stagehand) {
+      throw new Error('Stagehand not initialized');
+    }
+    
+    console.log('🔍 Extracting form fields from page...');
+    
+    // Use Stagehand to extract form information
+    const formFields = await this.stagehand.page.evaluate(() => {
+      const fields: ApplicationFormField[] = [];
+      
+      // Get all form inputs
+      const inputs = document.querySelectorAll('input, textarea, select');
+      
+      Array.from(inputs).forEach((element, index: number) => {
+        const input = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+        const name = input.name || input.id || `field_${index}`;
+        const type = input.type || input.tagName.toLowerCase();
+        const required = input.required || input.classList.contains('required');
+        
+        // Handle placeholder safely
+        let placeholder = '';
+        if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+          placeholder = (input as HTMLInputElement | HTMLTextAreaElement).placeholder || '';
+        }
+        
+        // Handle maxLength safely
+        let maxLength: number | undefined;
+        if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+          const maxLengthAttr = (input as HTMLInputElement | HTMLTextAreaElement).maxLength;
+          maxLength = maxLengthAttr > 0 ? maxLengthAttr : undefined;
+        }
+        
+        // Find label
+        let label = '';
+        const id = input.id;
+        if (id) {
+          const labelEl = document.querySelector(`label[for="${id}"]`);
+          if (labelEl) {
+            label = labelEl.textContent?.trim() || '';
+          }
+        }
+        
+        if (!label) {
+          // Look for closest label
+          const closest = input.closest('label');
+          if (closest) {
+            label = closest.textContent?.trim() || '';
+          }
+        }
+        
+        if (!label) {
+          // Look for previous sibling labels
+          const prevSibling = input.previousElementSibling;
+          if (prevSibling && prevSibling.tagName === 'LABEL') {
+            label = prevSibling.textContent?.trim() || '';
+          }
+        }
+        
+        if (!label) {
+          label = placeholder || name || 'Unknown Field';
+        }
+        
+        // Handle select options
+        let options: string[] | undefined;
+        if (type === 'select' && input.tagName === 'SELECT') {
+          const select = input as HTMLSelectElement;
+          options = Array.from(select.options)
+            .map(option => option.text.trim())
+            .filter(text => text && text !== 'Select...');
+        }
+        
+        fields.push({
+          name,
+          type,
+          label,
+          required,
+          options,
+          placeholder,
+          maxLength
+        });
+      });
+      
+      return fields;
+    });
+    
+    // Find submit button
+    const submitButton = await this.stagehand.page.evaluate(() => {
+      const buttons = document.querySelectorAll('input[type="submit"], button[type="submit"], button');
+      
+      for (const button of Array.from(buttons)) {
+        const text = button.textContent?.toLowerCase() || '';
+        const value = (button as HTMLInputElement).value?.toLowerCase() || '';
+        
+        if (text.includes('submit') || text.includes('apply') || text.includes('send') || 
+            value.includes('submit') || value.includes('apply') || value.includes('send')) {
+          return {
+            text: button.textContent || (button as HTMLInputElement).value || 'Submit',
+            selector: button.id ? `#${button.id}` : button.className ? `.${button.className.split(' ')[0]}` : 'button'
+          };
+        }
+      }
+      
+      return null;
+    });
+    
+    return {
+      url,
+      fields: formFields,
+      submitButton: submitButton || undefined
+    };
+  }
+
+  private async fillFormWithStagehand(formData: ApplicationFormData, applicationData: any): Promise<Record<string, string>> {
+    if (!this.stagehand) {
+      throw new Error('Stagehand not initialized');
+    }
+    
+    console.log('🤖 Filling form fields with AI-generated values...');
+    console.log('👀 You can watch the form being filled in the browser window');
+    
+    const filledFields: Record<string, string> = {};
+    
+    for (const field of formData.fields) {
+      try {
+        // Generate value using AI
+        const value = await this.generateFieldValue(field, applicationData);
+        if (!value) continue;
+        
+        console.log(`📝 Filling field: ${field.label} = "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        
+        // Fill the field using Stagehand
+        await this.fillFieldWithStagehand(field, value);
+        
+        filledFields[field.name] = value;
+        
+        // Small delay to make it visible to user
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.warn(`⚠️  Failed to fill field ${field.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    return filledFields;
+  }
+
+  private async fillFieldWithStagehand(field: ApplicationFormField, value: string): Promise<void> {
+    if (!this.stagehand) {
+      throw new Error('Stagehand not initialized');
+    }
+    
+    // Try different selector strategies
+    const selectors = [
+      `input[name="${field.name}"]`,
+      `textarea[name="${field.name}"]`,
+      `select[name="${field.name}"]`,
+      `#${field.name}`,
+      `[name="${field.name}"]`
+    ];
+    
+    for (const selector of selectors) {
+      try {
+        const element = await this.stagehand.page.locator(selector).first();
+        const isVisible = await element.isVisible();
+        
+        if (isVisible) {
+          if (field.type === 'select') {
+            // For select fields, select by text or value
+            await element.selectOption({ label: value });
+          } else if (field.type === 'checkbox' || field.type === 'radio') {
+            // For checkboxes/radios, check if value indicates selection
+            if (value.toLowerCase() === 'yes' || value.toLowerCase() === 'true' || value === '1') {
+              await element.check();
+            }
+          } else {
+            // For text fields, clear and type
+            await element.clear();
+            await element.fill(value);
+          }
+          
+          return; // Success, exit the loop
+        }
+      } catch (error) {
+        // Try next selector
+        continue;
+      }
+    }
+    
+    // If we get here, we couldn't find the field
+    console.warn(`⚠️  Could not locate field: ${field.name} (${field.label})`);
+  }
+
+  private async askUserForSubmission(): Promise<boolean> {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    return new Promise<boolean>((resolve) => {
+      console.log('\\n🚀 Form filling complete! Review the filled form in the browser.');
+      console.log('=' .repeat(50));
+      rl.question('Do you want to submit the form? (y/n): ', (answer: string) => {
+        rl.close();
+        const response = answer.toLowerCase().trim();
+        const shouldSubmit = response === 'y' || response === 'yes';
+        
+        if (shouldSubmit) {
+          console.log('✅ Form will be submitted');
+        } else {
+          console.log('❌ Form will not be submitted');
+        }
+        console.log('');
+        
+        resolve(shouldSubmit);
+      });
+    });
+  }
+
+  private async submitForm(formData: ApplicationFormData): Promise<boolean> {
+    if (!this.stagehand) {
+      throw new Error('Stagehand not initialized');
+    }
+    
+    if (!formData.submitButton) {
+      console.log('⚠️  No submit button found, cannot submit form');
+      return false;
+    }
+    
+    try {
+      console.log('🚀 Submitting form...');
+      
+      // Click the submit button
+      await this.stagehand.page.click(formData.submitButton.selector);
+      
+      // Wait for navigation or success indication
+      await this.stagehand.page.waitForLoadState('networkidle');
+      
+      console.log('✅ Form submitted successfully!');
+      return true;
+      
+    } catch (error) {
+      console.error(`❌ Failed to submit form: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
+    }
+  }
+
   async fillApplication(applicationUrl: string, jobId: string): Promise<ApplicationResult> {
     try {
-      console.log('🎯 Starting application form analysis...');
+      console.log('🎯 Starting automated application form filling...');
       console.log(`📋 Application URL: ${applicationUrl}`);
       console.log(`📊 Job ID: ${jobId}`);
 
-      // Step 1: Parse the application form
-      const formData = await this.parseApplicationForm(applicationUrl);
+      // Step 1: Initialize Stagehand for browser automation
+      await this.initializeStagehand();
       
       // Step 2: Load existing resume and interview prep data
       const applicationData = await this.loadApplicationData(jobId);
       
-      // Step 3: Fill the form fields using AI
-      const filledFields = await this.fillFormFields(formData, applicationData);
+      // Step 3: Navigate to the application form
+      await this.navigateToForm(applicationUrl);
       
-      // Step 4: Log the results
-      this.logApplicationSession(jobId, applicationUrl, formData, filledFields);
+      // Step 4: Extract form fields from the page
+      const formData = await this.extractFormDataFromPage(applicationUrl);
       
-      // Step 5: Display results and instructions
-      this.displayApplicationResults(formData, filledFields);
+      // Step 5: Fill the form using Stagehand with AI-generated values
+      const filledFields = await this.fillFormWithStagehand(formData, applicationData);
+      
+      // Step 6: Ask user if they want to submit
+      const shouldSubmit = await this.askUserForSubmission();
+      
+      // Step 7: Submit if approved
+      let submitted = false;
+      if (shouldSubmit) {
+        submitted = await this.submitForm(formData);
+      }
+      
+      // Step 8: Log the results
+      this.logApplicationSession(jobId, applicationUrl, formData, filledFields, submitted);
+      
+      // Step 9: Display results
+      this.displayApplicationResults(formData, filledFields, submitted);
       
       return {
         success: true,
         formData,
         filledFields,
         readyToSubmit: true,
+        submitted,
         instructions: this.generateSubmissionInstructions(applicationUrl, filledFields)
       };
       
@@ -57,6 +357,9 @@ export class ApplicationAgent extends BaseAgent {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
+    } finally {
+      // Clean up Stagehand
+      await this.cleanupStagehand();
     }
   }
 
@@ -297,12 +600,13 @@ Provide only the field value, nothing else:`;
     return value;
   }
 
-  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>): void {
-    console.log('\n🎯 Application Form Analysis Complete');
+  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false): void {
+    console.log('\n🎯 Application Form Processing Complete');
     console.log('=' .repeat(80));
     console.log(`📋 Form URL: ${formData.url}`);
     console.log(`📊 Total Fields: ${formData.fields.length}`);
     console.log(`✅ Filled Fields: ${Object.keys(filledFields).length}`);
+    console.log(`🚀 Submitted: ${submitted ? 'Yes' : 'No'}`);
     console.log('');
     
     console.log('📄 Field Values:');
@@ -325,7 +629,11 @@ Provide only the field value, nothing else:`;
       console.log(`  Selector: ${formData.submitButton.selector}`);
     }
     
-    console.log('\n⚠️  IMPORTANT: Review all field values before submitting!');
+    if (submitted) {
+      console.log('\n✅ Form has been successfully submitted!');
+    } else {
+      console.log('\n⚠️  Form was not submitted. You can review it in the browser.');
+    }
   }
 
   private generateSubmissionInstructions(url: string, filledFields: Record<string, string>): string {
@@ -343,7 +651,7 @@ To complete the application:
     `.trim();
   }
 
-  private logApplicationSession(jobId: string, url: string, formData: ApplicationFormData, filledFields: Record<string, string>): void {
+  private logApplicationSession(jobId: string, url: string, formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false): void {
     try {
       const jobDir = path.resolve('logs', jobId);
       if (!fs.existsSync(jobDir)) {
@@ -358,7 +666,10 @@ To complete the application:
         formData,
         filledFields,
         fieldCount: formData.fields.length,
-        filledCount: Object.keys(filledFields).length
+        filledCount: Object.keys(filledFields).length,
+        submitted,
+        automatedFilling: true,
+        tool: 'Stagehand'
       };
       
       const logPath = path.join(jobDir, `application-${timestamp}.json`);
