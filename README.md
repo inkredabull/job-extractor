@@ -499,18 +499,34 @@ Automatically fill job application forms using your resume and interview prepara
 job-extractor apply "https://company.com/apply" "4c32e01e"
 
 # The agent will:
-# 1. Parse the application form structure
-# 2. Load your resume and interview prep data for the job
-# 3. Use AI to generate appropriate responses for each field
-# 4. Display all filled values for your review
-# 5. Provide instructions for final submission
+# 1. Open a visible browser window using Stagehand automation
+# 2. Navigate to the application form
+# 3. Extract form fields and their requirements
+# 4. Load your resume and interview prep data for the job
+# 5. Fill each field with AI-generated content while you watch
+# 6. Ask for your confirmation before submitting
+# 7. Optionally submit the form if you approve
+```
+
+**Prerequisites:**
+⚠️ **IMPORTANT**: You must generate interview prep statements before using the apply command:
+
+```bash
+# Generate required interview prep content first
+job-extractor prep cover-letter "4c32e01e"
+job-extractor prep about-me "4c32e01e"
+
+# Then fill the application form
+job-extractor apply "https://company.com/apply" "4c32e01e"
 ```
 
 **How it works:**
-- **Form Analysis**: Uses cheerio to parse HTML forms and extract field information
+- **Browser Automation**: Uses Stagehand to control a visible browser window
+- **Real-time Filling**: You can watch the form being filled field by field
+- **Smart Field Detection**: Automatically recognizes cover letter, summary, and experience fields
 - **Data Integration**: Loads resume and interview prep data from previous job analysis
 - **AI Field Generation**: Uses OpenAI to generate contextually appropriate responses
-- **Human Verification**: Stops before submission to allow review of all AI-generated content
+- **Human-in-the-Loop**: Prompts for approval before submitting the form
 - **Comprehensive Logging**: Saves form structure and filled data for reference
 
 **Example output:**

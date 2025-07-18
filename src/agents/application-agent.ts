@@ -479,15 +479,39 @@ export class ApplicationAgent extends BaseAgent {
       const resumeFile = resumeFiles.sort().reverse()[0]; // Most recent
       const resumePath = path.join(jobDir, resumeFile);
       data.resume = JSON.parse(fs.readFileSync(resumePath, 'utf-8'));
+      console.log(`✅ Loaded resume from: ${resumeFile}`);
     }
     
     // Load interview prep statements
     const statementFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('interview-prep-') && f.endsWith('.json'));
+    console.log(`🔍 Found ${statementFiles.length} interview prep files: ${statementFiles.join(', ')}`);
+    
     for (const file of statementFiles) {
       const filePath = path.join(jobDir, file);
       const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      const type = file.split('-')[2]; // Extract type from filename
-      data.statements[type] = content;
+      // Extract type from filename - format: interview-prep-{type}-{hash}-{timestamp}.json
+      const parts = file.split('-');
+      if (parts.length >= 3) {
+        const type = parts[2]; // Extract type from filename
+        data.statements[type] = content;
+        console.log(`📝 Loaded statement type: ${type} from ${file}`);
+      }
+    }
+    
+    console.log(`📊 Final statement keys available: ${Object.keys(data.statements).join(', ')}`);
+    
+    // Warn if no interview prep statements are available
+    if (Object.keys(data.statements).length === 0) {
+      console.log('');
+      console.log('⚠️  WARNING: NO INTERVIEW PREP STATEMENTS FOUND!');
+      console.log('🚨 APPLICATION FORM FILLING WILL BE LIMITED WITHOUT INTERVIEW PREP CONTENT.');
+      console.log('');
+      console.log('RECOMMENDED: Generate interview prep statements first:');
+      console.log(`  npm run dev prep cover-letter ${jobId}`);
+      console.log(`  npm run dev prep about-me ${jobId}`);
+      console.log('');
+      console.log('Then retry the apply command for optimal results.');
+      console.log('');
     }
     
     return data;
@@ -545,6 +569,53 @@ export class ApplicationAgent extends BaseAgent {
   }
 
   private async generateFieldValue(field: ApplicationFormField, applicationData: any): Promise<string> {
+    // Debug logging
+    console.log(`🔍 Analyzing field: ${field.label} (${field.name})`);
+    console.log(`📋 Available statements: ${Object.keys(applicationData.statements).join(', ')}`);
+    
+    // First, check if this is a cover letter field and we have cover letter data
+    if (this.isCoverLetterField(field)) {
+      console.log(`✅ Detected cover letter field: ${field.label}`);
+      
+      // Try different statement key variations
+      const possibleKeys = ['cover', 'letter', 'coverletter', 'cover-letter'];
+      for (const key of possibleKeys) {
+        if (applicationData.statements[key]?.content) {
+          const coverLetterContent = applicationData.statements[key].content;
+          console.log(`📝 Using cover letter content from key: ${key}`);
+          // Truncate if needed
+          if (field.maxLength && coverLetterContent.length > field.maxLength) {
+            return coverLetterContent.substring(0, field.maxLength);
+          }
+          return coverLetterContent;
+        }
+      }
+    }
+
+    // Check for other specific field types
+    if (this.isAboutMeField(field)) {
+      console.log(`✅ Detected about me field: ${field.label}`);
+      const possibleKeys = ['about', 'me', 'aboutme', 'about-me', 'general', 'summary'];
+      for (const key of possibleKeys) {
+        if (applicationData.statements[key]?.content) {
+          const aboutMeContent = applicationData.statements[key].content;
+          console.log(`📝 Using about me content from key: ${key}`);
+          // Truncate if needed
+          if (field.maxLength && aboutMeContent.length > field.maxLength) {
+            return aboutMeContent.substring(0, field.maxLength);
+          }
+          return aboutMeContent;
+        }
+      }
+      console.log(`⚠️  No about me content found in keys: ${possibleKeys.join(', ')}`);
+    }
+
+    // Check for experience/leadership questions
+    if (this.isExperienceField(field)) {
+      console.log(`✅ Detected experience field: ${field.label}`);
+      return await this.generateExperienceResponse(field, applicationData);
+    }
+
     const prompt = `You are an expert job application assistant. Based on the candidate's information, provide an appropriate response for this form field.
 
 Field Information:
@@ -565,14 +636,18 @@ Candidate Information:
 Resume Data Available: ${applicationData.resume ? 'Yes' : 'No'}
 Interview Statements Available: ${Object.keys(applicationData.statements).join(', ') || 'None'}
 
+Available Statement Content:
+${Object.keys(applicationData.statements).map(key => `- ${key}: ${applicationData.statements[key].content ? 'Available' : 'Not available'}`).join('\n')}
+
 Instructions:
 1. If this is a personal information field (name, email, phone, etc.), use the exact personal info provided
 2. If this is a dropdown/select field, choose the most appropriate option from the available choices
-3. If this is a text field asking for experience, use information from the resume or interview statements
-4. If this is a cover letter or motivation field, use the cover letter or about-me statement content
-5. Keep responses within the character limit if specified
-6. Be professional and accurate
-7. If you cannot determine an appropriate value, return "SKIP"
+3. If this is a cover letter field, use the cover-letter statement content if available
+4. If this is an about me/motivation field, use the about-me statement content if available
+5. If this is a text field asking for experience, use information from the resume or interview statements
+6. Keep responses within the character limit if specified
+7. Be professional and accurate
+8. If you cannot determine an appropriate value, return "SKIP"
 
 Provide only the field value, nothing else:`;
 
@@ -597,6 +672,135 @@ Provide only the field value, nothing else:`;
       return match || field.options[0];
     }
     
+    return value;
+  }
+
+  private isCoverLetterField(field: ApplicationFormField): boolean {
+    const label = field.label.toLowerCase();
+    const name = field.name.toLowerCase();
+    const placeholder = field.placeholder?.toLowerCase() || '';
+    
+    // Check for cover letter indicators
+    const coverLetterKeywords = [
+      'cover letter', 'coverletter', 'cover_letter',
+      'motivation', 'motivational', 'letter',
+      'why do you want', 'why are you interested',
+      'tell us why', 'explain why'
+    ];
+    
+    const isMatch = coverLetterKeywords.some(keyword => 
+      label.includes(keyword) || 
+      name.includes(keyword) || 
+      placeholder.includes(keyword)
+    );
+    
+    if (isMatch) {
+      console.log(`🔍 Cover letter field detected: "${field.label}" (matched keywords: ${coverLetterKeywords.filter(k => label.includes(k) || name.includes(k) || placeholder.includes(k)).join(', ')})`);
+    }
+    
+    return isMatch;
+  }
+
+  private isAboutMeField(field: ApplicationFormField): boolean {
+    const label = field.label.toLowerCase();
+    const name = field.name.toLowerCase();
+    const placeholder = field.placeholder?.toLowerCase() || '';
+    
+    // Check for about me indicators
+    const aboutMeKeywords = [
+      'about me', 'about you', 'about yourself',
+      'tell us about', 'describe yourself',
+      'your background', 'personal statement',
+      'introduction', 'bio', 'biography',
+      'summary', 'overview', 'profile'
+    ];
+    
+    const isMatch = aboutMeKeywords.some(keyword => 
+      label.includes(keyword) || 
+      name.includes(keyword) || 
+      placeholder.includes(keyword)
+    );
+    
+    if (isMatch) {
+      console.log(`🔍 About me field detected: "${field.label}" (matched keywords: ${aboutMeKeywords.filter(k => label.includes(k) || name.includes(k) || placeholder.includes(k)).join(', ')})`);
+    }
+    
+    return isMatch;
+  }
+
+  private isExperienceField(field: ApplicationFormField): boolean {
+    const label = field.label.toLowerCase();
+    const name = field.name.toLowerCase();
+    const placeholder = field.placeholder?.toLowerCase() || '';
+    
+    // Check for experience/leadership question indicators
+    const experienceKeywords = [
+      'how have you', 'describe a time', 'tell us about a time',
+      'give an example', 'provide an example',
+      'scaled', 'scaling', 'growth', 'team', 'teams',
+      'leadership', 'management', 'managed',
+      'experience with', 'worked with', 'built',
+      'challenge', 'problem', 'solved', 'fix', 'fixed',
+      'implemented', 'developed', 'created',
+      'what broke', 'what did you do', 'how did you handle'
+    ];
+    
+    return experienceKeywords.some(keyword => 
+      label.includes(keyword) || 
+      name.includes(keyword) || 
+      placeholder.includes(keyword)
+    );
+  }
+
+  private async generateExperienceResponse(field: ApplicationFormField, applicationData: any): Promise<string> {
+    // Try to get CV content
+    let cvContent = '';
+    try {
+      cvContent = fs.readFileSync('cv.txt', 'utf-8');
+    } catch (error) {
+      console.warn('⚠️  Could not load cv.txt for experience response');
+    }
+
+    // Also try to get resume content if available
+    let resumeContent = '';
+    if (applicationData.resume?.content) {
+      resumeContent = applicationData.resume.content;
+    }
+
+    const prompt = `You are an expert at crafting compelling answers to job application questions based on a candidate's work history. 
+
+Question: ${field.label}
+
+Work History (CV):
+${cvContent}
+
+${resumeContent ? `Resume Content:\n${resumeContent}\n\n` : ''}
+
+Instructions:
+1. Analyze the work history to find relevant experiences that answer this specific question
+2. Focus on concrete examples with measurable outcomes
+3. Use the STAR method (Situation, Task, Action, Result) if applicable
+4. Be specific about technologies, team sizes, growth metrics, and business impact
+5. If the question asks about scaling or growth, look for examples of team expansion, system scaling, or process improvements
+6. If the question asks about challenges or problems, look for examples of technical debt, system failures, or organizational issues that were resolved
+7. Keep the response within ${field.maxLength || 2000} characters
+8. Be professional and confident
+9. If no relevant experience is found, return "SKIP"
+
+Provide a compelling, specific response that demonstrates relevant experience:`;
+
+    const response = await this.makeOpenAIRequest(prompt, 1000); // Increased token limit for experience responses
+    const value = response.trim();
+    
+    if (value === 'SKIP' || !value) {
+      return '';
+    }
+
+    // Truncate if needed
+    if (field.maxLength && value.length > field.maxLength) {
+      return value.substring(0, field.maxLength);
+    }
+
     return value;
   }
 
