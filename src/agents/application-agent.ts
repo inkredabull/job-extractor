@@ -327,14 +327,100 @@ export class ApplicationAgent extends BaseAgent {
     try {
       console.log('🚀 Submitting form...');
       
-      // Click the submit button
-      await this.stagehand.page.click(formData.submitButton.selector);
+      // Set up response monitoring to capture HTTP status codes
+      let submissionSuccess = false;
+      let responseStatus: number | null = null;
+      let responseUrl: string | null = null;
       
-      // Wait for navigation or success indication
-      await this.stagehand.page.waitForLoadState('networkidle');
+      // Listen for responses to monitor submission success
+      const responseHandler = async (response: any) => {
+        try {
+          const status = response.status();
+          const url = response.url();
+          const method = response.request().method();
+          
+          console.log(`📡 HTTP Response: ${method} ${status} - ${url}`);
+          
+          // Check if this looks like a form submission response
+          if (method === 'POST' || status === 200) {
+            responseStatus = status;
+            responseUrl = url;
+            
+            if (status === 200) {
+              submissionSuccess = true;
+              console.log('✅ Received 200 OK response - form submission successful');
+            } else if (status >= 400) {
+              console.log(`⚠️  Received ${status} error response`);
+            } else if (status >= 300) {
+              console.log(`🔄 Received ${status} redirect response`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️  Error processing response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      };
       
-      console.log('✅ Form submitted successfully!');
-      return true;
+      // Start monitoring responses
+      this.stagehand.page.on('response', responseHandler);
+      
+      try {
+        // Click the submit button
+        await this.stagehand.page.click(formData.submitButton.selector);
+        
+        // Wait for navigation or network activity to complete
+        console.log('⏳ Waiting for form submission response...');
+        await this.stagehand.page.waitForLoadState('networkidle', { timeout: 10000 });
+        
+        // Give a moment for any additional responses
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Remove the response listener
+        this.stagehand.page.off('response', responseHandler);
+        
+        // Evaluate submission success
+        if (submissionSuccess && responseStatus === 200) {
+          console.log('✅ Form submitted successfully with 200 OK response!');
+          console.log(`📍 Response URL: ${responseUrl}`);
+          return true;
+        } else if (responseStatus) {
+          console.log(`❌ Form submission failed with HTTP ${responseStatus}`);
+          console.log(`📍 Response URL: ${responseUrl}`);
+          return false;
+        } else {
+          // Check for success indicators on the page
+          console.log('🔍 Checking page for success indicators...');
+          const successIndicators = await this.stagehand.page.evaluate(() => {
+            const bodyText = document.body.innerText.toLowerCase();
+            const successKeywords = [
+              'thank you for your application',
+              'application submitted',
+              'application received', 
+              'successfully submitted',
+              'thank you for applying',
+              'application complete',
+              'submitted successfully',
+              'your application has been',
+              'we have received your application'
+            ];
+            
+            const foundKeywords = successKeywords.filter(keyword => bodyText.includes(keyword));
+            return { found: foundKeywords.length > 0, keywords: foundKeywords };
+          });
+          
+          if (successIndicators.found) {
+            console.log(`✅ Success indicators found: ${successIndicators.keywords.join(', ')}`);
+            console.log('✅ Form appears to have been submitted successfully (based on page content)');
+            return true;
+          } else {
+            console.log('⚠️  Unable to confirm successful submission - no 200 response or success indicators found');
+            return false;
+          }
+        }
+        
+      } finally {
+        // Ensure we clean up the event listener
+        this.stagehand.page.off('response', responseHandler);
+      }
       
     } catch (error) {
       console.error(`❌ Failed to submit form: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1001,6 +1087,7 @@ Provide a compelling, specific response that demonstrates relevant experience:`;
     
     if (submitted) {
       console.log('\n✅ Form has been successfully submitted!');
+      console.log('📡 Submission verified with 200 HTTP response or success indicators');
     } else {
       console.log('\n⚠️  Form was not submitted. You can review it in the browser.');
     }
@@ -1043,6 +1130,7 @@ To complete the application:
         fieldCount: formData.fields.length,
         filledCount: Object.keys(filledFields).length,
         submitted,
+        submissionVerified: submitted, // If submitted=true, it means 200 response was verified
         automatedFilling: true,
         tool: 'Stagehand'
       };
