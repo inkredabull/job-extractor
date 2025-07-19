@@ -16,6 +16,8 @@ export class ApplicationAgent extends BaseAgent {
   private interviewAgent: InterviewPrepAgent;
   private outreachAgent: OutreachAgent;
   private stagehand: Stagehand | null = null;
+  private lastSubmissionWasSuccessful: boolean = false;
+  private shouldKeepBrowserOpen: boolean = false;
 
   constructor(config: AgentConfig, anthropicApiKey: string) {
     super(config);
@@ -60,11 +62,32 @@ export class ApplicationAgent extends BaseAgent {
     console.log('');
   }
 
-  private async cleanupStagehand(): Promise<void> {
+  private async cleanupStagehand(wasSubmitted: boolean = false): Promise<void> {
+    console.log(`🔍 DEBUG: cleanupStagehand called with wasSubmitted: ${wasSubmitted}`);
+    
     if (this.stagehand) {
+      if (wasSubmitted) {
+        try {
+          console.log('');
+          console.log('🎉 Form submitted successfully!');
+          console.log('⏰ Waiting 2 seconds before closing browser...');
+          console.log('👀 Take a moment to view the success page');
+          console.log('🔍 DEBUG: Starting 10-second delay...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('🔍 DEBUG: 10-second delay completed');
+          console.log('');
+        } catch (error) {
+          console.log(`⚠️  Error during delay: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        console.log('🔍 DEBUG: No delay - form was not submitted successfully');
+      }
+      
       console.log('🧹 Cleaning up Stagehand...');
       await this.stagehand.close();
       this.stagehand = null;
+    } else {
+      console.log('🔍 DEBUG: No Stagehand instance to cleanup');
     }
   }
 
@@ -378,6 +401,8 @@ export class ApplicationAgent extends BaseAgent {
         this.stagehand.page.off('response', responseHandler);
         
         // Evaluate submission success
+        console.log(`🔍 DEBUG: Evaluating submission - submissionSuccess: ${submissionSuccess}, responseStatus: ${responseStatus}`);
+        
         if (submissionSuccess && responseStatus === 200) {
           console.log('✅ Form submitted successfully with 200 OK response!');
           console.log(`📍 Response URL: ${responseUrl}`);
@@ -387,6 +412,7 @@ export class ApplicationAgent extends BaseAgent {
           console.log(`📍 Response URL: ${responseUrl}`);
           return false;
         } else {
+          console.log('🔍 DEBUG: No HTTP response captured, checking page content...');
           // Check for success indicators on the page
           console.log('🔍 Checking page for success indicators...');
           const successIndicators = await this.stagehand.page.evaluate(() => {
@@ -456,6 +482,19 @@ export class ApplicationAgent extends BaseAgent {
       let submitted = false;
       if (shouldSubmit) {
         submitted = await this.submitForm(formData);
+        this.lastSubmissionWasSuccessful = submitted;
+        
+        if (submitted) {
+          console.log(`🔍 DEBUG: Submission succeeded, will delay cleanup and close browser`);
+          this.shouldKeepBrowserOpen = false;
+        } else {
+          console.log(`🔍 DEBUG: Submission failed verification, will keep browser open for manual review`);
+          this.shouldKeepBrowserOpen = true;
+        }
+      } else {
+        this.lastSubmissionWasSuccessful = false;
+        this.shouldKeepBrowserOpen = false;
+        console.log('🔍 DEBUG: User chose not to submit, will close browser immediately');
       }
       
       // Step 8: Log the results
@@ -463,7 +502,7 @@ export class ApplicationAgent extends BaseAgent {
       
       // Step 9: Display results
       const usedCachedFields = applicationData.cachedFields && Object.keys(applicationData.cachedFields).length > 0;
-      this.displayApplicationResults(formData, filledFields, submitted, usedCachedFields);
+      this.displayApplicationResults(formData, filledFields, submitted, usedCachedFields, shouldSubmit);
       
       return {
         success: true,
@@ -475,13 +514,26 @@ export class ApplicationAgent extends BaseAgent {
       };
       
     } catch (error) {
+      this.lastSubmissionWasSuccessful = false; // Ensure we don't delay on errors
+      this.shouldKeepBrowserOpen = false; // Close browser on errors
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     } finally {
-      // Clean up Stagehand
-      await this.cleanupStagehand();
+      // Clean up Stagehand (with delay if submission was successful, or keep open if submission failed)
+      if (this.shouldKeepBrowserOpen) {
+        console.log('');
+        console.log('🌐 Browser will remain open for manual review');
+        console.log('📋 Please manually check the submission status and close the browser when done');
+        console.log('⚠️  Note: The browser will not close automatically due to submission verification failure');
+      } else {
+        await this.cleanupStagehand(this.lastSubmissionWasSuccessful);
+      }
+      
+      // Reset state for next use
+      this.lastSubmissionWasSuccessful = false;
+      this.shouldKeepBrowserOpen = false;
     }
   }
 
@@ -1055,7 +1107,7 @@ Provide a compelling, specific response that demonstrates relevant experience:`;
     return value;
   }
 
-  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false, usedCachedFields: boolean = false): void {
+  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false, usedCachedFields: boolean = false, userChoseToSubmit: boolean = false): void {
     console.log('\n🎯 Application Form Processing Complete');
     console.log('=' .repeat(80));
     console.log(`📋 Form URL: ${formData.url}`);
@@ -1088,8 +1140,13 @@ Provide a compelling, specific response that demonstrates relevant experience:`;
     if (submitted) {
       console.log('\n✅ Form has been successfully submitted!');
       console.log('📡 Submission verified with 200 HTTP response or success indicators');
+    } else if (userChoseToSubmit) {
+      console.log('\n❌ Form submission failed verification!');
+      console.log('🔍 No 200 HTTP response or success indicators detected');
+      console.log('🌐 Browser will remain open for manual review and potential re-submission');
     } else {
-      console.log('\n⚠️  Form was not submitted. You can review it in the browser.');
+      console.log('\n⚠️  Form was not submitted (user choice).');
+      console.log('📋 You can review the filled form in the browser before it closes');
     }
     
     console.log('\n🤝 Networking Resources:');
