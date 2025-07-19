@@ -685,7 +685,7 @@ export class ApplicationAgent extends BaseAgent {
 
   private async generateFieldValue(field: ApplicationFormField, applicationData: any): Promise<string> {
     // Debug logging
-    console.log(`🔍 Analyzing field: ${field.label} (${field.name})`);
+    console.log(`🔍 Analyzing field: ${field.label} (${field.name}) [${field.type}]`);
     console.log(`📋 Available statements: ${Object.keys(applicationData.statements).join(', ')}`);
     
     // First, check if this is a cover letter field and we have cover letter data
@@ -800,17 +800,66 @@ Provide only the field value, nothing else:`;
       'cover letter', 'coverletter', 'cover_letter',
       'motivation', 'motivational', 'letter',
       'why do you want', 'why are you interested',
-      'tell us why', 'explain why'
+      'tell us why', 'explain why',
+      'why join', 'why work', 'join us',
+      'interest in', 'interested in',
+      'attracted to', 'drawn to',
+      'what interests you', 'what motivates you',
+      'personal statement', 'statement of interest',
+      'why this company', 'why our company',
+      'your motivation', 'your interest',
+      'why should we hire', 'why hire you',
+      'what excites you', 'excited about',
+      'passion for', 'passionate about'
     ];
     
-    const isMatch = coverLetterKeywords.some(keyword => 
+    // Additional patterns that indicate company-specific motivation questions
+    const companySpecificPatterns = [
+      /why.*join.*\w+/,              // "why do you want to join [company]"
+      /why.*work.*\w+/,              // "why do you want to work at [company]"
+      /why.*\w+.*company/,           // "why [company] company"
+      /what.*interests.*you.*about/, // "what interests you about"
+      /what.*attracts.*you.*to/,     // "what attracts you to"
+      /why.*choose.*\w+/,            // "why choose [company]"
+      /motivation.*join/,            // "motivation to join"
+      /interest.*position/,          // "interest in this position"
+      /why.*\w+\?$/,                // "why [company]?" at end of string
+      /excited.*about.*\w+/,         // "excited about [company]"
+      /passion.*for.*\w+/,           // "passion for [company]"
+      /what.*draws.*you/,            // "what draws you to"
+      /why.*applying.*\w+/           // "why are you applying to [company]"
+    ];
+    
+    // Check keyword matches
+    const keywordMatch = coverLetterKeywords.some(keyword => 
       label.includes(keyword) || 
       name.includes(keyword) || 
       placeholder.includes(keyword)
     );
     
+    // Check pattern matches
+    const patternMatch = companySpecificPatterns.some(pattern =>
+      pattern.test(label) || 
+      pattern.test(name) || 
+      pattern.test(placeholder)
+    );
+    
+    const isMatch = keywordMatch || patternMatch;
+    
     if (isMatch) {
-      console.log(`🔍 Cover letter field detected: "${field.label}" (matched keywords: ${coverLetterKeywords.filter(k => label.includes(k) || name.includes(k) || placeholder.includes(k)).join(', ')})`);
+      const matchedKeywords = coverLetterKeywords.filter(k => 
+        label.includes(k) || name.includes(k) || placeholder.includes(k)
+      );
+      const matchedPatterns = companySpecificPatterns.filter(p =>
+        p.test(label) || p.test(name) || p.test(placeholder)
+      );
+      
+      const matchInfo = [
+        ...matchedKeywords,
+        ...matchedPatterns.map(p => `pattern: ${p.source}`)
+      ];
+      
+      console.log(`🔍 Cover letter field detected: "${field.label}" (matched: ${matchInfo.join(', ')})`);
     }
     
     return isMatch;
