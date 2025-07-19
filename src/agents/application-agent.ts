@@ -29,7 +29,7 @@ export class ApplicationAgent extends BaseAgent {
     throw new Error('ApplicationAgent does not implement extract method. Use fillApplication instead.');
   }
 
-  private async initializeStagehand(): Promise<void> {
+  private async initializeStagehand(jobId: string): Promise<void> {
     console.log('🎭 Initializing Stagehand browser automation...');
     
     this.stagehand = new Stagehand({
@@ -40,6 +40,24 @@ export class ApplicationAgent extends BaseAgent {
     });
     
     await this.stagehand.init();
+    
+    // Invoke OutreachAgent to help with networking during application process
+    console.log('');
+    console.log('🤝 Setting up networking outreach...');
+    console.log('💡 This will open LinkedIn connections page to help with networking while applying');
+    try {
+      const outreachResult = await this.outreachAgent.findConnections(jobId);
+      if (outreachResult.success) {
+        console.log(`✅ LinkedIn networking setup complete for ${outreachResult.company}`);
+        console.log('🌐 LinkedIn connections page opened - you can network while form is being filled');
+        console.log('📝 Outreach instructions and template saved to job logs');
+      } else {
+        console.log(`⚠️  Outreach setup completed with issues: ${outreachResult.error}`);
+      }
+    } catch (error) {
+      console.log('⚠️  Outreach setup failed (application will continue):', error instanceof Error ? error.message : 'Unknown error');
+    }
+    console.log('');
   }
 
   private async cleanupStagehand(): Promise<void> {
@@ -334,7 +352,7 @@ export class ApplicationAgent extends BaseAgent {
       const applicationData = await this.loadApplicationData(jobId);
       
       // Step 2: Initialize Stagehand for browser automation (only after resume is ready)
-      await this.initializeStagehand();
+      await this.initializeStagehand(jobId);
       
       // Step 3: Navigate to the application form
       await this.navigateToForm(applicationUrl);
@@ -936,6 +954,11 @@ Provide a compelling, specific response that demonstrates relevant experience:`;
     } else {
       console.log('\n⚠️  Form was not submitted. You can review it in the browser.');
     }
+    
+    console.log('\n🤝 Networking Resources:');
+    console.log('   • LinkedIn connections page was opened during setup');
+    console.log('   • Check job logs for outreach instructions and connection templates');
+    console.log('   • Use these resources for follow-up networking after application');
   }
 
   private generateSubmissionInstructions(url: string, filledFields: Record<string, string>): string {
