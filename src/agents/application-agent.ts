@@ -570,18 +570,19 @@ export class ApplicationAgent extends BaseAgent {
     
     console.log(`📊 Final statement keys available: ${Object.keys(data.statements).join(', ')}`);
     
-    // Warn if no interview prep statements are available
+    // Exit if no interview prep statements are available
     if (Object.keys(data.statements).length === 0) {
       console.log('');
-      console.log('⚠️  WARNING: NO INTERVIEW PREP STATEMENTS FOUND!');
-      console.log('🚨 APPLICATION FORM FILLING WILL BE LIMITED WITHOUT INTERVIEW PREP CONTENT.');
+      console.log('❌ ERROR: NO INTERVIEW PREP STATEMENTS FOUND!');
+      console.log('🚨 APPLICATION FORM FILLING REQUIRES INTERVIEW PREP CONTENT.');
       console.log('');
-      console.log('RECOMMENDED: Generate interview prep statements first:');
+      console.log('REQUIRED: Generate interview prep statements first:');
       console.log(`  npm run dev prep cover-letter ${jobId}`);
       console.log(`  npm run dev prep about-me ${jobId}`);
       console.log('');
-      console.log('Then retry the apply command for optimal results.');
+      console.log('Then retry the apply command.');
       console.log('');
+      throw new Error('No interview prep statements found. Please generate cover letter and about-me statements first.');
     }
     
     return data;
