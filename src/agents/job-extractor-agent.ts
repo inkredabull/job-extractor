@@ -193,11 +193,37 @@ JSON:`;
   private parseStructuredData(jsonLd: any, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): JobListing {
     try {
       // Extract fields from JSON-LD JobPosting
+      let location = this.extractLocation(jsonLd.jobLocation);
+      
+      // Handle remote work designation
+      if (jsonLd.jobLocationType === 'TELECOMMUTE' || jsonLd.jobLocationType === 'REMOTE') {
+        if (location && location !== 'United States') {
+          location = `Remote (${location})`;
+        } else {
+          location = 'Remote';
+        }
+      }
+      
+      // Clean up HTML description if present
+      let description = jsonLd.description || '';
+      if (description.includes('<')) {
+        // Simple HTML tag removal - convert HTML to plain text
+        description = description
+          .replace(/<[^>]*>/g, ' ')                    // Remove HTML tags
+          .replace(/&nbsp;/g, ' ')                     // Replace &nbsp; with space
+          .replace(/&amp;/g, '&')                      // Replace &amp; with &
+          .replace(/&lt;/g, '<')                       // Replace &lt; with <
+          .replace(/&gt;/g, '>')                       // Replace &gt; with >
+          .replace(/&quot;/g, '"')                     // Replace &quot; with "
+          .replace(/\s+/g, ' ')                        // Normalize whitespace
+          .trim();
+      }
+      
       const jobData: JobListing = {
         title: jsonLd.title || jsonLd.identifier?.name || '',
         company: jsonLd.hiringOrganization?.name || '',
-        location: this.extractLocation(jsonLd.jobLocation),
-        description: jsonLd.description || '',
+        location: location,
+        description: description,
       };
 
       // Add applicant information if available
@@ -261,11 +287,17 @@ JSON:`;
     
     if (jobLocation.address) {
       const address = jobLocation.address;
+      if (address.addressLocality && address.addressRegion) {
+        return `${address.addressLocality}, ${address.addressRegion}`;
+      }
       if (address.addressLocality) {
         return address.addressLocality;
       }
       if (address.addressRegion && address.addressCountry) {
         return `${address.addressRegion}, ${address.addressCountry}`;
+      }
+      if (address.addressCountry) {
+        return address.addressCountry;
       }
     }
     

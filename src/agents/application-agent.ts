@@ -178,18 +178,32 @@ export class ApplicationAgent extends BaseAgent {
       throw new Error('Stagehand not initialized');
     }
     
-    console.log('🤖 Filling form fields with AI-generated values...');
-    console.log('👀 You can watch the form being filled in the browser window');
+    const hasCachedFields = applicationData.cachedFields && Object.keys(applicationData.cachedFields).length > 0;
+    
+    if (hasCachedFields) {
+      console.log('🔄 Using cached field values from previous application...');
+      console.log('👀 You can watch the form being filled in the browser window');
+    } else {
+      console.log('🤖 Filling form fields with AI-generated values...');
+      console.log('👀 You can watch the form being filled in the browser window');
+    }
     
     const filledFields: Record<string, string> = {};
     
     for (const field of formData.fields) {
       try {
-        // Generate value using AI
-        const value = await this.generateFieldValue(field, applicationData);
-        if (!value) continue;
+        let value = '';
         
-        console.log(`📝 Filling field: ${field.label} = "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        // First, try to use cached value if available
+        if (hasCachedFields && applicationData.cachedFields[field.name]) {
+          value = applicationData.cachedFields[field.name];
+          console.log(`🔄 Using cached value for field: ${field.label} = "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        } else {
+          // Generate value using AI if no cached value
+          value = await this.generateFieldValue(field, applicationData);
+          if (!value) continue;
+          console.log(`🤖 Generated new value for field: ${field.label} = "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        }
         
         // Fill the field using Stagehand
         await this.fillFieldWithStagehand(field, value);
@@ -341,7 +355,8 @@ export class ApplicationAgent extends BaseAgent {
       this.logApplicationSession(jobId, applicationUrl, formData, filledFields, submitted);
       
       // Step 9: Display results
-      this.displayApplicationResults(formData, filledFields, submitted);
+      const usedCachedFields = applicationData.cachedFields && Object.keys(applicationData.cachedFields).length > 0;
+      this.displayApplicationResults(formData, filledFields, submitted, usedCachedFields);
       
       return {
         success: true,
@@ -470,8 +485,22 @@ export class ApplicationAgent extends BaseAgent {
     const data: any = {
       personalInfo: this.extractPersonalInfo(),
       resume: null,
-      statements: {}
+      statements: {},
+      cachedFields: null
     };
+    
+    // Check for existing application data (cached field values)
+    const applicationFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('application-') && f.endsWith('.json'));
+    if (applicationFiles.length > 0) {
+      const mostRecentApp = applicationFiles.sort().reverse()[0]; // Most recent
+      const appPath = path.join(jobDir, mostRecentApp);
+      const appData = JSON.parse(fs.readFileSync(appPath, 'utf-8'));
+      if (appData.filledFields) {
+        data.cachedFields = appData.filledFields;
+        console.log(`🔄 Found existing application data: ${mostRecentApp}`);
+        console.log(`📋 Cached field values available: ${Object.keys(data.cachedFields).length} fields`);
+      }
+    }
     
     // Load resume data
     const resumeFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('tailored-') && f.endsWith('.json'));
@@ -869,12 +898,13 @@ Provide a compelling, specific response that demonstrates relevant experience:`;
     return value;
   }
 
-  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false): void {
+  private displayApplicationResults(formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false, usedCachedFields: boolean = false): void {
     console.log('\n🎯 Application Form Processing Complete');
     console.log('=' .repeat(80));
     console.log(`📋 Form URL: ${formData.url}`);
     console.log(`📊 Total Fields: ${formData.fields.length}`);
     console.log(`✅ Filled Fields: ${Object.keys(filledFields).length}`);
+    console.log(`🔄 Used Cached Values: ${usedCachedFields ? 'Yes' : 'No'}`);
     console.log(`🚀 Submitted: ${submitted ? 'Yes' : 'No'}`);
     console.log('');
     
