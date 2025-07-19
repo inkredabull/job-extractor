@@ -836,11 +836,12 @@ program
 program
   .command('outreach')
   .description('Find LinkedIn connections at target companies')
-  .argument('<action>', 'Action: search, list')
   .argument('<jobId>', 'Job ID to find connections for')
-  .action(async (action: string, jobId: string) => {
+  .option('-a, --action <action>', 'Action: search (default) or list connections', 'search')
+  .action(async (jobId: string, options) => {
     try {
       const outreachAgent = new OutreachAgent();
+      const action = options.action;
       
       if (action === 'search') {
         console.log('🔍 Searching for LinkedIn connections...');
@@ -896,7 +897,7 @@ program
           process.exit(1);
         }
       } else {
-        console.error('❌ Invalid action. Use: search or list');
+        console.error('❌ Invalid action. Use --action search or --action list');
         process.exit(1);
       }
       

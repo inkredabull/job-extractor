@@ -2,6 +2,7 @@ import { BaseAgent } from './base-agent';
 import { AgentConfig, ExtractorResult, ApplicationFormField, ApplicationFormData, ApplicationResult } from '../types';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import { InterviewPrepAgent } from './interview-prep-agent';
+import { OutreachAgent } from './outreach-agent';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cheerio from 'cheerio';
@@ -13,6 +14,7 @@ import * as readline from 'readline';
 export class ApplicationAgent extends BaseAgent {
   private resumeAgent: ResumeCreatorAgent;
   private interviewAgent: InterviewPrepAgent;
+  private outreachAgent: OutreachAgent;
   private stagehand: Stagehand | null = null;
 
   constructor(config: AgentConfig, anthropicApiKey: string) {
@@ -20,6 +22,7 @@ export class ApplicationAgent extends BaseAgent {
     // Initialize sub-agents for data retrieval
     this.resumeAgent = new ResumeCreatorAgent(anthropicApiKey);
     this.interviewAgent = new InterviewPrepAgent(anthropicApiKey);
+    this.outreachAgent = new OutreachAgent();
   }
 
   async extract(url: string): Promise<ExtractorResult> {
