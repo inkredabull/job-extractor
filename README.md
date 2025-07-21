@@ -1006,6 +1006,46 @@ Application form filling produces detailed analysis and filled field data:
 
 ## How It Works
 
+### Happy Path Flow
+
+The following diagram shows the typical workflow from job discovery to application submission:
+
+```mermaid
+flowchart TD
+    A[Job URL Discovery] --> B[Extract Job Data]
+    B --> C{JSON-LD Available?}
+    C -->|Yes| D[Parse Structured Data]
+    C -->|No| E[AI HTML Extraction]
+    D --> F[Job Scoring]
+    E --> F
+    F --> G{Score ≥ Threshold?}
+    G -->|No| H[Log & Skip]
+    G -->|Yes| I[Auto-Generate Resume]
+    I --> J[Resume Critique]
+    J --> K{Apply to Job?}
+    K -->|No| L[End]
+    K -->|Yes| M[Generate Interview Prep]
+    M --> N[Cover Letter]
+    M --> O[About Me Statement]
+    N --> P[Fill Application Form]
+    O --> P
+    P --> Q[AI Field Generation]
+    Q --> R[Human Review]
+    R --> S{Submit Application?}
+    S -->|No| T[Keep Browser Open]
+    S -->|Yes| U[Submit & Confirm]
+    U --> V[Success Tracking]
+    
+    style A fill:#e1f5fe
+    style B fill:#e8f5e8
+    style F fill:#fff3e0
+    style I fill:#f3e5f5
+    style M fill:#fce4ec
+    style P fill:#e0f2f1
+    style U fill:#e8f5e8
+    style V fill:#c8e6c9
+```
+
 ### Dual Extraction Strategy
 
 1. **JSON-LD Structured Data (Primary)**
