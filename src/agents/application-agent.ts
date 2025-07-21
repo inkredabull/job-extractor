@@ -717,19 +717,23 @@ export class ApplicationAgent extends BaseAgent {
       console.log('');
     }
     
-    // Load interview prep statements
-    const statementFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('interview-prep-') && f.endsWith('.json'));
-    console.log(`🔍 Found ${statementFiles.length} interview prep files: ${statementFiles.join(', ')}`);
-    
-    for (const file of statementFiles) {
-      const filePath = path.join(jobDir, file);
-      const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      // Extract type from filename - format: interview-prep-{type}-{hash}-{timestamp}.json
-      const parts = file.split('-');
-      if (parts.length >= 3) {
-        const type = parts[2]; // Extract type from filename
-        data.statements[type] = content;
-        console.log(`📝 Loaded statement type: ${type} from ${file}`);
+    // Load interview prep statements (skip if skip mode is enabled)
+    if (skipGeneration) {
+      console.log('⏭️  SKIP MODE: Skipping interview prep statement loading');
+    } else {
+      const statementFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('interview-prep-') && f.endsWith('.json'));
+      console.log(`🔍 Found ${statementFiles.length} interview prep files: ${statementFiles.join(', ')}`);
+      
+      for (const file of statementFiles) {
+        const filePath = path.join(jobDir, file);
+        const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        // Extract type from filename - format: interview-prep-{type}-{hash}-{timestamp}.json
+        const parts = file.split('-');
+        if (parts.length >= 3) {
+          const type = parts[2]; // Extract type from filename
+          data.statements[type] = content;
+          console.log(`📝 Loaded statement type: ${type} from ${file}`);
+        }
       }
     }
     
