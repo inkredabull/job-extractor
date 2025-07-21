@@ -1,5 +1,6 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
+import { WebScraper } from '../utils/web-scraper';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
@@ -167,7 +168,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     let promptTemplate = this.loadPromptTemplate(type);
     
     // Load company values if available
-    const companyValues = this.loadCompanyValues(this.currentJobId);
+    const companyValues = await this.loadCompanyValues(this.currentJobId);
     
     // For about-me type, check if themes exist and include them
     if (type === 'about-me') {
@@ -1401,11 +1402,11 @@ ${project.result}`;
       }
 
       // Load company values
-      const companyValues = this.loadCompanyValues(jobId);
+      const companyValues = await this.loadCompanyValues(jobId);
       if (!companyValues) {
         return {
           success: false,
-          error: 'company-values.txt not found in job directory. Please create this file with the company values.',
+          error: 'Unable to load or research company values. Please create company-values.txt file manually or provide a valid company URL.',
           type: 'focus' as StatementType
         };
       }
@@ -1439,19 +1440,120 @@ ${project.result}`;
     }
   }
 
-  private loadCompanyValues(jobId: string): string | null {
+  private async loadCompanyValues(jobId: string): Promise<string | null> {
     try {
       const jobDir = path.resolve('logs', jobId);
       const valuesPath = path.join(jobDir, 'company-values.txt');
       
-      if (!fs.existsSync(valuesPath)) {
-        return null;
+      if (fs.existsSync(valuesPath)) {
+        const content = fs.readFileSync(valuesPath, 'utf-8').trim();
+        if (content.length > 0) {
+          return content;
+        }
+        // File exists but is empty - treat as non-existent
+        console.log('📋 Found empty company-values.txt file. Researching company values...');
+      } else {
+        // Company values file doesn't exist - research and create it
+        console.log('📋 No company-values.txt found. Researching company values...');
+      }
+      const companyValues = await this.researchCompanyValues(jobId);
+      
+      if (companyValues) {
+        fs.writeFileSync(valuesPath, companyValues);
+        console.log(`✅ Company values researched and saved to: ${valuesPath}`);
+        return companyValues;
       }
 
-      return fs.readFileSync(valuesPath, 'utf-8').trim();
+      return null;
     } catch (error) {
       console.warn(`⚠️  Failed to load company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
+    }
+  }
+
+  private async researchCompanyValues(jobId: string): Promise<string | null> {
+    try {
+      // Load job data to get company name
+      const jobData = this.loadJobData(jobId);
+      const companyName = jobData.company;
+
+      console.log(`🔍 Researching company values for: ${companyName}`);
+
+      // Prompt user for company URL
+      const companyUrl = await this.promptForCompanyUrl(companyName);
+      if (!companyUrl) {
+        console.log('⏭️  Skipping company values research - no URL provided');
+        return null;
+      }
+
+      console.log(`🌐 Fetching company website: ${companyUrl}`);
+      
+      // Fetch and analyze the company website
+      const htmlContent = await WebScraper.fetchHtml(companyUrl);
+      
+      // Use Claude to extract and synthesize company values
+      const companyValues = await this.synthesizeCompanyValues(companyName, htmlContent, companyUrl);
+      
+      return companyValues;
+    } catch (error) {
+      console.warn(`⚠️  Failed to research company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  private async promptForCompanyUrl(companyName: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+
+      console.log('');
+      console.log('🏢 Company Values Research');
+      console.log('=========================');
+      console.log(`To generate tailored interview responses, I need to research ${companyName}'s company values.`);
+      console.log('');
+      
+      rl.question(`Please provide the company website URL (or press Enter to skip): `, (url) => {
+        rl.close();
+        resolve(url.trim() || null);
+      });
+    });
+  }
+
+  private async synthesizeCompanyValues(companyName: string, htmlContent: string, companyUrl: string): Promise<string> {
+    const prompt = `You are analyzing a company website to extract and synthesize their core company values for interview preparation. Your goal is to identify 3-5 key company values that would be most relevant for a candidate preparing for interviews.
+
+Company: ${companyName}
+Website URL: ${companyUrl}
+
+Website Content (HTML):
+${htmlContent.substring(0, 15000)} ${htmlContent.length > 15000 ? '...[truncated]' : ''}
+
+Instructions:
+1. Analyze the website content for explicit company values, mission statements, culture descriptions, and "about us" sections
+2. Look for recurring themes in job postings, blog posts, leadership messages, and company descriptions
+3. Identify implicit values from the language and tone used throughout the site
+4. Synthesize 3-5 core company values that would be most important for interview preparation
+5. For each value, provide a 1-2 sentence description that explains what it means in practice
+
+IMPORTANT: Return ONLY the bulleted list of values and descriptions. Do not include any introductory text, concluding remarks, or additional context.
+
+Format your response exactly like this:
+
+**Innovation**: Description of what innovation means to this company and how it's demonstrated.
+
+**Customer-Centricity**: Description of their approach to customers and why this matters.
+
+**Collaboration**: Description of how they work together and their teamwork philosophy.
+
+Keep each description concise but specific enough to be actionable for interview preparation. Focus on values that would be most relevant for someone interviewing for an engineering leadership role.`;
+
+    try {
+      const response = await this.makeClaudeRequest(prompt);
+      return response.trim();
+    } catch (error) {
+      throw new Error(`Failed to synthesize company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
