@@ -454,14 +454,14 @@ export class ApplicationAgent extends BaseAgent {
     }
   }
 
-  async fillApplication(applicationUrl: string, jobId: string): Promise<ApplicationResult> {
+  async fillApplication(applicationUrl: string, jobId: string, options: { dryRun?: boolean; skipGeneration?: boolean } = {}): Promise<ApplicationResult> {
     try {
       console.log('🎯 Starting automated application form filling...');
       console.log(`📋 Application URL: ${applicationUrl}`);
       console.log(`📊 Job ID: ${jobId}`);
 
       // Step 1: Load existing resume and interview prep data (generate resume if needed)
-      const applicationData = await this.loadApplicationData(jobId);
+      const applicationData = await this.loadApplicationData(jobId, options.dryRun, options.skipGeneration);
       
       // Step 2: Initialize Stagehand for browser automation (only after resume is ready)
       await this.initializeStagehand(jobId);
@@ -471,6 +471,33 @@ export class ApplicationAgent extends BaseAgent {
       
       // Step 4: Extract form fields from the page
       const formData = await this.extractFormDataFromPage(applicationUrl);
+      
+      if (options.dryRun) {
+        // Dry run mode: Show form analysis and keep browser open for inspection
+        console.log('');
+        console.log('🔍 DRY RUN MODE: Form analysis complete');
+        console.log('📋 Form fields detected and analyzed');
+        console.log('👀 Browser will remain open for manual inspection');
+        console.log('⚠️  No form filling or submission will be performed');
+        console.log('');
+        console.log('💡 Use this to:');
+        console.log('  - See what fields require cover letter content');
+        console.log('  - Check if about-me statements are needed');
+        console.log('  - Understand the form structure before normal apply');
+        console.log('');
+        
+        // Keep browser open indefinitely for inspection
+        this.shouldKeepBrowserOpen = true;
+        
+        return {
+          success: true,
+          formData,
+          filledFields: {},
+          readyToSubmit: false,
+          submitted: false,
+          instructions: 'DRY RUN: Form opened for inspection. Close browser manually when done.'
+        };
+      }
       
       // Step 5: Fill the form using Stagehand with AI-generated values
       const filledFields = await this.fillFormWithStagehand(formData, applicationData);
@@ -633,7 +660,7 @@ export class ApplicationAgent extends BaseAgent {
     return element.prop('tagName')?.toLowerCase() || 'button';
   }
 
-  private async loadApplicationData(jobId: string): Promise<any> {
+  private async loadApplicationData(jobId: string, dryRun: boolean = false, skipGeneration: boolean = false): Promise<any> {
     console.log('📄 Loading resume and interview prep data...');
     
     const jobDir = path.resolve('logs', jobId);
@@ -678,7 +705,7 @@ export class ApplicationAgent extends BaseAgent {
         if (resumeResult.success) {
           console.log(`✅ Resume generated successfully: ${resumeResult.pdfPath}`);
           // Reload the data to include the newly generated resume
-          const reloadedData = await this.loadApplicationData(jobId);
+          const reloadedData = await this.loadApplicationData(jobId, dryRun, skipGeneration);
           Object.assign(data, reloadedData);
         } else {
           console.log('❌ Failed to generate resume. Application form filling will proceed without resume data.');
@@ -708,19 +735,100 @@ export class ApplicationAgent extends BaseAgent {
     
     console.log(`📊 Final statement keys available: ${Object.keys(data.statements).join(', ')}`);
     
-    // Exit if no interview prep statements are available
+    // Handle interview prep statements based on mode
     if (Object.keys(data.statements).length === 0) {
+      if (dryRun) {
+        console.log('');
+        console.log('🔍 DRY RUN MODE: Skipping interview prep statement check');
+        console.log('📝 Form will be opened for inspection without statement validation');
+        console.log('');
+      } else if (skipGeneration) {
+        console.log('');
+        console.log('⏭️  SKIP MODE: No interview prep statements found but generation is skipped');
+        console.log('📝 Form filling will proceed without cover-letter and about-me content');
+        console.log('⚠️  Note: Some form fields may not be filled if they require this content');
+        console.log('');
+      } else {
+        // Auto-generate interview prep statements if none are available
       console.log('');
-      console.log('❌ ERROR: NO INTERVIEW PREP STATEMENTS FOUND!');
-      console.log('🚨 APPLICATION FORM FILLING REQUIRES INTERVIEW PREP CONTENT.');
+      console.log('📝 No interview prep statements found. Auto-generating required statements...');
+      console.log('🔄 This will generate both cover-letter and about-me statements');
       console.log('');
-      console.log('REQUIRED: Generate interview prep statements first:');
-      console.log(`  npm run dev prep cover-letter ${jobId}`);
-      console.log(`  npm run dev prep about-me ${jobId}`);
-      console.log('');
-      console.log('Then retry the apply command.');
-      console.log('');
-      throw new Error('No interview prep statements found. Please generate cover letter and about-me statements first.');
+      
+      try {
+        // Find CV file for interview prep generation
+        const cvFiles = ['cv.txt', 'CV.txt', 'sample-cv.txt'];
+        let cvFilePath = '';
+        
+        for (const cvFile of cvFiles) {
+          if (fs.existsSync(cvFile)) {
+            cvFilePath = cvFile;
+            break;
+          }
+        }
+        
+        if (!cvFilePath) {
+          throw new Error('No CV file found. Please ensure cv.txt exists in the project directory.');
+        }
+        
+        console.log(`📄 Using CV file: ${cvFilePath}`);
+        
+        // Generate cover-letter statement
+        console.log('📝 Generating cover-letter statement...');
+        const coverLetterResult = await this.interviewAgent.generateMaterial('cover-letter', jobId, cvFilePath);
+        if (coverLetterResult.success) {
+          console.log(`✅ Cover letter generated successfully`);
+        } else {
+          console.log(`❌ Failed to generate cover letter: ${coverLetterResult.error}`);
+        }
+        
+        // Generate about-me statement  
+        console.log('📝 Generating about-me statement...');
+        const aboutMeResult = await this.interviewAgent.generateMaterial('about-me', jobId, cvFilePath);
+        if (aboutMeResult.success) {
+          console.log(`✅ About-me statement generated successfully`);
+        } else {
+          console.log(`❌ Failed to generate about-me statement: ${aboutMeResult.error}`);
+        }
+        
+        // Now reload the statement files that were just generated
+        console.log('📄 Reloading newly generated statements...');
+        const statementFiles = fs.readdirSync(jobDir).filter(f => f.startsWith('interview-prep-') && f.endsWith('.json'));
+        
+        for (const file of statementFiles) {
+          const filePath = path.join(jobDir, file);
+          const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          // Extract type from filename - format: interview-prep-{type}-{hash}-{timestamp}.json
+          const parts = file.split('-');
+          if (parts.length >= 3) {
+            const type = parts[2]; // Extract type from filename
+            data.statements[type] = content;
+            console.log(`📝 Loaded generated statement type: ${type} from ${file}`);
+          }
+        }
+        
+        // Check if we successfully generated at least one statement
+        if (Object.keys(data.statements).length === 0) {
+          throw new Error('Failed to generate any interview prep statements');
+        }
+        
+        console.log(`✅ Successfully generated ${Object.keys(data.statements).length} interview prep statement(s)`);
+        console.log('');
+        
+      } catch (error) {
+        console.log('');
+        console.log('❌ ERROR: FAILED TO AUTO-GENERATE INTERVIEW PREP STATEMENTS!');
+        console.log('🚨 APPLICATION FORM FILLING REQUIRES INTERVIEW PREP CONTENT.');
+        console.log('');
+        console.log('MANUAL GENERATION REQUIRED: Generate interview prep statements first:');
+        console.log(`  npm run dev prep cover-letter ${jobId}`);
+        console.log(`  npm run dev prep about-me ${jobId}`);
+        console.log('');
+        console.log('Then retry the apply command.');
+        console.log('');
+        throw new Error(`Auto-generation failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please generate statements manually.`);
+        }
+      }
     }
     
     return data;
