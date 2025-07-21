@@ -890,14 +890,64 @@ export class ApplicationAgent extends BaseAgent {
       // Extract name (first line)
       personalInfo.name = lines[0]?.trim() || 'Anthony Bull';
       
-      // Extract contact info from second line
-      const contactLine = lines[1] || '';
-      const emailMatch = contactLine.match(/[\w.-]+@[\w.-]+\.\w+/);
-      const phoneMatch = contactLine.match(/\+?[\d\s()-]+/);
+      // Extract contact info from initial lines
+      let emailFound = false;
+      let phoneFound = false;
+      let linkedinFound = false;
+      let githubFound = false;
+      let locationFound = false;
       
-      personalInfo.email = emailMatch ? emailMatch[0] : 'anthony@bluxomelabs.com';
-      personalInfo.phone = phoneMatch ? phoneMatch[0].trim() : '+1 415-269-4893';
-      personalInfo.location = 'San Francisco, CA';
+      // Look through first 10 lines for contact information
+      for (let i = 1; i < Math.min(lines.length, 10); i++) {
+        const line = lines[i].trim();
+        
+        if (!emailFound && line.includes('@')) {
+          const emailMatch = line.match(/[\w.-]+@[\w.-]+\.\w+/);
+          if (emailMatch) {
+            personalInfo.email = emailMatch[0];
+            emailFound = true;
+          }
+        }
+        
+        if (!phoneFound && (line.includes('Phone:') || line.match(/\+?[\d\s()-]{10,}/))) {
+          const phoneMatch = line.match(/\+?[\d\s()-]+/);
+          if (phoneMatch && phoneMatch[0].replace(/\D/g, '').length >= 10) {
+            personalInfo.phone = phoneMatch[0].trim();
+            phoneFound = true;
+          }
+        }
+        
+        if (!linkedinFound && (line.toLowerCase().includes('linkedin') || line.includes('linkedin.com'))) {
+          const linkedinMatch = line.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[\w-]+\/?/);
+          if (linkedinMatch) {
+            personalInfo.linkedin = linkedinMatch[0];
+            linkedinFound = true;
+          }
+        }
+        
+        if (!githubFound && (line.toLowerCase().includes('github') || line.includes('github.com'))) {
+          const githubMatch = line.match(/https?:\/\/(?:www\.)?github\.com\/[\w-]+\/?/);
+          if (githubMatch) {
+            personalInfo.github = githubMatch[0];
+            githubFound = true;
+          }
+        }
+        
+        if (!locationFound && (line.includes('Location:') || line.includes('City'))) {
+          const locationMatch = line.replace(/Location:\s*/i, '').trim();
+          if (locationMatch && locationMatch.length > 0) {
+            personalInfo.location = locationMatch;
+            locationFound = true;
+          }
+        }
+      }
+      
+      // Set defaults for missing fields
+      if (!emailFound) personalInfo.email = 'anthony@bluxomelabs.com';
+      if (!phoneFound) personalInfo.phone = '+1 415-269-4893';
+      if (!locationFound) personalInfo.location = 'San Francisco, CA';
+      if (!linkedinFound) personalInfo.linkedin = 'https://linkedin.com/in/anthonybull';
+      if (!githubFound) personalInfo.github = 'https://github.com/inkredabull';
       
       return personalInfo;
     } catch (error) {
@@ -906,7 +956,9 @@ export class ApplicationAgent extends BaseAgent {
         name: 'Anthony Bull',
         email: 'anthony@bluxomelabs.com',
         phone: '+1 415-269-4893',
-        location: 'San Francisco, CA'
+        location: 'San Francisco, CA',
+        linkedin: 'https://linkedin.com/in/anthonybull',
+        github: 'https://github.com/inkredabull'
       };
     }
   }
@@ -978,6 +1030,32 @@ export class ApplicationAgent extends BaseAgent {
       return await this.generateExperienceResponse(field, applicationData);
     }
 
+    // Check for LinkedIn profile field
+    if (this.isLinkedInField(field)) {
+      console.log(`✅ Detected LinkedIn profile field: ${field.label}`);
+      const linkedinUrl = applicationData.personalInfo.linkedin;
+      if (linkedinUrl) {
+        console.log(`📝 Using LinkedIn URL from CV: ${linkedinUrl}`);
+        return linkedinUrl;
+      } else {
+        console.log(`⚠️  No LinkedIn URL found in personal info, using default`);
+        return 'https://linkedin.com/in/anthonybull';
+      }
+    }
+
+    // Check for GitHub profile field
+    if (this.isGitHubField(field)) {
+      console.log(`✅ Detected GitHub profile field: ${field.label}`);
+      const githubUrl = applicationData.personalInfo.github;
+      if (githubUrl) {
+        console.log(`📝 Using GitHub URL from CV: ${githubUrl}`);
+        return githubUrl;
+      } else {
+        console.log(`⚠️  No GitHub URL found in personal info, using default`);
+        return 'https://github.com/inkredabull';
+      }
+    }
+
     const prompt = `You are an expert job application assistant. Based on the candidate's information, provide an appropriate response for this form field.
 
 Field Information:
@@ -994,6 +1072,8 @@ Candidate Information:
 - Email: ${applicationData.personalInfo.email}
 - Phone: ${applicationData.personalInfo.phone}
 - Location: ${applicationData.personalInfo.location}
+- LinkedIn: ${applicationData.personalInfo.linkedin || 'Not available'}
+- GitHub: ${applicationData.personalInfo.github || 'Not available'}
 
 Resume Data Available: ${applicationData.resume ? 'Yes' : 'No'}
 Interview Statements Available: ${Object.keys(applicationData.statements).join(', ') || 'None'}
@@ -1157,6 +1237,45 @@ Provide only the field value, nothing else:`;
     ];
     
     return experienceKeywords.some(keyword => 
+      label.includes(keyword) || 
+      name.includes(keyword) || 
+      placeholder.includes(keyword)
+    );
+  }
+
+  private isLinkedInField(field: ApplicationFormField): boolean {
+    const label = field.label.toLowerCase();
+    const name = field.name.toLowerCase();
+    const placeholder = field.placeholder?.toLowerCase() || '';
+    
+    // Check for LinkedIn profile indicators
+    const linkedinKeywords = [
+      'linkedin', 'linked in', 'linked-in',
+      'linkedin profile', 'linkedin url',
+      'professional profile', 'social media profile'
+    ];
+    
+    return linkedinKeywords.some(keyword => 
+      label.includes(keyword) || 
+      name.includes(keyword) || 
+      placeholder.includes(keyword)
+    );
+  }
+
+  private isGitHubField(field: ApplicationFormField): boolean {
+    const label = field.label.toLowerCase();
+    const name = field.name.toLowerCase();
+    const placeholder = field.placeholder?.toLowerCase() || '';
+    
+    // Check for GitHub profile indicators
+    const githubKeywords = [
+      'github', 'git hub', 'git-hub',
+      'github profile', 'github url',
+      'github username', 'portfolio url',
+      'code repository', 'code samples'
+    ];
+    
+    return githubKeywords.some(keyword => 
       label.includes(keyword) || 
       name.includes(keyword) || 
       placeholder.includes(keyword)
