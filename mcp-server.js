@@ -150,7 +150,7 @@ class CVMCPServer {
       const content = cvContent.content[0].text;
       
       // Simple search - find lines containing the query (case-insensitive)
-      const lines = content.split('\\n');
+      const lines = content.split('\n');
       const matchingLines = lines
         .map((line, index) => ({ line: line.trim(), lineNumber: index + 1 }))
         .filter(({ line }) => line.toLowerCase().includes(query.toLowerCase()))
@@ -169,13 +169,13 @@ class CVMCPServer {
       
       const results = matchingLines
         .map(({ line, lineNumber }) => `Line ${lineNumber}: ${line}`)
-        .join('\\n');
+        .join('\n');
       
       return {
         content: [
           {
             type: 'text',
-            text: `Found ${matchingLines.length} matches for "${query}":\\n\\n${results}`,
+            text: `Found ${matchingLines.length} matches for "${query}":\n\n${results}`,
           },
         ],
       };
@@ -230,7 +230,7 @@ class CVMCPServer {
       skills: [],
     };
     
-    const lines = content.split('\\n').map(line => line.trim()).filter(line => line);
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line);
     
     let currentSection = '';
     
@@ -251,7 +251,7 @@ class CVMCPServer {
         if (currentSection === 'accomplishments' && !line.toUpperCase().includes('ACCOMPLISHMENTS')) {
           sections.accomplishments.push(line);
         } else if (currentSection === 'strengths' && !line.toUpperCase().includes('STRENGTHS')) {
-          sections.strengths.push(line.replace(/^\\*\\s*/, '')); // Remove bullet points
+          sections.strengths.push(line.replace(/^\*\s*/, '')); // Remove bullet points
         } else if (currentSection === 'experience') {
           sections.experience.push(line);
         } else if (!sections.name && !currentSection && !line.includes('|') && !line.includes('@')) {
@@ -267,54 +267,72 @@ class CVMCPServer {
   generateCVResponse(question, sections) {
     const lowerQuestion = question.toLowerCase();
     
-    // Experience and accomplishments
+    // Technical details/delegation
+    if (lowerQuestion.includes('technical details') || lowerQuestion.includes('delegate') || lowerQuestion.includes('involve yourself')) {
+      const techAccomplishments = sections.accomplishments.filter(a =>
+        a.toLowerCase().includes('technical') || a.toLowerCase().includes('platform') || 
+        a.toLowerCase().includes('data') || a.toLowerCase().includes('ai') || a.toLowerCase().includes('system')
+      );
+      const teamStrengths = sections.strengths.filter(s =>
+        s.toLowerCase().includes('leadership') || s.toLowerCase().includes('team') || s.toLowerCase().includes('collaboration')
+      );
+      
+      return `I enjoy getting involved in architectural decisions, data modeling, and complex problem-solving challenges. From my experience:\n\n` +
+        `**Technical Areas I Dive Into:**\n${techAccomplishments.length > 0 ? techAccomplishments.map(a => `• ${a}`).join('\n') : '• Platform architecture and scalability decisions\n• Data pipeline optimization\n• Performance bottlenecks and system design'}\n\n` +
+        `**What I Delegate:**\n• Routine implementation tasks once the approach is clear\n• Unit testing and code reviews (with oversight)\n• Documentation and deployment processes\n\n` +
+        `I believe in being hands-on with the complex technical decisions while empowering my team to own their implementations.`;
+    }
+    
+    // Experience and accomplishments  
     if (lowerQuestion.includes('experience') || lowerQuestion.includes('work') || lowerQuestion.includes('job')) {
-      return `Based on the CV, here are the key accomplishments and experience:\\n\\n` +
-        `**Key Accomplishments:**\\n${sections.accomplishments.map(a => `• ${a}`).join('\\n')}\\n\\n` +
-        `**Experience Details:**\\n${sections.experience.map(e => `• ${e}`).join('\\n')}`;
+      return `Here are my key accomplishments and experience:\n\n` +
+        `**My Key Accomplishments:**\n${sections.accomplishments.map(a => `• ${a}`).join('\n')}\n\n` +
+        `**Experience Details:**\n${sections.experience.length > 0 ? sections.experience.map(e => `• ${e}`).join('\n') : 'See accomplishments above for detailed work history'}`;
     }
     
     // Skills and strengths
     if (lowerQuestion.includes('skill') || lowerQuestion.includes('strength') || lowerQuestion.includes('good at')) {
-      return `Based on the CV, here are the key strengths and skills:\\n\\n` +
-        `${sections.strengths.map(s => `• ${s}`).join('\\n')}`;
+      return `My core strengths include:\n\n` +
+        `${sections.strengths.map(s => `• ${s}`).join('\n')}`;
     }
     
     // Accomplishments
     if (lowerQuestion.includes('accomplishment') || lowerQuestion.includes('achievement') || lowerQuestion.includes('success')) {
-      return `Key accomplishments from the CV:\\n\\n` +
-        `${sections.accomplishments.map(a => `• ${a}`).join('\\n')}`;
+      return `Here are my key accomplishments:\n\n` +
+        `${sections.accomplishments.map(a => `• ${a}`).join('\n')}`;
     }
     
     // Leadership
     if (lowerQuestion.includes('leadership') || lowerQuestion.includes('lead') || lowerQuestion.includes('manage')) {
       const leadership = sections.accomplishments.filter(a => 
-        a.toLowerCase().includes('launched') || a.toLowerCase().includes('drove') || a.toLowerCase().includes('delivered')
+        a.toLowerCase().includes('led') || a.toLowerCase().includes('launched') || 
+        a.toLowerCase().includes('drove') || a.toLowerCase().includes('delivered') || a.toLowerCase().includes('team')
       );
       const leadershipStrengths = sections.strengths.filter(s =>
         s.toLowerCase().includes('leadership') || s.toLowerCase().includes('communication') || s.toLowerCase().includes('team')
       );
       
-      return `Leadership experience and qualities:\\n\\n` +
-        `**Leadership Accomplishments:**\\n${leadership.map(l => `• ${l}`).join('\\n')}\\n\\n` +
-        `**Leadership Strengths:**\\n${leadershipStrengths.map(s => `• ${s}`).join('\\n')}`;
+      return `My leadership experience includes:\n\n` +
+        `**Leadership Accomplishments:**\n${leadership.length > 0 ? leadership.map(l => `• ${l}`).join('\n') : sections.accomplishments.slice(0,3).map(a => `• ${a}`).join('\n')}\n\n` +
+        `**My Leadership Style:**\n${leadershipStrengths.length > 0 ? leadershipStrengths.map(s => `• ${s}`).join('\n') : '• Technical leadership with strong communication\n• Collaborative approach to team management'}`;
     }
     
     // Technical/AI
     if (lowerQuestion.includes('technical') || lowerQuestion.includes('ai') || lowerQuestion.includes('technology')) {
       const techAccomplishments = sections.accomplishments.filter(a =>
-        a.toLowerCase().includes('ai') || a.toLowerCase().includes('data') || a.toLowerCase().includes('platform')
+        a.toLowerCase().includes('ai') || a.toLowerCase().includes('data') || 
+        a.toLowerCase().includes('platform') || a.toLowerCase().includes('technical') || a.toLowerCase().includes('system')
       );
       
-      return `Technical accomplishments and experience:\\n\\n` +
-        `${techAccomplishments.map(t => `• ${t}`).join('\\n')}`;
+      return `My technical background includes:\n\n` +
+        `${techAccomplishments.length > 0 ? techAccomplishments.map(t => `• ${t}`).join('\n') : sections.accomplishments.map(a => `• ${a}`).join('\n')}`;
     }
     
     // Default response with full context
-    return `Based on the CV:\\n\\n` +
-      `**Key Accomplishments:**\\n${sections.accomplishments.map(a => `• ${a}`).join('\\n')}\\n\\n` +
-      `**Core Strengths:**\\n${sections.strengths.map(s => `• ${s}`).join('\\n')}\\n\\n` +
-      `This provides a comprehensive overview to help answer your question: "${question}"`;
+    return `Based on my background:\n\n` +
+      `**My Key Accomplishments:**\n${sections.accomplishments.map(a => `• ${a}`).join('\n')}\n\n` +
+      `**My Core Strengths:**\n${sections.strengths.map(s => `• ${s}`).join('\n')}\n\n` +
+      `I'd be happy to elaborate on how this relates to: "${question}"`;
   }
 
   async run() {

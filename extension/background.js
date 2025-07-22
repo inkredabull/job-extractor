@@ -42,24 +42,22 @@ async function handleMCPServerCall(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling MCP server call for:', request.args.question);
     
-    // Try to fetch CV content from the parent directory
-    try {
-      const response = await fetch(chrome.runtime.getURL('../cv.txt'));
-      if (!response.ok) {
-        throw new Error(`Failed to fetch cv.txt: ${response.status}`);
-      }
-      const cvContent = await response.text();
-      console.log('Job Extractor Background: CV content loaded, length:', cvContent.length);
+    // Test if local MCP server is running
+    const mcpServerRunning = await testMCPServerConnection();
+    
+    if (mcpServerRunning) {
+      console.log('Job Extractor Background: MCP server is running, using real CV data');
       
-      const cvResponse = generateCVResponse(request.args.question, cvContent);
-      console.log('Job Extractor Background: Generated response:', cvResponse);
+      // Make request to local MCP server
+      const mcpResponse = await callLocalMCPServer(request.args.question);
       
       sendResponse({
         success: true,
-        data: cvResponse
+        data: mcpResponse
       });
-    } catch (fetchError) {
-      console.warn('Job Extractor Background: Could not fetch cv.txt, using embedded sample:', fetchError);
+    } else {
+      console.error('Job Extractor Background: MCP server is not running on localhost:3000');
+      console.error('Job Extractor Background: Please start MCP server with: npm run mcp-server');
       
       // Fallback to sample CV content for testing
       const sampleCV = `KEY ACCOMPLISHMENTS
@@ -78,11 +76,12 @@ STRENGTHS
 * Collaboration - Works effectively across departments to achieve shared business goals`;
 
       const cvResponse = generateCVResponse(request.args.question, sampleCV);
-      console.log('Job Extractor Background: Generated fallback response:', cvResponse);
+      console.warn('Job Extractor Background: Using fallback sample CV data (MCP server not available)');
       
       sendResponse({
         success: true,
-        data: cvResponse
+        data: cvResponse,
+        warning: 'Using sample CV data - MCP server not running. Start with: npm run mcp-server'
       });
     }
     
@@ -92,6 +91,51 @@ STRENGTHS
       success: false,
       error: error.message
     });
+  }
+}
+
+// Test if MCP server is running
+async function testMCPServerConnection() {
+  try {
+    const response = await fetch('http://localhost:3000/health', {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(2000) // 2 second timeout
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.log('Job Extractor Background: MCP server connection test failed:', error.message);
+    return false;
+  }
+}
+
+// Call local MCP server
+async function callLocalMCPServer(question) {
+  try {
+    const response = await fetch('http://localhost:3000/cv-question', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question: question }),
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+    
+    if (!response.ok) {
+      throw new Error(`MCP server responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.response || data.answer || 'No response from MCP server';
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to call MCP server:', error);
+    throw error;
   }
 }
 
