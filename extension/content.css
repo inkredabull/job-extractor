@@ -21,8 +21,17 @@
   right: 0;
 }
 
-.job-extractor-gutter-open {
-  margin-right: 33.333%;
+/* Body adjustment when gutter is open */
+body.job-extractor-gutter-open {
+  width: 66.667% !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+  transition: width 0.3s ease-in-out !important;
+}
+
+/* Ensure html and body can be resized */
+html.job-extractor-gutter-open {
+  overflow-x: hidden !important;
 }
 
 /* Gutter Header */
@@ -103,8 +112,7 @@
   border-radius: 6px;
   font-size: 14px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 80px;
+  height: 44px;
   margin-bottom: 12px;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -116,27 +124,37 @@
 }
 
 .submit-btn {
-  background: #1a73e8;
+  background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   width: 100%;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #1557b0;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #1557b0 0%, #0f4c75 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0px);
+  box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
 }
 
 .submit-btn:disabled {
-  background: #cccccc;
+  background: linear-gradient(135deg, #cccccc 0%, #999999 100%);
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .response-section {
@@ -224,8 +242,8 @@
     right: -40%;
   }
   
-  .job-extractor-gutter-open {
-    margin-right: 40%;
+  body.job-extractor-gutter-open {
+    width: 60% !important;
   }
 }
 
@@ -235,8 +253,8 @@
     right: -50%;
   }
   
-  .job-extractor-gutter-open {
-    margin-right: 50%;
+  body.job-extractor-gutter-open {
+    width: 50% !important;
   }
 }
 
@@ -246,7 +264,7 @@
     right: -100%;
   }
   
-  .job-extractor-gutter-open {
-    margin-right: 100%;
+  body.job-extractor-gutter-open {
+    width: 0% !important;
   }
 }

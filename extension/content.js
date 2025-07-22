@@ -19,7 +19,7 @@ function createGutter() {
         <p>Ask a question to get AI-powered insights:</p>
         
         <div class="input-section">
-          <textarea id="llm-input" placeholder="Enter your question here..." rows="3"></textarea>
+          <input type="text" id="llm-input" placeholder="Enter your question here...">
           <button id="submit-query" class="submit-btn">Submit</button>
         </div>
         
@@ -47,9 +47,9 @@ function createGutter() {
   // Add submit button functionality
   document.getElementById('submit-query').addEventListener('click', handleLLMQuery);
   
-  // Add Enter key functionality for textarea
+  // Add Enter key functionality for input
   document.getElementById('llm-input').addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleLLMQuery();
     }
@@ -137,6 +137,7 @@ function openGutter() {
   setTimeout(() => {
     gutterElement.classList.add('open');
     document.body.classList.add('job-extractor-gutter-open');
+    document.documentElement.classList.add('job-extractor-gutter-open');
     isGutterOpen = true;
   }, 10);
   
@@ -149,6 +150,7 @@ function closeGutter() {
   
   gutterElement.classList.remove('open');
   document.body.classList.remove('job-extractor-gutter-open');
+  document.documentElement.classList.remove('job-extractor-gutter-open');
   
   setTimeout(() => {
     if (gutterElement && gutterElement.parentNode) {
