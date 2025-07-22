@@ -4,15 +4,23 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Check current state
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.tabs.sendMessage(tabs[0].id, {action: 'getGutterState'}, function(response) {
-      if (chrome.runtime.lastError) {
-        // Content script not ready, assume gutter is closed
-        updateButton(false);
-        return;
-      }
-      
-      updateButton(response?.isOpen || false);
-    });
+    // Add small delay to ensure content script is loaded
+    setTimeout(() => {
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'getGutterState'}, function(response) {
+        if (chrome.runtime.lastError) {
+          // Content script not ready, inject it manually
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['content.js']
+          }, () => {
+            updateButton(false);
+          });
+          return;
+        }
+        
+        updateButton(response?.isOpen || false);
+      });
+    }, 100);
   });
   
   // Handle toggle button click
@@ -20,7 +28,23 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       chrome.tabs.sendMessage(tabs[0].id, {action: 'toggleGutter'}, function(response) {
         if (chrome.runtime.lastError) {
-          showStatus('Error: Could not communicate with page', 'error');
+          // Try to inject content script and then toggle
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['content.js']
+          }, () => {
+            // Wait a bit for script to initialize, then try again
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabs[0].id, {action: 'toggleGutter'}, function(response) {
+                if (response?.success) {
+                  updateButton(response.isOpen);
+                  showStatus(response.isOpen ? 'Panel opened!' : 'Panel closed!', 'success');
+                } else {
+                  showStatus('Error: Failed to toggle panel', 'error');
+                }
+              });
+            }, 200);
+          });
           return;
         }
         

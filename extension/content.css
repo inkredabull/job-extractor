@@ -70,48 +70,133 @@
   background: #fafafa;
 }
 
-.welcome-message {
+/* LLM Interface Styles */
+.llm-interface {
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.welcome-message h4 {
-  margin: 0 0 16px 0;
+.llm-interface h4 {
+  margin: 0 0 8px 0;
   color: #1a73e8;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
 }
 
-.welcome-message p {
+.llm-interface p {
   margin: 0 0 20px 0;
   line-height: 1.5;
-  color: #333;
+  color: #666;
+  font-size: 14px;
 }
 
-.feature-preview {
-  margin: 20px 0;
+.input-section {
+  margin-bottom: 20px;
+}
+
+#llm-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+#llm-input:focus {
+  outline: none;
+  border-color: #1a73e8;
+}
+
+.submit-btn {
+  background: #1a73e8;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #1557b0;
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.response-section {
+  margin-top: 20px;
   padding: 16px;
   background: #f8f9ff;
   border-radius: 6px;
   border-left: 4px solid #1a73e8;
 }
 
-.feature-preview h5 {
-  margin: 0 0 12px 0;
-  color: #1a73e8;
-  font-weight: 600;
+.response-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #333;
 }
 
-.feature-preview ul {
-  margin: 0;
-  padding-left: 20px;
+.status-indicator.success {
+  color: #0d7377;
+  font-weight: bold;
 }
 
-.feature-preview li {
-  margin: 6px 0;
-  color: #555;
+.status-indicator.error {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.api-metadata {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.api-metadata small {
+  color: #666;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.response-text {
+  line-height: 1.6;
+  color: #333;
+  font-size: 14px;
+}
+
+.loading {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 20px 0;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #d32f2f;
+  font-size: 14px;
 }
 
 .current-url {
