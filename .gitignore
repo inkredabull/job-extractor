@@ -112,6 +112,7 @@ jspm_packages/
 !package.json
 !package-lock.json
 !tsconfig.json
+!extension/manifest.json
 !jest.config.js
 !requirements.txt
 !examples/**/*.py
