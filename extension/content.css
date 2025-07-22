@@ -235,6 +235,41 @@ html.job-extractor-gutter-open {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
+/* Page Analysis Section */
+.page-analysis {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f0f8ff;
+  border-radius: 6px;
+  border-left: 4px solid #4285f4;
+}
+
+.page-analysis h5 {
+  margin: 0 0 12px 0;
+  color: #4285f4;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#questions-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style-type: disc;
+}
+
+#questions-list li {
+  margin: 8px 0;
+  color: #444;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+#questions-list li:hover {
+  color: #1a73e8;
+}
+
 /* Responsive adjustments for smaller screens */
 @media (max-width: 1200px) {
   #job-extractor-gutter {

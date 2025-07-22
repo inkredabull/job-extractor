@@ -35,6 +35,11 @@ function createGutter() {
           <strong>Current URL:</strong><br>
           <span id="current-url-display">${window.location.href}</span>
         </div>
+        
+        <div id="page-questions" class="page-analysis" style="display: none;">
+          <h5>Questions Found on Page:</h5>
+          <ul id="questions-list"></ul>
+        </div>
       </div>
     </div>
   `;
@@ -54,6 +59,9 @@ function createGutter() {
       handleLLMQuery();
     }
   });
+  
+  // Analyze page content for questions
+  analyzePageContent();
   
   console.log('Job Extractor: Gutter created');
 }
@@ -125,6 +133,98 @@ function generateMockResponse(query) {
   }
   
   return responses.default;
+}
+
+// Analyze page content for questions
+function analyzePageContent() {
+  try {
+    const questions = findQuestionsOnPage();
+    const questionsDiv = document.getElementById('page-questions');
+    const questionsList = document.getElementById('questions-list');
+    
+    if (questions.length > 0) {
+      questionsList.innerHTML = '';
+      questions.forEach(question => {
+        const li = document.createElement('li');
+        li.textContent = question;
+        questionsList.appendChild(li);
+      });
+      questionsDiv.style.display = 'block';
+      console.log(`Job Extractor: Found ${questions.length} questions on page`);
+    } else {
+      questionsDiv.style.display = 'none';
+      console.log('Job Extractor: No questions found on page');
+    }
+  } catch (error) {
+    console.error('Job Extractor: Error analyzing page content:', error);
+  }
+}
+
+// Find questions on the current page
+function findQuestionsOnPage() {
+  const questions = [];
+  const questionPatterns = [
+    /\b[A-Z][^.!?]*\?/g, // Basic question pattern
+    /What\s+[^?]+\?/gi,
+    /How\s+[^?]+\?/gi,
+    /Why\s+[^?]+\?/gi,
+    /When\s+[^?]+\?/gi,
+    /Where\s+[^?]+\?/gi,
+    /Who\s+[^?]+\?/gi,
+    /Which\s+[^?]+\?/gi,
+    /Can\s+you\s+[^?]+\?/gi,
+    /Do\s+you\s+[^?]+\?/gi,
+    /Are\s+you\s+[^?]+\?/gi,
+    /Have\s+you\s+[^?]+\?/gi,
+    /Would\s+you\s+[^?]+\?/gi,
+    /Could\s+you\s+[^?]+\?/gi
+  ];
+  
+  // Get all text content from the page
+  const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, td, span, div:not(script):not(style)');
+  const seenQuestions = new Set();
+  
+  textElements.forEach(element => {
+    // Skip our own extension content
+    if (element.closest('#job-extractor-gutter')) return;
+    
+    const text = element.textContent || '';
+    
+    questionPatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const cleanQuestion = match.trim();
+          // Filter out very short questions, duplicates, and common non-questions
+          if (cleanQuestion.length > 10 && 
+              cleanQuestion.length < 200 && 
+              !seenQuestions.has(cleanQuestion.toLowerCase()) &&
+              !isCommonNonQuestion(cleanQuestion)) {
+            questions.push(cleanQuestion);
+            seenQuestions.add(cleanQuestion.toLowerCase());
+          }
+        });
+      }
+    });
+  });
+  
+  // Limit to first 10 questions to avoid overwhelming the UI
+  return questions.slice(0, 10);
+}
+
+// Filter out common patterns that aren't real questions
+function isCommonNonQuestion(text) {
+  const nonQuestionPatterns = [
+    /^(what|how|why|when|where|who)\s*(is|are|was|were)?\s*$/i, // Too short
+    /\b(username|password|email|phone|name|address)\b/i, // Form fields
+    /\b(search|find|looking for)\b/i, // Search queries
+    /^\s*\?\s*$/,  // Just question marks
+    /\d+\s*\?\s*\d+/,  // Math expressions
+    /\$\d+/,  // Price questions
+    /\b(faq|q&a)\b/i  // FAQ headers
+  ];
+  
+  return nonQuestionPatterns.some(pattern => pattern.test(text));
 }
 
 // Open the gutter
