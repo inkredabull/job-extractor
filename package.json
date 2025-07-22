@@ -14,7 +14,8 @@
     "test:watch": "jest --watch --config jest.config.js",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist",
-    "mcp-server": "node mcp-server.js"
+    "mcp-server": "node mcp-server.js",
+    "mcp-server:llm": "node mcp-server.js --llm"
   },
   "keywords": [
     "job",

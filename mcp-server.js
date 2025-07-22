@@ -12,9 +12,28 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const url = require('url');
+const Anthropic = require('@anthropic-ai/sdk');
+require('dotenv').config();
 
 class CVMCPServer {
-  constructor() {
+  constructor(useLLM = false) {
+    this.useLLM = useLLM;
+    this.anthropic = null;
+    
+    if (this.useLLM) {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        console.error('ERROR: ANTHROPIC_API_KEY not found in environment variables');
+        console.error('Please set ANTHROPIC_API_KEY in your .env file to use Claude 3.5');
+        process.exit(1);
+      }
+      this.anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+      console.log('🧠 Claude 3.5 Sonnet LLM enabled for CV responses');
+    } else {
+      console.log('📝 Using pattern-matching for CV responses (use --llm flag to enable Claude)');
+    }
+    
     this.server = new Server(
       {
         name: 'cv-server',
@@ -191,20 +210,28 @@ class CVMCPServer {
       console.log('  -> CV content loaded, length:', cvContent.content[0].text.length);
       const content = cvContent.content[0].text;
       
-      // Parse key sections from CV
-      console.log('  -> Parsing CV sections...');
-      const sections = this.parseCV(content);
-      console.log('  -> CV sections parsed:', {
-        name: sections.name,
-        accomplishments: sections.accomplishments.length,
-        strengths: sections.strengths.length,
-        experience: sections.experience.length
-      });
+      let response;
       
-      // Generate contextual response based on question
-      console.log('  -> Generating CV response...');
-      const response = this.generateCVResponse(question, sections);
-      console.log('  -> CV response generated, length:', response.length);
+      if (this.useLLM && this.anthropic) {
+        console.log('  -> Using Claude 3.5 Sonnet for response generation...');
+        response = await this.generateLLMResponse(question, content);
+        console.log('  -> Claude response generated, length:', response.length);
+      } else {
+        // Parse key sections from CV
+        console.log('  -> Parsing CV sections...');
+        const sections = this.parseCV(content);
+        console.log('  -> CV sections parsed:', {
+          name: sections.name,
+          accomplishments: sections.accomplishments.length,
+          strengths: sections.strengths.length,
+          experience: sections.experience.length
+        });
+        
+        // Generate contextual response based on question
+        console.log('  -> Generating pattern-based CV response...');
+        response = this.generateCVResponse(question, sections);
+        console.log('  -> Pattern-based response generated, length:', response.length);
+      }
       
       return {
         content: [
@@ -217,6 +244,39 @@ class CVMCPServer {
     } catch (error) {
       console.error('  -> answerCVQuestion error:', error);
       throw new Error(`Failed to answer CV question: ${error.message}`);
+    }
+  }
+  
+  async generateLLMResponse(question, cvContent) {
+    try {
+      const prompt = `You are responding to an interview question as the person whose CV/resume is provided below. Answer in first person voice as if you are this person being interviewed. Be specific and reference actual accomplishments from the CV when relevant.
+
+CV/Resume:
+${cvContent}
+
+Interview Question: ${question}
+
+Please provide a thoughtful, first-person response that draws from the experience and accomplishments in the CV above. Be conversational but professional, and include specific examples when possible.`;
+
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1500,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      });
+
+      return response.content[0].text;
+    } catch (error) {
+      console.error('  -> Claude API error:', error);
+      // Fallback to pattern-based response
+      console.log('  -> Falling back to pattern-based response due to LLM error');
+      const sections = this.parseCV(cvContent);
+      return this.generateCVResponse(question, sections);
     }
   }
   
@@ -430,6 +490,7 @@ class CVMCPServer {
       console.log('  GET  /health      - Server health check');
       console.log('  POST /cv-question - Answer CV questions');
       console.log('MCP stdio server also running for CLI tools');
+      console.log('Response Mode:', this.useLLM ? 'Claude 3.5 Sonnet 🧠' : 'Pattern Matching 📝');
       console.log('=====================================');
       console.log('Waiting for requests...\n');
     });
@@ -444,8 +505,18 @@ class CVMCPServer {
   }
 }
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const useLLM = args.includes('--llm') || args.includes('--claude');
+
+if (useLLM) {
+  console.log('🤖 Starting CV MCP Server with Claude 3.5 Sonnet...');
+} else {
+  console.log('📚 Starting CV MCP Server with pattern-matching (use --llm to enable Claude)...');
+}
+
 // Run the server
-const server = new CVMCPServer();
+const server = new CVMCPServer(useLLM);
 server.run().catch((error) => {
   console.error('Server error:', error);
   process.exit(1);
