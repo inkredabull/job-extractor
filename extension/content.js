@@ -86,8 +86,15 @@ async function handleLLMQuery() {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Mock successful LLM response
-    const mockResponse = generateMockResponse(query);
+    // Try to get CV-aware response first, fallback to mock
+    let response = await generateCVAwareResponse(query);
+    if (!response) {
+      response = generateMockResponse(query);
+      console.log('Job Extractor: Using fallback mock response');
+    } else {
+      console.log('Job Extractor: Using CV-aware response');
+    }
+    const mockResponse = response;
     
     // Display successful response
     responseContent.innerHTML = `
@@ -225,6 +232,33 @@ function isCommonNonQuestion(text) {
   ];
   
   return nonQuestionPatterns.some(pattern => pattern.test(text));
+}
+
+// Generate CV-aware response using local MCP server
+async function generateCVAwareResponse(query) {
+  try {
+    console.log('Job Extractor: Requesting CV-aware response for:', query);
+    
+    // Make request to local MCP server (through background script)
+    const response = await chrome.runtime.sendMessage({
+      action: 'callMCPServer',
+      tool: 'answer_cv_question',
+      args: { question: query }
+    });
+    
+    console.log('Job Extractor: Background response:', response);
+    
+    if (response && response.success && response.data) {
+      console.log('Job Extractor: CV-aware response received:', response.data);
+      return response.data;
+    }
+    
+    console.log('Job Extractor: No CV-aware response available, falling back to mock');
+    return null;
+  } catch (error) {
+    console.warn('Job Extractor: Failed to get CV-aware response:', error);
+    return null;
+  }
 }
 
 // Open the gutter

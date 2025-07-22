@@ -1,6 +1,6 @@
 # Job Extractor
 
-A TypeScript CLI tool that extracts and automatically scores job information from job posting URLs using dual extraction strategies. Built with Commander.js, Cheerio for HTML parsing, and OpenAI's GPT models for intelligent data extraction and job matching.
+A comprehensive TypeScript CLI tool ecosystem that extracts and scores job information from URLs using AI-powered dual extraction strategies. Features integrated Chrome extension for CV-aware responses, local MCP server for secure data access, and automated application form filling. Built with Commander.js, modern web technologies, and multiple AI models for intelligent job matching and application assistance.
 
 Table of Contents
 =================
@@ -57,25 +57,37 @@ Table of Contents
 
 ## Features
 
-- 🎯 **Smart Dual Extraction Strategy:**
+### 🎯 **Core Job Analysis**
+- **Smart Dual Extraction Strategy:**
   - **Primary**: JSON-LD structured data extraction (instant, no LLM needed)
   - **Fallback**: AI-powered HTML scraping with OpenAI GPT models
-- 🏗️ **JSON-LD Support**: Automatically detects and parses Schema.org JobPosting structured data
-- 💰 **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
-- 📊 **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
-- 📄 **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
-- 🤖 **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
-- 🔍 **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
-- 📝 **Interview Preparation**: Create personalized cover letters, endorsements, interview talking points, theme extraction, and project showcases
-- 🎯 **Intelligent Project Extraction**: Extract and format project information from themes for easy copy-paste into application forms
-- 📊 **Performance Metrics Extraction**: AI-powered analysis to identify likely 90-day and first-year KPIs based on job descriptions
-- 🌐 **Robust Web Scraping**: Intelligent HTML simplification with error handling
-- 📄 **Application Form Filling**: Automated form filling using resume and interview data with human-in-the-loop verification
-- 📁 **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
-- 📋 **Structured JSON Output**: Standardized job schema with optional salary information
-- 🧪 **Comprehensive Testing**: Full unit test coverage with mocking for external dependencies
-- 🔧 **TypeScript**: Full type safety and modern development experience
-- 📊 **LangSmith Evaluation**: Comprehensive LLM evaluation, monitoring, and performance analysis
+- **JSON-LD Support**: Automatically detects and parses Schema.org JobPosting structured data
+- **Advanced Salary Parsing**: Extracts salary ranges from various text formats in job descriptions
+- **Job Scoring & Matching**: AI-powered job scoring against customizable criteria with detailed rationale
+
+### 📄 **Resume & Interview Preparation**
+- **Resume Generation**: Create tailored PDF resumes optimized for specific job postings
+- **Auto-Resume Generation**: Automatically generate tailored resumes when job scores exceed a configurable threshold
+- **Resume Critique**: AI-powered analysis of generated resumes with actionable feedback and improvement recommendations
+- **Interview Preparation**: Create personalized cover letters, endorsements, interview talking points, theme extraction, and project showcases
+- **Intelligent Project Extraction**: Extract and format project information from themes for easy copy-paste into application forms
+- **Performance Metrics Extraction**: AI-powered analysis to identify likely 90-day and first-year KPIs based on job descriptions
+
+### 🌐 **Browser Integration & Automation**
+- **Chrome Extension**: CV-aware AI assistant with page question detection and personalized responses
+- **Application Form Filling**: Automated form filling using resume and interview data with human-in-the-loop verification
+- **Robust Web Scraping**: Intelligent HTML simplification with error handling
+
+### 🔐 **Data Security & Architecture**
+- **Local MCP Server**: Secure CV data exposure with privacy-first design
+- **12-Factor Compliant**: PII-free codebase with externalized configuration
+- **Automatic Logging**: Saves all extracted data to uniquely named JSON files in logs/
+- **Structured JSON Output**: Standardized job schema with optional salary information
+
+### 🔧 **Developer Experience**
+- **Full TypeScript**: Complete type safety and modern development experience
+- **Comprehensive Testing**: Full unit test coverage with mocking for external dependencies
+- **LangSmith Evaluation**: Comprehensive LLM evaluation, monitoring, and performance analysis
 
 ## Installation
 
@@ -1200,6 +1212,7 @@ logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 - `npm run test:watch` - Run tests in watch mode
 - `npm run lint` - Run ESLint
 - `npm run clean` - Clean the dist directory
+- `npm run mcp-server` - Start the local MCP server for CV data access
 
 ### Project Structure
 
@@ -1222,6 +1235,21 @@ src/
 ├── config.ts                  # Environment configuration
 ├── cli.ts                     # Command-line interface with logging
 └── index.ts                   # Main exports
+
+extension/                     # Chrome Extension for CV-aware assistance
+├── manifest.json              # Extension manifest (Manifest V3)
+├── popup.html                 # Extension popup interface
+├── popup.js                   # Popup functionality and controls
+├── content.js                 # Content script with page analysis and AI integration
+├── content.css                # Styling for extension UI components
+├── background.js              # Background service worker with CV parsing
+├── icons/                     # Extension icons (SVG format)
+│   ├── icon16.svg
+│   ├── icon48.svg
+│   └── icon128.svg
+└── README.md                  # Extension usage and installation guide
+
+mcp-server.js                  # Model Context Protocol server for CV data access
 
 __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
@@ -1249,52 +1277,75 @@ data/                          # Evaluation data (created by extract-for-eval)
 └── jd_*.txt                   # Job description text files
 
 criteria.json                  # Configurable job scoring criteria
+cv.txt                         # Your CV file (externalized, git-ignored)
 sample-cv.txt                  # Example CV format for resume generation
 ```
 
 ### Architecture
 
-The project follows a modular architecture with smart extraction and scoring strategies:
+The project follows a comprehensive modular architecture with multiple interconnected components:
 
-1. **BaseAgent**: Abstract base class that handles OpenAI API communication
-2. **JobExtractorAgent**: Implements dual extraction strategy:
-   - JSON-LD structured data parsing (primary)
-   - HTML scraping + AI extraction (fallback)
-   - Advanced salary parsing from description text
-3. **JobScorerAgent**: Intelligent job matching system:
-   - Configurable scoring criteria (skills, salary, location, etc.)
-   - Weighted scoring algorithm across 6 categories
-   - AI-generated rationale for match quality
-   - Automatic score logging with timestamps
-4. **ResumeCreatorAgent**: Claude 3.5 Sonnet-powered resume tailoring system:
-   - Parses plain text CV files into structured data
-   - Analyzes job requirements and optimizes resume content
-   - Generates professional PDF resumes with tailored content
-   - Tracks and reports all modifications made
-5. **ResumeCriticAgent**: Claude 3.5 Sonnet-powered resume analysis system:
-   - Finds and analyzes the most recent resume for a given job ID
-   - Evaluates resume against job requirements using multiple criteria
-   - Provides structured feedback with strengths, weaknesses, and recommendations
-   - Rates resumes on a 1-10 scale with detailed analysis
-   - Logs critique results for tracking improvement over time
-6. **InterviewPrepAgent**: Claude 3.5 Sonnet-powered interview preparation system:
-   - Generates cover letters, endorsements, and interview talking points
-   - Extracts priority themes from job descriptions with CV examples
-   - Creates interview stories and highlighted professional impact examples
-   - Generates personal profiles with Google Apps Script integration
-   - Extracts project information formatted for application forms
-   - Supports configurable profile settings and caching
-7. **ApplicationAgent**: OpenAI-powered application form filling system:
-   - Parses HTML forms to extract field structure and requirements
-   - Loads resume and interview preparation data from previous job analysis
-   - Uses AI to generate contextually appropriate responses for each field
-   - Provides human-in-the-loop verification before submission
-   - Comprehensive logging of form structure and filled data
-8. **WebScraper**: Utility for:
-   - HTML fetching with proper headers
-   - JSON-LD structured data extraction
-   - HTML simplification for AI processing
-9. **CLI**: Commander.js interface with automatic logging to unique files
+#### **System Overview**
+
+```mermaid
+graph TB
+    subgraph "Browser Environment"
+        EXT[Chrome Extension]
+        PAGE[Web Page]
+        EXT --> PAGE
+    end
+    
+    subgraph "Local System"
+        CLI[CLI Tool]
+        MCP[MCP Server]
+        CV[cv.txt]
+        MCP --> CV
+    end
+    
+    subgraph "AI Services"
+        OPENAI[OpenAI GPT]
+        CLAUDE[Claude 3.5 Sonnet]
+    end
+    
+    EXT -.-> MCP
+    CLI --> OPENAI
+    CLI --> CLAUDE
+    
+    style EXT fill:#e3f2fd
+    style CLI fill:#f3e5f5
+    style MCP fill:#e8f5e8
+    style CV fill:#fff3e0
+```
+
+#### **Core Components**
+
+**1. CLI Tool Core**
+- **BaseAgent**: Abstract base class that handles OpenAI API communication
+- **JobExtractorAgent**: Implements dual extraction strategy (JSON-LD + AI fallback)
+- **JobScorerAgent**: Intelligent job matching with configurable criteria
+- **ResumeCreatorAgent**: Claude-powered resume tailoring with PDF generation
+- **ResumeCriticAgent**: AI resume analysis with structured feedback
+- **InterviewPrepAgent**: Interview preparation materials and project extraction
+- **ApplicationAgent**: Automated form filling with human-in-the-loop verification
+- **WebScraper**: HTML fetching, JSON-LD extraction, and simplification
+
+**2. Chrome Extension**
+- **Content Script**: Page analysis, question detection, and CV-aware responses
+- **Background Service Worker**: CV parsing and response generation with privacy controls
+- **Popup Interface**: Extension controls and status display
+- **Page Integration**: Seamless web page interaction without overlay issues
+
+**3. MCP Server**
+- **CV Data Access**: Secure, local-only CV information exposure
+- **Privacy-First Design**: No PII in git-committed code
+- **Tool-Based Interface**: `read_cv`, `search_cv_experience`, `answer_cv_question`
+- **12-Factor Compliance**: Configuration externalized from codebase
+
+**4. Data Flow & Security**
+- **Local CV File**: Single source of truth (`cv.txt`) for all components
+- **No Remote CV Data**: All personal information stays local
+- **Secure Communication**: Extension ↔ MCP server communication
+- **Git-Safe Codebase**: Zero PII committed to version control
 
 ### Python Dependencies (Optional)
 

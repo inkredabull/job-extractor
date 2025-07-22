@@ -13,7 +13,8 @@
     "test": "jest --config jest.config.js",
     "test:watch": "jest --watch --config jest.config.js",
     "lint": "eslint src --ext .ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "mcp-server": "node mcp-server.js"
   },
   "keywords": [
     "job",
@@ -28,6 +29,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
     "@browserbasehq/stagehand": "^2.4.1",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "commander": "^11.1.0",

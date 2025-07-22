@@ -253,21 +253,30 @@ html.job-extractor-gutter-open {
 
 #questions-list {
   margin: 0;
-  padding-left: 18px;
-  list-style-type: disc;
+  padding-left: 20px;
+  list-style-type: disc !important;
 }
 
 #questions-list li {
-  margin: 8px 0;
+  margin: 6px 0;
   color: #444;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.5;
   cursor: pointer;
   transition: color 0.2s;
+  display: list-item;
+  padding-left: 4px;
 }
 
 #questions-list li:hover {
   color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.05);
+  border-radius: 3px;
+}
+
+#questions-list li::marker {
+  color: #4285f4;
+  font-size: 14px;
 }
 
 /* Responsive adjustments for smaller screens */
