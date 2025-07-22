@@ -1586,6 +1586,9 @@ Your task:
 
 Please respond in the following format:
 
+**EXECUTIVE SUMMARY:**
+[Create 2-3 bullet points following the format "<IMPACT> over <TIMEFRAME> as <ROLE>". Extract the most compelling achievements from the chosen story's results and present them in this concise format. For example: "• Reduced deployment time by 75% over 18 months as Engineering Manager" or "• Scaled team from 3 to 15 engineers over 2 years as Technical Lead"]
+
 **KEY RESULTS DELIVERED:**
 [Start with 1-2 most impactful, quantified results from the chosen story - these should be the headline achievements that grab attention]
 
