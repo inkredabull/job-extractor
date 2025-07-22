@@ -10,6 +10,8 @@ const {
 } = require('@modelcontextprotocol/sdk/types.js');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const url = require('url');
 
 class CVMCPServer {
   constructor() {
@@ -105,7 +107,28 @@ class CVMCPServer {
   async readCV() {
     try {
       const cvPath = path.join(__dirname, 'cv.txt');
+      console.log('  -> Attempting to read CV from:', cvPath);
+      
+      if (!fs.existsSync(cvPath)) {
+        console.log('  -> cv.txt not found, checking for sample-cv.txt...');
+        const samplePath = path.join(__dirname, 'sample-cv.txt');
+        if (fs.existsSync(samplePath)) {
+          console.log('  -> Using sample-cv.txt instead');
+          const content = fs.readFileSync(samplePath, 'utf8');
+          return {
+            content: [
+              {
+                type: 'text',
+                text: content,
+              },
+            ],
+          };
+        }
+        throw new Error('Neither cv.txt nor sample-cv.txt found in project directory');
+      }
+      
       const content = fs.readFileSync(cvPath, 'utf8');
+      console.log('  -> CV file read successfully, size:', content.length, 'bytes');
       
       return {
         content: [
@@ -116,6 +139,7 @@ class CVMCPServer {
         ],
       };
     } catch (error) {
+      console.error('  -> readCV error:', error);
       throw new Error(`Failed to read CV: ${error.message}`);
     }
   }
@@ -162,14 +186,25 @@ class CVMCPServer {
 
   async answerCVQuestion(question) {
     try {
+      console.log('  -> answerCVQuestion called with:', question);
       const cvContent = await this.readCV();
+      console.log('  -> CV content loaded, length:', cvContent.content[0].text.length);
       const content = cvContent.content[0].text;
       
       // Parse key sections from CV
+      console.log('  -> Parsing CV sections...');
       const sections = this.parseCV(content);
+      console.log('  -> CV sections parsed:', {
+        name: sections.name,
+        accomplishments: sections.accomplishments.length,
+        strengths: sections.strengths.length,
+        experience: sections.experience.length
+      });
       
       // Generate contextual response based on question
+      console.log('  -> Generating CV response...');
       const response = this.generateCVResponse(question, sections);
+      console.log('  -> CV response generated, length:', response.length);
       
       return {
         content: [
@@ -180,6 +215,7 @@ class CVMCPServer {
         ],
       };
     } catch (error) {
+      console.error('  -> answerCVQuestion error:', error);
       throw new Error(`Failed to answer CV question: ${error.message}`);
     }
   }
@@ -282,9 +318,111 @@ class CVMCPServer {
   }
 
   async run() {
+    // Start HTTP server for Chrome extension
+    this.startHTTPServer();
+    
+    // Also start MCP stdio server for CLI tools
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('CV MCP server running on stdio');
+    console.error('CV MCP server running on stdio and HTTP port 3000');
+  }
+  
+  startHTTPServer() {
+    const server = http.createServer((req, res) => {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - ${req.headers['user-agent']?.slice(0, 50) || 'Unknown'}`);
+      
+      // Enable CORS for Chrome extension
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      
+      if (req.method === 'OPTIONS') {
+        console.log('  -> CORS preflight request');
+        res.writeHead(200);
+        res.end();
+        return;
+      }
+      
+      const parsedUrl = url.parse(req.url, true);
+      
+      if (req.method === 'GET' && parsedUrl.pathname === '/health') {
+        console.log('  -> Health check request');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok', service: 'CV MCP Server' }));
+        console.log('  -> Health check response sent');
+        return;
+      }
+      
+      if (req.method === 'POST' && parsedUrl.pathname === '/cv-question') {
+        console.log('  -> CV question request received');
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk;
+          console.log(`  -> Received ${chunk.length} bytes of data`);
+        });
+        req.on('end', async () => {
+          console.log(`  -> Full request body received (${body.length} bytes):`, body);
+          try {
+            const { question } = JSON.parse(body);
+            console.log('  -> Parsed question:', question);
+            if (!question) {
+              console.log('  -> ERROR: No question provided');
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Question parameter is required' }));
+              return;
+            }
+            
+            console.log('  -> Processing CV question with answerCVQuestion...');
+            const response = await this.answerCVQuestion(question);
+            console.log('  -> CV response generated:', response.content[0].text.slice(0, 100) + '...');
+            
+            const jsonResponse = { 
+              success: true, 
+              response: response.content[0].text 
+            };
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(jsonResponse));
+            console.log('  -> CV question response sent successfully');
+          } catch (error) {
+            console.error('  -> HTTP CV question error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ 
+              error: 'Failed to process CV question',
+              details: error.message 
+            }));
+            console.log('  -> Error response sent');
+          }
+        });
+        return;
+      }
+      
+      // 404 for unknown endpoints
+      console.log(`  -> 404 - Unknown endpoint: ${req.method} ${parsedUrl.pathname}`);
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Endpoint not found' }));
+    });
+    
+    server.listen(3000, '127.0.0.1', () => {
+      console.log('=====================================');
+      console.log('🚀 CV MCP Server Started Successfully');
+      console.log('=====================================');
+      console.log('HTTP Server: http://localhost:3000');
+      console.log('Available endpoints:');
+      console.log('  GET  /health      - Server health check');
+      console.log('  POST /cv-question - Answer CV questions');
+      console.log('MCP stdio server also running for CLI tools');
+      console.log('=====================================');
+      console.log('Waiting for requests...\n');
+    });
+    
+    server.on('error', (error) => {
+      console.error('HTTP Server Error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error('Port 3000 is already in use. Please stop any other services on port 3000.');
+        process.exit(1);
+      }
+    });
   }
 }
 
