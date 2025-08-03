@@ -97,18 +97,22 @@ STRENGTHS
 // Test if MCP server is running
 async function testMCPServerConnection() {
   try {
+    console.log('Job Extractor Background: Testing MCP server connection...');
     const response = await fetch('http://localhost:3000/health', {
       method: 'GET',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
-      signal: AbortSignal.timeout(2000) // 2 second timeout
+      signal: AbortSignal.timeout(5000) // 5 second timeout
     });
     
-    return response.ok;
+    console.log('Job Extractor Background: Health check response status:', response.status);
+    const result = response.ok;
+    console.log('Job Extractor Background: MCP server connection test result:', result);
+    return result;
   } catch (error) {
-    console.log('Job Extractor Background: MCP server connection test failed:', error.message);
+    console.error('Job Extractor Background: MCP server connection test failed:', error.message, error);
     return false;
   }
 }
@@ -116,6 +120,7 @@ async function testMCPServerConnection() {
 // Call local MCP server
 async function callLocalMCPServer(question) {
   try {
+    console.log('Job Extractor Background: Calling MCP server with question:', question);
     const response = await fetch('http://localhost:3000/cv-question', {
       method: 'POST',
       mode: 'cors',
@@ -123,15 +128,20 @@ async function callLocalMCPServer(question) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ question: question }),
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(15000) // 15 second timeout
     });
+    
+    console.log('Job Extractor Background: MCP server response status:', response.status);
     
     if (!response.ok) {
       throw new Error(`MCP server responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    return data.response || data.answer || 'No response from MCP server';
+    console.log('Job Extractor Background: MCP server response data:', data);
+    const result = data.response || data.answer || 'No response from MCP server';
+    console.log('Job Extractor Background: Returning CV response, length:', result.length);
+    return result;
     
   } catch (error) {
     console.error('Job Extractor Background: Failed to call MCP server:', error);

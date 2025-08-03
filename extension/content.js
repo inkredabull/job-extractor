@@ -88,20 +88,25 @@ async function handleLLMQuery() {
     
     // Try to get CV-aware response first, fallback to mock
     let response = await generateCVAwareResponse(query);
+    let isRealResponse = false;
     if (!response) {
       response = generateMockResponse(query);
       console.log('Job Extractor: Using fallback mock response');
     } else {
       console.log('Job Extractor: Using CV-aware response');
+      isRealResponse = true;
     }
-    const mockResponse = response;
     
-    // Display successful response
+    // Display successful response with appropriate metadata
+    const metadata = isRealResponse 
+      ? '<small>✅ CV-aware response from Claude 3.5 Sonnet</small>'
+      : '<small>⚠️ Mock response (MCP server not available)</small>';
+    
     responseContent.innerHTML = `
       <div class="api-metadata">
-        <small>Model: claude-3.5-sonnet | Response time: 1.2s | Tokens: 156</small>
+        ${metadata}
       </div>
-      <div class="response-text">${mockResponse}</div>
+      <div class="response-text">${response}</div>
     `;
     
     console.log('Job Extractor: Mock LLM API call successful');

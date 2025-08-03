@@ -90,6 +90,28 @@ class CVMCPServer {
               required: ['question'],
             },
           },
+          {
+            name: 'analyze_job_posting',
+            description: 'Analyze a job posting from a webpage and provide insights based on CV match',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  description: 'URL of the job posting to analyze',
+                },
+                pageContent: {
+                  type: 'string',
+                  description: 'HTML content of the job posting page (optional, will fetch if not provided)',
+                },
+                question: {
+                  type: 'string',
+                  description: 'Specific question about the job posting (optional)',
+                },
+              },
+              required: ['url'],
+            },
+          },
         ],
       };
     });
@@ -107,6 +129,9 @@ class CVMCPServer {
             
           case 'answer_cv_question':
             return await this.answerCVQuestion(args.question);
+            
+          case 'analyze_job_posting':
+            return await this.analyzeJobPosting(args.url, args.pageContent, args.question);
             
           default:
             throw new McpError(
@@ -323,6 +348,283 @@ Please provide a thoughtful, first-person response that draws from the experienc
     
     return sections;
   }
+
+  async analyzeJobPosting(url, pageContent, question) {
+    try {
+      console.log('  -> analyzeJobPosting called with:', { url, hasContent: !!pageContent, question });
+      
+      // Get CV content for comparison
+      const cvContent = await this.readCV();
+      const cvText = cvContent.content[0].text;
+      const cvSections = this.parseCV(cvText);
+      
+      // Fetch job posting content if not provided
+      let jobContent = pageContent;
+      if (!jobContent) {
+        console.log('  -> Fetching job posting content from URL...');
+        try {
+          const https = require('https');
+          const http = require('http');
+          const urlLib = url.startsWith('https:') ? https : http;
+          
+          jobContent = await new Promise((resolve, reject) => {
+            const req = urlLib.get(url, (res) => {
+              let data = '';
+              res.on('data', chunk => data += chunk);
+              res.on('end', () => resolve(data));
+            });
+            req.on('error', reject);
+            req.setTimeout(10000, () => reject(new Error('Request timeout')));
+          });
+        } catch (error) {
+          console.error('  -> Failed to fetch job posting:', error);
+          return {
+            content: [{
+              type: 'text',
+              text: `Unable to fetch job posting from ${url}. Error: ${error.message}`
+            }]
+          };
+        }
+      }
+      
+      console.log('  -> Job content length:', jobContent.length);
+      
+      // Extract and clean job posting content
+      const jobData = this.extractJobInfo(jobContent);
+      
+      let response;
+      if (this.useLLM && this.anthropic) {
+        console.log('  -> Using Claude 3.5 Sonnet for job analysis...');
+        response = await this.generateJobAnalysisLLMResponse(jobData, cvSections, question);
+      } else {
+        console.log('  -> Using pattern-based job analysis...');
+        response = this.generateJobAnalysisResponse(jobData, cvSections, question);
+      }
+      
+      return {
+        content: [{
+          type: 'text',
+          text: response
+        }]
+      };
+      
+    } catch (error) {
+      console.error('  -> analyzeJobPosting error:', error);
+      throw new Error(`Failed to analyze job posting: ${error.message}`);
+    }
+  }
+  
+  extractJobInfo(htmlContent) {
+    // Simple HTML parsing to extract job information
+    const jobData = {
+      title: '',
+      company: '',
+      location: '',
+      description: '',
+      requirements: [],
+      benefits: []
+    };
+    
+    // Remove script and style tags
+    const cleanContent = htmlContent.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                   .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    
+    // Extract text content
+    const textContent = cleanContent.replace(/<[^>]*>/g, ' ')
+                                   .replace(/\s+/g, ' ')
+                                   .trim();
+    
+    // Try to extract job title (common patterns)
+    const titlePatterns = [
+      /<title[^>]*>([^<]*)/i,
+      /<h1[^>]*>([^<]*)/i,
+      /job.?title[^>]*>([^<]*)/i
+    ];
+    
+    for (const pattern of titlePatterns) {
+      const match = htmlContent.match(pattern);
+      if (match && match[1]) {
+        jobData.title = match[1].trim();
+        break;
+      }
+    }
+    
+    // Extract company name (common patterns)
+    const companyPatterns = [
+      /company[^>]*>([^<]*)/i,
+      /employer[^>]*>([^<]*)/i
+    ];
+    
+    for (const pattern of companyPatterns) {
+      const match = htmlContent.match(pattern);
+      if (match && match[1]) {
+        jobData.company = match[1].trim();
+        break;
+      }
+    }
+    
+    // Use full text as description
+    jobData.description = textContent.slice(0, 5000); // Limit length
+    
+    return jobData;
+  }
+  
+  generateJobAnalysisResponse(jobData, cvSections, question) {
+    const analysis = this.analyzeJobMatch(jobData, cvSections);
+    
+    if (question) {
+      const lowerQuestion = question.toLowerCase();
+      
+      if (lowerQuestion.includes('salary') || lowerQuestion.includes('compensation')) {
+        return `**Salary Analysis:**
+${analysis.salaryEstimate}
+
+**Market Context:**
+Based on the job requirements and location, this role typically offers competitive compensation in the market range.`;
+      }
+      
+      if (lowerQuestion.includes('interview') || lowerQuestion.includes('prepare')) {
+        return `**Interview Preparation:**
+
+**Key areas to highlight:**
+${analysis.strengths.map(s => `• ${s}`).join('\n')}
+
+**Potential questions to prepare for:**
+• Technical challenges you've solved
+• Leadership experience examples
+• How you handle scalability issues
+• Your approach to team collaboration`;
+      }
+      
+      if (lowerQuestion.includes('fit') || lowerQuestion.includes('match')) {
+        return `**Job Fit Analysis:**
+
+**Strong Matches:**
+${analysis.strengths.map(s => `• ${s}`).join('\n')}
+
+**Areas to Address:**
+${analysis.gaps.map(g => `• ${g}`).join('\n')}
+
+**Overall Assessment:** ${analysis.overallMatch}`;
+      }
+    }
+    
+    // Default comprehensive analysis
+    return `**Job Analysis:**
+
+**Position:** ${jobData.title || 'Software Engineering Role'}
+**Company:** ${jobData.company || 'Technology Company'}
+
+**CV Match Strengths:**
+${analysis.strengths.map(s => `• ${s}`).join('\n')}
+
+**Potential Gaps to Address:**
+${analysis.gaps.map(g => `• ${g}`).join('\n')}
+
+**Recommendation:** ${analysis.overallMatch}`;
+  }
+  
+  analyzeJobMatch(jobData, cvSections) {
+    const jobText = (jobData.description || '').toLowerCase();
+    const strengths = [];
+    const gaps = [];
+    
+    // Analyze technical match
+    const techKeywords = ['javascript', 'react', 'node', 'python', 'data', 'ai', 'ml', 'api', 'database'];
+    const foundTechSkills = techKeywords.filter(keyword => jobText.includes(keyword));
+    
+    if (foundTechSkills.length > 0) {
+      strengths.push(`Technical skills alignment with ${foundTechSkills.join(', ')}`);
+    }
+    
+    // Analyze leadership match
+    if (jobText.includes('lead') || jobText.includes('senior') || jobText.includes('architect')) {
+      const hasLeadership = cvSections.accomplishments.some(acc => 
+        acc.toLowerCase().includes('led') || acc.toLowerCase().includes('managed')
+      );
+      if (hasLeadership) {
+        strengths.push('Leadership experience matches senior role requirements');
+      } else {
+        gaps.push('Limited leadership experience for senior role');
+      }
+    }
+    
+    // Analyze experience level
+    if (jobText.includes('5+ years') || jobText.includes('senior')) {
+      strengths.push('Experience level matches senior requirements');
+    }
+    
+    // Default gaps if none found
+    if (gaps.length === 0) {
+      gaps.push('Consider highlighting specific achievements that match job requirements');
+    }
+    
+    // Default strengths if none found
+    if (strengths.length === 0) {
+      strengths.push('Strong technical background applicable to this role');
+      strengths.push('Proven track record of delivering results');
+    }
+    
+    const overallMatch = strengths.length >= gaps.length ? 
+      'Strong candidate - recommend applying with targeted cover letter' :
+      'Good potential - address gaps in application materials';
+    
+    return {
+      strengths,
+      gaps,
+      overallMatch,
+      salaryEstimate: 'Competitive salary expected based on role requirements and seniority level'
+    };
+  }
+  
+  async generateJobAnalysisLLMResponse(jobData, cvSections, question) {
+    try {
+      const cvText = `KEY ACCOMPLISHMENTS
+${cvSections.accomplishments.join('\n')}
+
+STRENGTHS  
+${cvSections.strengths.join('\n')}`;
+
+      const prompt = `You are a career advisor analyzing a job posting against a candidate's CV. Provide specific, actionable insights.
+
+CV/Resume:
+${cvText}
+
+Job Posting Information:
+Title: ${jobData.title || 'Not specified'}
+Company: ${jobData.company || 'Not specified'}  
+Description: ${jobData.description.slice(0, 2000)}
+
+${question ? `Specific Question: ${question}` : ''}
+
+Please analyze this job opportunity and provide insights on:
+1. How well the CV matches the job requirements
+2. Key strengths to highlight in applications
+3. Any gaps that should be addressed
+4. Interview preparation recommendations
+5. Salary expectations if relevant
+
+Be specific and reference actual accomplishments from the CV where applicable.`;
+
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      });
+
+      return response.content[0].text;
+    } catch (error) {
+      console.error('  -> Claude API error in job analysis:', error);
+      // Fallback to pattern-based response
+      return this.generateJobAnalysisResponse(jobData, cvSections, question);
+    }
+  }
   
   generateCVResponse(question, sections) {
     const lowerQuestion = question.toLowerCase();
@@ -467,6 +769,50 @@ Please provide a thoughtful, first-person response that draws from the experienc
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
               error: 'Failed to process CV question',
+              details: error.message 
+            }));
+            console.log('  -> Error response sent');
+          }
+        });
+        return;
+      }
+      
+      if (req.method === 'POST' && parsedUrl.pathname === '/analyze-job') {
+        console.log('  -> Job analysis request received');
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk;
+          console.log(`  -> Received ${chunk.length} bytes of data`);
+        });
+        req.on('end', async () => {
+          console.log(`  -> Full request body received (${body.length} bytes):`, body);
+          try {
+            const { url, pageContent, question } = JSON.parse(body);
+            console.log('  -> Parsed job analysis request:', { url, hasContent: !!pageContent, question });
+            if (!url) {
+              console.log('  -> ERROR: No URL provided');
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'URL parameter is required' }));
+              return;
+            }
+            
+            console.log('  -> Processing job analysis with analyzeJobPosting...');
+            const response = await this.analyzeJobPosting(url, pageContent, question);
+            console.log('  -> Job analysis response generated:', response.content[0].text.slice(0, 100) + '...');
+            
+            const jsonResponse = { 
+              success: true, 
+              response: response.content[0].text 
+            };
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(jsonResponse));
+            console.log('  -> Job analysis response sent successfully');
+          } catch (error) {
+            console.error('  -> HTTP job analysis error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ 
+              error: 'Failed to process job analysis',
               details: error.message 
             }));
             console.log('  -> Error response sent');
