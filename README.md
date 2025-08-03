@@ -13,6 +13,7 @@ Table of Contents
       * [Command Line Interface](#command-line-interface)
          * [Job Extraction (with Automatic Scoring)](#job-extraction-with-automatic-scoring)
          * [Manual Job Scoring](#manual-job-scoring)
+         * [Manual Job Creation](#manual-job-creation)
          * [Resume Generation](#resume-generation)
          * [Auto-Resume Generation](#auto-resume-generation)
          * [Resume Critique](#resume-critique)
@@ -209,6 +210,55 @@ job-extractor score "4c32e01e" -c my-criteria.json
 
 **Score Options:**
 - `-c, --criteria <file>`: Path to criteria file (default: `criteria.json`)
+
+#### Manual Job Creation
+
+Create a new job entry for manual population when you don't have a URL to extract from:
+
+```bash
+# Create a new empty job entry
+job-extractor create-job
+
+# Create with company and title information
+job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
+
+# Or with npm run dev (note the -- separator)
+npm run dev -- create-job --company "TechCorp" --title "Senior Software Engineer"
+```
+
+**Create-Job Options:**
+- `-c, --company <company>`: Company name (optional)
+- `-t, --title <title>`: Job title (optional)
+
+**How it works:**
+- Generates a unique 8-character job ID (e.g., `a1b2c3d4`)
+- Creates directory structure under `logs/{jobId}/`
+- Creates an empty job JSON template with the structure:
+  ```json
+  {
+    "title": "Senior Software Engineer",
+    "company": "TechCorp", 
+    "location": "",
+    "description": "",
+    "source": "manual",
+    "salary": {
+      "min": "",
+      "max": "",
+      "currency": "USD"
+    }
+  }
+  ```
+
+**Next steps after creation:**
+1. Edit the generated JSON file to add job details (description, location, salary, etc.)
+2. Run `job-extractor extract-description {jobId}` to process the description
+3. Run `job-extractor score {jobId}` to score the job against your criteria
+
+**Use cases:**
+- Jobs shared via email or Slack without public URLs
+- Internal job postings or referrals
+- Jobs from recruiting platforms that require login
+- When you want to manually curate job information
 
 #### Resume Generation
 
@@ -700,6 +750,9 @@ job-extractor score "a1b2c3d4"
 
 # Manually score with custom criteria
 job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
+
+# Create a new job entry for manual population
+job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
 
 # Generate a tailored resume for a specific job (uses cache if available)
 job-extractor resume "a1b2c3d4"
@@ -1213,6 +1266,7 @@ logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 - `npm run lint` - Run ESLint
 - `npm run clean` - Clean the dist directory
 - `npm run mcp-server` - Start the local MCP server for CV data access
+- `npm run mcp-server:llm` - Start the MCP server with Claude 3.5 Sonnet for intelligent CV responses
 
 ### Project Structure
 
