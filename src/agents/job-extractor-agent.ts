@@ -722,7 +722,7 @@ Response format: ["term1", "term2", "term3", ...]`;
     }
   }
 
-  async createJob(company?: string, title?: string): Promise<{ jobId: string; filePath: string }> {
+  async createJob(company?: string, title?: string, blurbPath?: string, companyUrl?: string): Promise<{ jobId: string; filePath: string }> {
     try {
       // Generate unique job ID
       const jobId = this.generateJobId();
@@ -739,6 +739,22 @@ Response format: ["term1", "term2", "term3", ...]`;
         fs.mkdirSync(jobDir, { recursive: true });
       }
 
+      let jobDescription = "";
+      
+      // If both blurb and URL are provided, synthesize job description
+      if (blurbPath && companyUrl) {
+        try {
+          console.log(`📄 Reading blurb from: ${blurbPath}`);
+          console.log(`🌐 Gathering company info from: ${companyUrl}`);
+          
+          jobDescription = await this.synthesizeJobDescription(blurbPath, companyUrl);
+          console.log(`✅ Job description synthesized successfully`);
+        } catch (error) {
+          console.log(`⚠️  Failed to synthesize job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.log(`   Proceeding with empty description that can be filled manually`);
+        }
+      }
+
       // Create empty job JSON template
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `job-${timestamp}.json`;
@@ -748,7 +764,7 @@ Response format: ["term1", "term2", "term3", ...]`;
         title: title || "",
         company: company || "",
         location: "",
-        description: "",
+        description: jobDescription,
         source: "manual",
         salary: {
           min: "",
@@ -773,5 +789,75 @@ Response format: ["term1", "term2", "term3", ...]`;
   private generateJobId(): string {
     // Generate 8-character hex ID similar to existing pattern
     return Math.random().toString(16).substring(2, 10);
+  }
+
+  private async synthesizeJobDescription(blurbPath: string, companyUrl: string): Promise<string> {
+    try {
+      // Read blurb file
+      const blurbContent = fs.readFileSync(path.resolve(blurbPath), 'utf-8').trim();
+      if (!blurbContent) {
+        throw new Error('Blurb file is empty');
+      }
+      
+      // Gather company information from URL
+      const companyInfo = await this.gatherCompanyInfo(companyUrl);
+      
+      // Create synthesis prompt
+      const prompt = this.createJobDescriptionSynthesisPrompt(blurbContent, companyInfo);
+      
+      // Get LLM response
+      const synthesizedDescription = await this.makeOpenAIRequest(prompt, 3000);
+      
+      return synthesizedDescription.trim();
+    } catch (error) {
+      throw new Error(`Failed to synthesize job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  private async gatherCompanyInfo(companyUrl: string): Promise<string> {
+    try {
+      const { WebScraper } = require('../utils/web-scraper');
+      const html = await WebScraper.fetchHtml(companyUrl);
+      const simplifiedHtml = WebScraper.simplifyHtml(html);
+      
+      // Extract key company information using LLM
+      const prompt = `Extract key company information from the following HTML content. Focus on:
+- Company mission, values, and culture
+- Products, services, and business model
+- Company size, stage, and market position
+- Recent news, achievements, or initiatives
+- Work environment and company benefits
+
+Provide a concise summary that would be useful for creating a targeted job description.
+
+HTML Content:
+${simplifiedHtml.slice(0, 8000)}...`;
+      
+      const companyInfo = await this.makeOpenAIRequest(prompt, 2000);
+      return companyInfo.trim();
+    } catch (error) {
+      throw new Error(`Failed to gather company info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  private createJobDescriptionSynthesisPrompt(blurb: string, companyInfo: string): string {
+    return `Create a comprehensive job description by combining the provided job blurb with company information.
+
+Job Blurb:
+${blurb}
+
+Company Information:
+${companyInfo}
+
+Instructions:
+- Use the job blurb as the foundation for the role requirements and responsibilities
+- Incorporate relevant company information to make the description more specific and appealing
+- Maintain the core job requirements from the blurb
+- Add company-specific context, culture, and benefits where appropriate
+- Ensure the tone matches professional job posting standards
+- Make the description comprehensive but not overly long
+- Focus on what would attract qualified candidates
+
+Return only the synthesized job description text, no additional formatting or commentary.`;
   }
 }

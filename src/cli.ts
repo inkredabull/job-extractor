@@ -338,6 +338,8 @@ program
   .description('Create a new job ID and empty job JSON file for manual population')
   .option('-c, --company <company>', 'Company name (optional)')
   .option('-t, --title <title>', 'Job title (optional)')
+  .option('-b, --blurb <blurb>', 'Relative path to a blurb file for job description synthesis (optional)')
+  .option('-u, --url <url>', 'Company URL for gathering information (optional)')
   .action(async (options) => {
     try {
       console.log('📁 Creating new job entry...');
@@ -350,7 +352,7 @@ program
       const config = getConfig();
       const agent = new JobExtractorAgent(config);
       
-      const result = await agent.createJob(options.company, options.title);
+      const result = await agent.createJob(options.company, options.title, options.blurb, options.url);
       
       console.log('✅ Job creation complete');
       console.log('=' .repeat(50));
