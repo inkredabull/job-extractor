@@ -281,11 +281,11 @@ ${cvContent}
 
 Interview Question: ${question}
 
-Please provide a thoughtful, first-person response that draws from the experience and accomplishments in the CV above. Be conversational but professional, and include specific examples when possible.`;
+IMPORTANT: Keep your response between 200-400 characters. Be concise, direct, and impactful. Focus on the most relevant accomplishment or experience that answers the question.`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1500,
+        max_tokens: 150,
         temperature: 0.7,
         messages: [
           {
@@ -597,18 +597,11 @@ Description: ${jobData.description.slice(0, 2000)}
 
 ${question ? `Specific Question: ${question}` : ''}
 
-Please analyze this job opportunity and provide insights on:
-1. How well the CV matches the job requirements
-2. Key strengths to highlight in applications
-3. Any gaps that should be addressed
-4. Interview preparation recommendations
-5. Salary expectations if relevant
-
-Be specific and reference actual accomplishments from the CV where applicable.`;
+IMPORTANT: Keep your response between 200-400 characters. Be concise and focus on the most critical insights: key strengths to highlight and one major gap to address.`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
+        max_tokens: 150,
         temperature: 0.7,
         messages: [
           {
