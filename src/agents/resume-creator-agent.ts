@@ -9,11 +9,13 @@ import { ResumeCriticAgent } from './resume-critic-agent';
 export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private maxRoles: number;
   private claudeApiKey: string;
+  private mode: 'builder' | 'leader';
 
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 4) {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 4, mode: 'builder' | 'leader' = 'leader') {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
+    this.mode = mode;
   }
 
   async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true): Promise<ResumeResult> {
@@ -654,8 +656,20 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     companyValuesSection: string;
   }): string {
     try {
-      const promptPath = path.resolve('prompts', 'resume-creator.md');
-      let promptTemplate = fs.readFileSync(promptPath, 'utf-8');
+      // Load base template
+      const basePath = path.resolve('prompts', 'resume-creator-base.md');
+      let promptTemplate = fs.readFileSync(basePath, 'utf-8');
+      
+      // Load mode-specific fragments
+      const fragmentsFileName = this.mode === 'builder' ? 'resume-creator-builder-fragments.md' : 'resume-creator-leader-fragments.md';
+      const fragmentsPath = path.resolve('prompts', fragmentsFileName);
+      const fragments = this.loadFragments(fragmentsPath);
+      
+      // Replace fragment placeholders with mode-specific content
+      Object.entries(fragments).forEach(([key, value]) => {
+        const placeholder = `{{${key}}}`;
+        promptTemplate = promptTemplate.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+      });
       
       // Remove markdown headers and formatting to get clean prompt
       promptTemplate = promptTemplate
@@ -686,6 +700,27 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       console.warn(`⚠️  Failed to load prompt template, using fallback: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Fallback to a minimal prompt if template loading fails
       return `You are a professional resume writer. Create a tailored resume for this job:\n\nJob: ${variables.job.title} at ${variables.job.company}\nDescription: ${variables.job.description}\n\nCV Content:\n${this.formatCVForPrompt(variables.cvContent)}\n\nReturn JSON with markdownContent and changes array.`;
+    }
+  }
+
+  private loadFragments(fragmentsPath: string): Record<string, string> {
+    try {
+      const fragmentsContent = fs.readFileSync(fragmentsPath, 'utf-8');
+      const fragments: Record<string, string> = {};
+      
+      // Parse fragments using regex to find ### sectionName blocks
+      const fragmentRegex = /### (\w+)\n((?:(?!### \w+)[\s\S])*)/g;
+      let match;
+      
+      while ((match = fragmentRegex.exec(fragmentsContent)) !== null) {
+        const [, sectionName, sectionContent] = match;
+        fragments[sectionName] = sectionContent.trim();
+      }
+      
+      return fragments;
+    } catch (error) {
+      console.warn(`⚠️  Failed to load fragments from ${fragmentsPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return {};
     }
   }
 

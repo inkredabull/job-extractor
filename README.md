@@ -262,7 +262,7 @@ npm run dev -- create-job --company "TechCorp" --title "Senior Software Engineer
 
 #### Resume Generation
 
-Generate a tailored PDF resume for a specific job posting:
+Generate a tailored PDF resume for a specific job posting with two distinct approaches:
 
 ```bash
 # Generate a tailored resume for a job (uses cache if available)
@@ -277,6 +277,21 @@ job-extractor resume "4c32e01e" -o tailored-resume.pdf
 # Force regenerate with custom output path
 job-extractor resume "4c32e01e" -o tailored-resume.pdf --regen
 ```
+
+**Resume Generation Modes:**
+
+The tool supports two distinct resume generation approaches that can be configured programmatically:
+
+- **Leader Mode (Default)**: Emphasizes leadership experience, team management, and strategic impact
+  - Highlights team scaling, process improvement, and cross-functional collaboration
+  - Positions you as a player-coach who builds teams and delivers products
+  - Focuses on management metrics like team size, project scope, and business impact
+
+- **Builder Mode**: Emphasizes hands-on technical work, coding, and direct contribution
+  - Prioritizes technical achievements, shipped products, and measurable technical impact
+  - Uses action verbs like "built", "implemented", "shipped", and "deployed"
+  - Automatically converts leadership-centric language to builder-focused terms
+  - Includes comprehensive verb replacement rules for consistent technical framing
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
@@ -1268,6 +1283,35 @@ logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 - `npm run mcp-server` - Start the local MCP server for CV data access
 - `npm run mcp-server:llm` - Start the MCP server with Claude 3.5 Sonnet for intelligent CV responses
 
+### API Changes
+
+#### ResumeCreatorAgent Constructor
+
+The `ResumeCreatorAgent` constructor has been updated to support configurable resume generation modes:
+
+```typescript
+// Previous API (still supported - defaults to 'leader' mode)
+const creator = new ResumeCreatorAgent(claudeApiKey, model, maxTokens, maxRoles);
+
+// New API with mode selection
+const leaderCreator = new ResumeCreatorAgent(claudeApiKey, model, maxTokens, maxRoles, 'leader');
+const builderCreator = new ResumeCreatorAgent(claudeApiKey, model, maxTokens, maxRoles, 'builder');
+```
+
+**Parameters:**
+- `claudeApiKey: string` - Anthropic API key
+- `model?: string` - Claude model to use (default: `claude-3-5-sonnet-20241022`)
+- `maxTokens?: number` - Maximum tokens (default: `4000`)
+- `maxRoles: number` - Maximum number of roles to include (default: `4`)
+- `mode: 'builder' | 'leader'` - Resume generation mode (default: `'leader'`)
+
+**Mode Differences:**
+- **Leader Mode**: Emphasizes management, team leadership, and strategic impact
+- **Builder Mode**: Emphasizes technical skills, hands-on work, and individual contributions
+
+**Backwards Compatibility:**
+All existing code will continue to work unchanged as the `mode` parameter defaults to `'leader'`.
+
 ### Project Structure
 
 ```
@@ -1277,7 +1321,7 @@ src/
 │   ├── claude-base-agent.ts   # Abstract base class for Claude-powered agents
 │   ├── job-extractor-agent.ts # Job extraction with dual strategy
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
-│   ├── resume-creator-agent.ts # AI-powered resume generation and PDF creation
+│   ├── resume-creator-agent.ts # AI-powered resume generation with leader/builder modes and PDF creation
 │   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
 │   ├── interview-prep-agent.ts # Interview preparation materials and project extraction
 │   ├── application-agent.ts   # Application form filling with AI-powered field generation
@@ -1377,7 +1421,7 @@ graph TB
 - **BaseAgent**: Abstract base class that handles OpenAI API communication
 - **JobExtractorAgent**: Implements dual extraction strategy (JSON-LD + AI fallback)
 - **JobScorerAgent**: Intelligent job matching with configurable criteria
-- **ResumeCreatorAgent**: Claude-powered resume tailoring with PDF generation
+- **ResumeCreatorAgent**: Claude-powered resume tailoring with configurable leader/builder modes and PDF generation
 - **ResumeCriticAgent**: AI resume analysis with structured feedback
 - **InterviewPrepAgent**: Interview preparation materials and project extraction
 - **ApplicationAgent**: Automated form filling with human-in-the-loop verification
