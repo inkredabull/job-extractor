@@ -666,8 +666,23 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       const fragments = this.loadFragments(fragmentsPath);
       
       // Replace fragment placeholders with mode-specific content
-      Object.entries(fragments).forEach(([key, value]) => {
+      // First, define all possible fragment placeholders
+      const allPlaceholders = [
+        'modeSpecificInstructions',
+        'summaryGuidance', 
+        'rolesSpecificInstructions',
+        'metricsType',
+        'bulletPointGuidance',
+        'verbReplacementSection',
+        'technologiesSection',
+        'skillsSpecificInstructions',
+        'enforcementSection'
+      ];
+      
+      // Replace each placeholder with fragment content or empty string if not found
+      allPlaceholders.forEach(key => {
         const placeholder = `{{${key}}}`;
+        const value = fragments[key] || '';
         promptTemplate = promptTemplate.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
       });
       
@@ -687,6 +702,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       
       // Replace template variables with escaped content
       const prompt = promptTemplate
+        .replace(/{{resumeMode}}/g, this.mode.toUpperCase())
         .replace(/{{maxRoles}}/g, variables.maxRoles.toString())
         .replace(/{{job\.title}}/g, this.escapeForPrompt(variables.job.title))
         .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
@@ -694,6 +710,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
         .replace(/{{recommendationsSection}}/g, variables.recommendationsSection)
         .replace(/{{companyValuesSection}}/g, variables.companyValuesSection);
+      
       
       return prompt;
     } catch (error) {
@@ -877,7 +894,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     
     try {
       // Use pandoc to convert markdown to PDF
-      const pandocCommand = `pandoc "${markdownPath}" -o "${finalPath}" -V geometry:margin=0.5in`;
+      const pandocCommand = `pandoc "${markdownPath}" -o "${finalPath}" -V geometry:margin=0.33in`;
       execSync(pandocCommand, { stdio: 'pipe' });
       
       console.log(`✅ Resume generated: ${finalPath}`);

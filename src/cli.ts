@@ -455,6 +455,7 @@ program
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Force regeneration of tailored content (skip cache)')
+  .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .action(async (jobId: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
@@ -466,7 +467,17 @@ program
       console.log('');
 
       const anthropicConfig = getAnthropicConfig();
-      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens);
+      
+      // Validate mode option
+      if (options.mode && !['leader', 'builder'].includes(options.mode)) {
+        console.error('❌ Error: Mode must be either "leader" or "builder"');
+        process.exit(1);
+      }
+      
+      const mode = (options.mode || 'leader') as 'leader' | 'builder';
+      console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
+      
+      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, 4, mode);
       
       const result = await creator.createResume(jobId, cvFile, options.output, !!options.regen);
       

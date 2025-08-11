@@ -268,14 +268,20 @@ Generate a tailored PDF resume for a specific job posting with two distinct appr
 # Generate a tailored resume for a job (uses cache if available)
 job-extractor resume "4c32e01e"
 
+# Generate resume in builder mode (emphasizes technical work)
+job-extractor resume "4c32e01e" --mode builder
+
+# Generate resume in leader mode (emphasizes management/strategy) - this is the default
+job-extractor resume "4c32e01e" --mode leader
+
 # Force regenerate fresh content (ignores cache)
 job-extractor resume "4c32e01e" --regen
 
 # Specify custom output path
 job-extractor resume "4c32e01e" -o tailored-resume.pdf
 
-# Force regenerate with custom output path
-job-extractor resume "4c32e01e" -o tailored-resume.pdf --regen
+# Combine flags: builder mode with custom output path
+job-extractor resume "4c32e01e" --mode builder -o tailored-resume.pdf --regen
 ```
 
 **Resume Generation Modes:**
@@ -295,7 +301,8 @@ The tool supports two distinct resume generation approaches that can be configur
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
-- `--regen`: Force regenerate tailored content (ignores cached content)
+- `--regen`: Force regenerate tailored content (ignores cached content)  
+- `-m, --mode <mode>`: Resume generation mode - `"leader"` (default, emphasizes management/strategy) or `"builder"` (emphasizes technical work)
 
 **Notes:** 
 - The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
@@ -772,14 +779,17 @@ job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
 # Generate a tailored resume for a specific job (uses cache if available)
 job-extractor resume "a1b2c3d4"
 
+# Generate builder-focused resume (emphasizes technical work)
+job-extractor resume "a1b2c3d4" --mode builder
+
 # Force regenerate fresh content (ignores cache)
 job-extractor resume "a1b2c3d4" --regen
 
 # Generate resume with custom output path
 job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf"
 
-# Generate fresh resume with custom output path
-job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf" --regen
+# Generate builder-focused resume with custom output path
+job-extractor resume "a1b2c3d4" --mode builder -o "resumes/technical-resume.pdf" --regen
 
 # Critique a generated resume for feedback
 job-extractor critique "a1b2c3d4"
