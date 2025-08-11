@@ -168,6 +168,19 @@ npm run build
 
 ### Command Line Interface
 
+**Important Note on npm Scripts:**
+When using `npm run dev` to execute commands, you must use the `--` separator before any command flags to properly pass them to the underlying CLI tool:
+
+```bash
+# Correct: Use -- before flags
+npm run dev -- resume "jobId" --mode builder --regen
+
+# Incorrect: Flags won't be recognized
+npm run dev resume "jobId" --mode builder --regen
+```
+
+This is a standard npm behavior - the `--` tells npm to pass everything after it directly to the script.
+
 #### Job Extraction (with Automatic Scoring)
 
 Extract job information from a URL and automatically score it:
@@ -185,7 +198,7 @@ job-extractor extract "https://example.com/job-posting" --no-score
 # Extract even if competition is too high
 job-extractor extract "https://example.com/job-posting" --force-extract
 
-# Or with npm run dev (note the -- separator)
+# Or with npm run dev (note the -- separator for passing flags)
 npm run dev -- extract "https://example.com/job-posting" --force-extract
 ```
 
@@ -222,7 +235,7 @@ job-extractor create-job
 # Create with company and title information
 job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
 
-# Or with npm run dev (note the -- separator)
+# Or with npm run dev (note the -- separator for passing flags)
 npm run dev -- create-job --company "TechCorp" --title "Senior Software Engineer"
 ```
 
@@ -282,6 +295,9 @@ job-extractor resume "4c32e01e" -o tailored-resume.pdf
 
 # Combine flags: builder mode with custom output path
 job-extractor resume "4c32e01e" --mode builder -o tailored-resume.pdf --regen
+
+# With npm run dev (note the -- separator for passing flags)
+npm run dev -- resume "4c32e01e" --mode builder --regen
 ```
 
 **Resume Generation Modes:**
@@ -790,6 +806,9 @@ job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf"
 
 # Generate builder-focused resume with custom output path
 job-extractor resume "a1b2c3d4" --mode builder -o "resumes/technical-resume.pdf" --regen
+
+# With npm run dev (requires -- separator for flags)
+npm run dev -- resume "a1b2c3d4" --mode builder --regen
 
 # Critique a generated resume for feedback
 job-extractor critique "a1b2c3d4"
@@ -1581,6 +1600,12 @@ MIT License - see LICENSE file for details.
    - `(node:XXXX) ExperimentalWarning: The Fetch API is an experimental feature`
    - This warning appears on older Node.js versions (< 18) and is harmless
    - Consider upgrading to Node.js 18+ to eliminate the warning
+
+7. **Flags not being recognized with npm run dev**
+   - **Problem**: Mode flags like `--mode builder` show default behavior instead
+   - **Cause**: npm requires `--` separator to pass flags to the underlying script
+   - **Solution**: Use `npm run dev -- resume "jobId" --mode builder` instead of `npm run dev resume "jobId" --mode builder`
+   - **Alternative**: Use the compiled binary directly: `job-extractor resume "jobId" --mode builder`
 
 ### Getting Help
 
