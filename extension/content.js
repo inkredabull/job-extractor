@@ -302,6 +302,10 @@ function analyzePageContent() {
       questions.forEach(question => {
         const li = document.createElement('li');
         li.textContent = question;
+        li.classList.add('clickable-question');
+        li.addEventListener('click', function() {
+          populateQuestionInput(question);
+        });
         questionsList.appendChild(li);
       });
       questionsDiv.style.display = 'block';
@@ -380,6 +384,16 @@ function isCommonNonQuestion(text) {
   ];
   
   return nonQuestionPatterns.some(pattern => pattern.test(text));
+}
+
+// Populate question into input field for user review
+function populateQuestionInput(question) {
+  const input = document.getElementById('llm-input');
+  if (input) {
+    input.value = question;
+    input.focus();
+    console.log('Job Extractor: Question populated into input:', question);
+  }
 }
 
 // Generate CV-aware response using local MCP server
