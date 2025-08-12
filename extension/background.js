@@ -42,6 +42,10 @@ async function handleMCPServerCall(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling MCP server call for:', request.args.question);
     
+    // Extract job description if provided
+    const jobDescription = request.args.jobDescription || '';
+    console.log('Job Extractor Background: Job description provided:', jobDescription ? 'Yes' : 'No');
+    
     // Test if local MCP server is running
     const mcpServerRunning = await testMCPServerConnection();
     
@@ -49,7 +53,7 @@ async function handleMCPServerCall(request, sendResponse) {
       console.log('Job Extractor Background: MCP server is running, using real CV data');
       
       // Make request to local MCP server
-      const mcpResponse = await callLocalMCPServer(request.args.question);
+      const mcpResponse = await callLocalMCPServer(request.args.question, jobDescription);
       
       sendResponse({
         success: true,
@@ -75,7 +79,7 @@ STRENGTHS
 * Continuous Learning - Stays current with emerging technologies and industry best practices
 * Collaboration - Works effectively across departments to achieve shared business goals`;
 
-      const cvResponse = generateCVResponse(request.args.question, sampleCV);
+      const cvResponse = generateCVResponse(request.args.question, sampleCV, jobDescription);
       console.warn('Job Extractor Background: Using fallback sample CV data (MCP server not available)');
       
       sendResponse({
@@ -118,16 +122,24 @@ async function testMCPServerConnection() {
 }
 
 // Call local MCP server
-async function callLocalMCPServer(question) {
+async function callLocalMCPServer(question, jobDescription = '') {
   try {
     console.log('Job Extractor Background: Calling MCP server with question:', question);
+    const requestBody = { question: question };
+    
+    // Include job description context if available
+    if (jobDescription.trim()) {
+      requestBody.jobDescription = jobDescription;
+      console.log('Job Extractor Background: Including job description context');
+    }
+    
     const response = await fetch('http://localhost:3000/cv-question', {
       method: 'POST',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ question: question }),
+      body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(15000) // 15 second timeout
     });
     
@@ -150,16 +162,19 @@ async function callLocalMCPServer(question) {
 }
 
 // Generate CV-aware response from parsed CV content
-function generateCVResponse(question, cvContent) {
+function generateCVResponse(question, cvContent, jobDescription = '') {
   const cvData = parseCV(cvContent);
   const questionType = classifyQuestion(question);
   
+  // Add job description context if available
+  const jobContext = jobDescription.trim() ? ` given this job description: "${jobDescription.substring(0, 300)}..."` : '';
+  
   const responses = {
-    experience: () => generateExperienceResponse(cvData),
-    skills: () => generateSkillsResponse(cvData),
-    leadership: () => generateLeadershipResponse(cvData),
-    technical: () => generateTechnicalResponse(cvData),
-    default: () => generateDefaultResponse(cvData, question)
+    experience: () => generateExperienceResponse(cvData, jobContext),
+    skills: () => generateSkillsResponse(cvData, jobContext),
+    leadership: () => generateLeadershipResponse(cvData, jobContext),
+    technical: () => generateTechnicalResponse(cvData, jobContext),
+    default: () => generateDefaultResponse(cvData, question, jobContext)
   };
   
   return responses[questionType]();
@@ -186,32 +201,36 @@ function classifyQuestion(question) {
 }
 
 // Generate experience-focused response
-function generateExperienceResponse(cvData) {
+function generateExperienceResponse(cvData, jobContext = '') {
   const experienceAreas = extractExperienceAreas(cvData.accomplishments);
+  const contextSuffix = jobContext ? `\n\nThis background aligns well${jobContext}` : '';
   
   return `Based on the CV, here are key work experiences:
 
 ${formatBulletList(cvData.accomplishments)}
 
-Strong experience in ${experienceAreas.join(', ')} with measurable business impact.`;
+Strong experience in ${experienceAreas.join(', ')} with measurable business impact.${contextSuffix}`;
 }
 
 // Generate skills-focused response  
-function generateSkillsResponse(cvData) {
+function generateSkillsResponse(cvData, jobContext = '') {
+  const contextSuffix = jobContext ? `\n\nThese skills are particularly relevant${jobContext}` : '';
+  
   return `Core strengths include:
 
 ${formatBulletList(cvData.strengths)}
 
-Excels at combining technical leadership with strong communication and process optimization.`;
+Excels at combining technical leadership with strong communication and process optimization.${contextSuffix}`;
 }
 
 // Generate leadership-focused response
-function generateLeadershipResponse(cvData) {
+function generateLeadershipResponse(cvData, jobContext = '') {
   const leadershipKeywords = ['launched', 'drove', 'delivered', 'led', 'managed'];
   const communicationKeywords = ['leadership', 'communication', 'collaboration'];
   
   const leadershipAccomplishments = filterByKeywords(cvData.accomplishments, leadershipKeywords);
   const leadershipStrengths = filterByKeywords(cvData.strengths, communicationKeywords);
+  const contextSuffix = jobContext ? `\n\nThis leadership experience directly applies${jobContext}` : '';
   
   return `Demonstrates strong leadership through:
 
@@ -219,23 +238,26 @@ function generateLeadershipResponse(cvData) {
 ${formatBulletList(leadershipAccomplishments)}
 
 **Leadership Style:**
-${formatBulletList(leadershipStrengths)}`;
+${formatBulletList(leadershipStrengths)}${contextSuffix}`;
 }
 
 // Generate technical-focused response
-function generateTechnicalResponse(cvData) {
+function generateTechnicalResponse(cvData, jobContext = '') {
   const techKeywords = ['ai', 'data', 'platform', 'technical', 'system', 'application'];
   const techAccomplishments = filterByKeywords(cvData.accomplishments, techKeywords);
+  const contextSuffix = jobContext ? `\n\nThis technical expertise is well-suited${jobContext}` : '';
   
   return `Technical background and achievements:
 
 ${formatBulletList(techAccomplishments.length > 0 ? techAccomplishments : cvData.accomplishments)}
 
-Combines technical depth with business impact and measurable results.`;
+Combines technical depth with business impact and measurable results.${contextSuffix}`;
 }
 
 // Generate comprehensive default response
-function generateDefaultResponse(cvData, question) {
+function generateDefaultResponse(cvData, question, jobContext = '') {
+  const contextSuffix = jobContext ? `\n\nThis expertise is particularly relevant${jobContext}` : '';
+  
   return `Based on the CV:
 
 **Key Accomplishments:**
@@ -244,7 +266,7 @@ ${formatBulletList(cvData.accomplishments)}
 **Core Strengths:**
 ${formatBulletList(cvData.strengths)}
 
-This provides expertise relevant to: "${question}"`;
+This provides expertise relevant to: "${question}"${contextSuffix}`;
 }
 
 // Helper function to format bullet lists consistently

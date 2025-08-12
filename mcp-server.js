@@ -78,13 +78,17 @@ class CVMCPServer {
           },
           {
             name: 'answer_cv_question',
-            description: 'Answer a question about the CV content and work history',
+            description: 'Answer a question about the CV content and work history, optionally with job description context',
             inputSchema: {
               type: 'object',
               properties: {
                 question: {
                   type: 'string',
                   description: 'Question about work experience, skills, accomplishments, or background',
+                },
+                jobDescription: {
+                  type: 'string',
+                  description: 'Job description context to frame the response (optional)',
                 },
               },
               required: ['question'],
@@ -128,7 +132,7 @@ class CVMCPServer {
             return await this.searchCVExperience(args.query);
             
           case 'answer_cv_question':
-            return await this.answerCVQuestion(args.question);
+            return await this.answerCVQuestion(args.question, args.jobDescription);
             
           case 'analyze_job_posting':
             return await this.analyzeJobPosting(args.url, args.pageContent, args.question);
@@ -228,9 +232,9 @@ class CVMCPServer {
     }
   }
 
-  async answerCVQuestion(question) {
+  async answerCVQuestion(question, jobDescription = '') {
     try {
-      console.log('  -> answerCVQuestion called with:', question);
+      console.log('  -> answerCVQuestion called with:', question, jobDescription ? '(with job context)' : '(no job context)');
       const cvContent = await this.readCV();
       console.log('  -> CV content loaded, length:', cvContent.content[0].text.length);
       const content = cvContent.content[0].text;
@@ -239,7 +243,7 @@ class CVMCPServer {
       
       if (this.useLLM && this.anthropic) {
         console.log('  -> Using Claude 3.5 Sonnet for response generation...');
-        response = await this.generateLLMResponse(question, content);
+        response = await this.generateLLMResponse(question, content, jobDescription);
         console.log('  -> Claude response generated, length:', response.length);
       } else {
         // Parse key sections from CV
@@ -254,7 +258,7 @@ class CVMCPServer {
         
         // Generate contextual response based on question
         console.log('  -> Generating pattern-based CV response...');
-        response = this.generateCVResponse(question, sections);
+        response = this.generateCVResponse(question, sections, jobDescription);
         console.log('  -> Pattern-based response generated, length:', response.length);
       }
       
@@ -272,12 +276,20 @@ class CVMCPServer {
     }
   }
   
-  async generateLLMResponse(question, cvContent) {
+  async generateLLMResponse(question, cvContent, jobDescription = '') {
     try {
+      // Build context-aware prompt
+      const jobContextSection = jobDescription.trim() ? `
+
+Job Description Context:
+${jobDescription}
+
+IMPORTANT: Frame your response considering the requirements and vocabulary from this job description. Use similar terminology and emphasize experiences that align with the role.` : '';
+
       const prompt = `You are responding to an interview question as the person whose CV/resume is provided below. Answer in first person voice as if you are this person being interviewed. Be specific and reference actual accomplishments from the CV when relevant.
 
 CV/Resume:
-${cvContent}
+${cvContent}${jobContextSection}
 
 Interview Question: ${question}
 
@@ -619,8 +631,9 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
     }
   }
   
-  generateCVResponse(question, sections) {
+  generateCVResponse(question, sections, jobDescription = '') {
     const lowerQuestion = question.toLowerCase();
+    const jobContext = jobDescription.trim() ? `\n\n**Job Context Alignment:**\nThis aligns with the job requirements: "${jobDescription.substring(0, 150)}..."` : '';
     
     // Technical details/delegation
     if (lowerQuestion.includes('technical details') || lowerQuestion.includes('delegate') || lowerQuestion.includes('involve yourself')) {
@@ -635,26 +648,26 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
       return `I enjoy getting involved in architectural decisions, data modeling, and complex problem-solving challenges. From my experience:\n\n` +
         `**Technical Areas I Dive Into:**\n${techAccomplishments.length > 0 ? techAccomplishments.map(a => `• ${a}`).join('\n') : '• Platform architecture and scalability decisions\n• Data pipeline optimization\n• Performance bottlenecks and system design'}\n\n` +
         `**What I Delegate:**\n• Routine implementation tasks once the approach is clear\n• Unit testing and code reviews (with oversight)\n• Documentation and deployment processes\n\n` +
-        `I believe in being hands-on with the complex technical decisions while empowering my team to own their implementations.`;
+        `I believe in being hands-on with the complex technical decisions while empowering my team to own their implementations.${jobContext}`;
     }
     
     // Experience and accomplishments  
     if (lowerQuestion.includes('experience') || lowerQuestion.includes('work') || lowerQuestion.includes('job')) {
       return `Here are my key accomplishments and experience:\n\n` +
         `**My Key Accomplishments:**\n${sections.accomplishments.map(a => `• ${a}`).join('\n')}\n\n` +
-        `**Experience Details:**\n${sections.experience.length > 0 ? sections.experience.map(e => `• ${e}`).join('\n') : 'See accomplishments above for detailed work history'}`;
+        `**Experience Details:**\n${sections.experience.length > 0 ? sections.experience.map(e => `• ${e}`).join('\n') : 'See accomplishments above for detailed work history'}${jobContext}`;
     }
     
     // Skills and strengths
     if (lowerQuestion.includes('skill') || lowerQuestion.includes('strength') || lowerQuestion.includes('good at')) {
       return `My core strengths include:\n\n` +
-        `${sections.strengths.map(s => `• ${s}`).join('\n')}`;
+        `${sections.strengths.map(s => `• ${s}`).join('\n')}${jobContext}`;
     }
     
     // Accomplishments
     if (lowerQuestion.includes('accomplishment') || lowerQuestion.includes('achievement') || lowerQuestion.includes('success')) {
       return `Here are my key accomplishments:\n\n` +
-        `${sections.accomplishments.map(a => `• ${a}`).join('\n')}`;
+        `${sections.accomplishments.map(a => `• ${a}`).join('\n')}${jobContext}`;
     }
     
     // Leadership
@@ -669,7 +682,7 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
       
       return `My leadership experience includes:\n\n` +
         `**Leadership Accomplishments:**\n${leadership.length > 0 ? leadership.map(l => `• ${l}`).join('\n') : sections.accomplishments.slice(0,3).map(a => `• ${a}`).join('\n')}\n\n` +
-        `**My Leadership Style:**\n${leadershipStrengths.length > 0 ? leadershipStrengths.map(s => `• ${s}`).join('\n') : '• Technical leadership with strong communication\n• Collaborative approach to team management'}`;
+        `**My Leadership Style:**\n${leadershipStrengths.length > 0 ? leadershipStrengths.map(s => `• ${s}`).join('\n') : '• Technical leadership with strong communication\n• Collaborative approach to team management'}${jobContext}`;
     }
     
     // Technical/AI
@@ -680,14 +693,14 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
       );
       
       return `My technical background includes:\n\n` +
-        `${techAccomplishments.length > 0 ? techAccomplishments.map(t => `• ${t}`).join('\n') : sections.accomplishments.map(a => `• ${a}`).join('\n')}`;
+        `${techAccomplishments.length > 0 ? techAccomplishments.map(t => `• ${t}`).join('\n') : sections.accomplishments.map(a => `• ${a}`).join('\n')}${jobContext}`;
     }
     
     // Default response with full context
     return `Based on my background:\n\n` +
       `**My Key Accomplishments:**\n${sections.accomplishments.map(a => `• ${a}`).join('\n')}\n\n` +
       `**My Core Strengths:**\n${sections.strengths.map(s => `• ${s}`).join('\n')}\n\n` +
-      `I'd be happy to elaborate on how this relates to: "${question}"`;
+      `I'd be happy to elaborate on how this relates to: "${question}"${jobContext}`;
   }
 
   async run() {
@@ -736,8 +749,9 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
         req.on('end', async () => {
           console.log(`  -> Full request body received (${body.length} bytes):`, body);
           try {
-            const { question } = JSON.parse(body);
+            const { question, jobDescription } = JSON.parse(body);
             console.log('  -> Parsed question:', question);
+            console.log('  -> Job description provided:', jobDescription ? 'Yes' : 'No');
             if (!question) {
               console.log('  -> ERROR: No question provided');
               res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -746,7 +760,7 @@ IMPORTANT: Keep your response between 200-400 characters. Be concise and focus o
             }
             
             console.log('  -> Processing CV question with answerCVQuestion...');
-            const response = await this.answerCVQuestion(question);
+            const response = await this.answerCVQuestion(question, jobDescription);
             console.log('  -> CV response generated:', response.content[0].text.slice(0, 100) + '...');
             
             const jsonResponse = { 

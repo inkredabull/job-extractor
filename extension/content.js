@@ -1,6 +1,7 @@
 // Job Extractor Assistant - Content Script
 let gutterElement = null;
 let isGutterOpen = false;
+let extractedJobDescription = '';
 
 // Create the right gutter
 function createGutter() {
@@ -14,6 +15,13 @@ function createGutter() {
       <button id="close-gutter">×</button>
     </div>
     <div class="gutter-content">
+      <div class="job-description-section">
+        <h4>📄 Job Description</h4>
+        <p>Auto-extracted job description (editable):</p>
+        <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically...">${extractedJobDescription}</textarea>
+        <button id="refresh-job-description" class="refresh-btn">🔄 Re-extract</button>
+      </div>
+      
       <div class="llm-interface">
         <h4>AI Assistant</h4>
         <p>Ask a question to get AI-powered insights:</p>
@@ -60,10 +68,145 @@ function createGutter() {
     }
   });
   
+  // Add refresh job description functionality
+  document.getElementById('refresh-job-description').addEventListener('click', function() {
+    extractJobDescription();
+    const textarea = document.getElementById('job-description');
+    textarea.value = extractedJobDescription;
+  });
+  
+  // Extract job description automatically when gutter opens
+  extractJobDescription();
+  
   // Analyze page content for questions
   analyzePageContent();
   
   console.log('Job Extractor: Gutter created');
+}
+
+// Extract job description from the current page
+function extractJobDescription() {
+  try {
+    console.log('Job Extractor: Extracting job description from page');
+    
+    // Strategy 1: Look for JSON-LD structured data first (similar to CLI tool)
+    const jsonLdElements = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const element of jsonLdElements) {
+      try {
+        const data = JSON.parse(element.textContent);
+        if (data['@type'] === 'JobPosting' && data.description) {
+          extractedJobDescription = cleanText(data.description);
+          console.log('Job Extractor: Found job description in JSON-LD');
+          return;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    // Strategy 2: Look for common job description patterns
+    const jobDescriptionSelectors = [
+      // Common job site patterns
+      '[data-testid*="job-description"]',
+      '[data-testid*="jobDescription"]',
+      '.job-description',
+      '.job-content',
+      '.job-details',
+      '.job-summary',
+      '.position-description',
+      '.role-description',
+      '#job-description',
+      '#job-content',
+      '#job-details',
+      
+      // Workday patterns
+      '[data-automation-id*="jobPostingDescription"]',
+      '[data-automation-id*="job-description"]',
+      
+      // Greenhouse patterns
+      '#content .section:first-of-type',
+      '.job-post__content',
+      
+      // LinkedIn patterns
+      '.jobs-description-content__text',
+      '.jobs-description__container',
+      
+      // Generic patterns
+      '[class*="job"][class*="description"]',
+      '[class*="position"][class*="description"]',
+      '[id*="job"][id*="description"]'
+    ];
+    
+    for (const selector of jobDescriptionSelectors) {
+      const element = document.querySelector(selector);
+      if (element && element.textContent.trim().length > 100) {
+        extractedJobDescription = cleanText(element.textContent);
+        console.log(`Job Extractor: Found job description using selector: ${selector}`);
+        return;
+      }
+    }
+    
+    // Strategy 3: Look for main content areas and extract the longest text block
+    const mainContentSelectors = ['main', '[role="main"]', '.main-content', '#main-content', '.content'];
+    for (const selector of mainContentSelectors) {
+      const mainElement = document.querySelector(selector);
+      if (mainElement) {
+        const textBlocks = Array.from(mainElement.querySelectorAll('p, div'))
+          .map(el => el.textContent.trim())
+          .filter(text => text.length > 200)
+          .sort((a, b) => b.length - a.length);
+        
+        if (textBlocks.length > 0) {
+          extractedJobDescription = cleanText(textBlocks[0]);
+          console.log('Job Extractor: Found job description in main content area');
+          return;
+        }
+      }
+    }
+    
+    // Strategy 4: Fallback - get the longest paragraph on the page
+    const allParagraphs = Array.from(document.querySelectorAll('p, div'))
+      .filter(el => !el.closest('#job-extractor-gutter')) // Exclude our own content
+      .map(el => el.textContent.trim())
+      .filter(text => text.length > 150 && !isNavigationalText(text))
+      .sort((a, b) => b.length - a.length);
+    
+    if (allParagraphs.length > 0) {
+      extractedJobDescription = cleanText(allParagraphs[0]);
+      console.log('Job Extractor: Found job description using fallback method');
+      return;
+    }
+    
+    // If nothing found, set a helpful message
+    extractedJobDescription = 'No job description could be automatically extracted from this page. Please paste the job description manually.';
+    console.log('Job Extractor: No job description found');
+    
+  } catch (error) {
+    console.error('Job Extractor: Error extracting job description:', error);
+    extractedJobDescription = 'Error extracting job description. Please paste manually.';
+  }
+}
+
+// Clean extracted text
+function cleanText(text) {
+  return text
+    .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
+    .replace(/[\r\n]+/g, '\n') // Normalize line breaks
+    .trim()
+    .substring(0, 2000); // Limit length to avoid overly long descriptions
+}
+
+// Check if text looks like navigation/header/footer content
+function isNavigationalText(text) {
+  const navPatterns = [
+    /^(home|about|contact|login|register|sign in|menu)/i,
+    /^(copyright|privacy|terms|cookies)/i,
+    /^(search|filter|sort by)/i,
+    /^(next|previous|page \d+)/i,
+    /(navigation|breadcrumb|footer|header)/i
+  ];
+  
+  return navPatterns.some(pattern => pattern.test(text)) || text.length < 50;
 }
 
 // Handle LLM query submission
@@ -244,11 +387,18 @@ async function generateCVAwareResponse(query) {
   try {
     console.log('Job Extractor: Requesting CV-aware response for:', query);
     
+    // Get current job description from textarea
+    const jobDescriptionTextarea = document.getElementById('job-description');
+    const jobDescription = jobDescriptionTextarea ? jobDescriptionTextarea.value.trim() : '';
+    
     // Make request to local MCP server (through background script)
     const response = await chrome.runtime.sendMessage({
       action: 'callMCPServer',
       tool: 'answer_cv_question',
-      args: { question: query }
+      args: { 
+        question: query,
+        jobDescription: jobDescription
+      }
     });
     
     console.log('Job Extractor: Background response:', response);

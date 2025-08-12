@@ -894,7 +894,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     
     try {
       // Use pandoc to convert markdown to PDF
-      const pandocCommand = `pandoc "${markdownPath}" -o "${finalPath}" -V geometry:margin=0.5in`;
+      const pandocCommand = `pandoc "${markdownPath}" -o "${finalPath}" -V geometry:margin=0.33in`;
       execSync(pandocCommand, { stdio: 'pipe' });
       
       console.log(`✅ Resume generated: ${finalPath}`);
