@@ -1,6 +1,12 @@
 # Job Extractor
 
-A comprehensive TypeScript CLI tool ecosystem that extracts and scores job information from URLs using AI-powered dual extraction strategies. Features integrated Chrome extension for CV-aware responses, local MCP server for secure data access, and automated application form filling. Built with Commander.js, modern web technologies, and multiple AI models for intelligent job matching and application assistance.
+## High-level
+
+  Job Extractor is an AI-powered career toolkit that transforms how you approach job applications and interview preparation. It automatically extracts and analyzes job postings, generates tailored resumes and cover letters, creates personalized interview stories using the STAR method, and helps you connect with relevant professionals on LinkedIn. The tool learns from your CV to provide contextual career advice and can even auto-fill job applications, making your job search more strategic and efficient.
+
+## Technical details
+
+  Built as a comprehensive TypeScript ecosystem, the tool combines a CLI interface with a Chrome extension for seamless web integration. It leverages multiple AI models through Claude's API for intelligent content generation, includes a local MCP server for secure CV data access, and features dual extraction strategies for reliable job data parsing. The system generates Rich Text Format output for easy document integration, maintains conversation history for iterative improvements, and includes automated LinkedIn outreach capabilities—all orchestrated through Commander.js with modern web technologies.
 
 Table of Contents
 =================
