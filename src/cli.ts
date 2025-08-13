@@ -100,11 +100,26 @@ function escapeRTF(text: string): string {
     .replace(/\n/g, '\\par ');
 }
 
+// Unescape RTF content (convert \\par to \par, etc.)
+function unescapeRTF(content: string): string {
+  return content
+    .replace(/\\\\/g, '\\')  // Convert double backslashes to single
+    .replace(/\\{/g, '{')    // Convert escaped braces
+    .replace(/\\}/g, '}');   // Convert escaped braces
+}
+
 // Copy content to clipboard using pbcopy
 async function copyToClipboard(content: string): Promise<void> {
   try {
+    // Check if content looks like escaped RTF and unescape it
+    let processedContent = content;
+    if (content.includes('\\\\rtf1') || content.includes('\\\\par')) {
+      processedContent = unescapeRTF(content);
+      console.log('📝 Unescaped RTF formatting for proper clipboard copying');
+    }
+    
     // Use pbcopy to copy RTF content to clipboard
-    execSync('pbcopy', { input: content });
+    execSync('pbcopy', { input: processedContent });
   } catch (error) {
     console.warn('⚠️  Failed to copy to clipboard. Content saved to logs instead.');
     throw error;
@@ -899,7 +914,7 @@ program
           // Just output the content without any formatting
           console.log(result.content);
         } else if (result.type === 'focus') {
-          // Special handling for focus stories - convert to RTF and copy to clipboard
+          // Special handling for focus stories - copy RTF to clipboard
           console.log('✅ Focus Story Generation Complete');
           console.log('=' .repeat(50));
           console.log(`📝 Type: FOCUS STORY`);
@@ -912,6 +927,21 @@ program
           }
           
           console.log('📋 Focus story copied to clipboard in Rich Text Format');
+          console.log('💡 Ready to paste into documents, emails, or notes');
+        } else if (result.type === 'about-me') {
+          // Special handling for about-me - copy RTF to clipboard
+          console.log('✅ About Me Generation Complete');
+          console.log('=' .repeat(50));
+          console.log(`📝 Type: ABOUT ME`);
+          console.log(`📊 Character Count: ${result.characterCount}`);
+          console.log('');
+          
+          // Copy RTF content directly to clipboard (LLM now generates RTF format)
+          if (result.content) {
+            await copyToClipboard(result.content);
+          }
+          
+          console.log('📋 About me content copied to clipboard in Rich Text Format');
           console.log('💡 Ready to paste into documents, emails, or notes');
         } else {
           console.log('✅ Interview Material Generation Complete');

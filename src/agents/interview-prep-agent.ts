@@ -241,7 +241,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
         return 'Length: 375-500 characters. Third person. Use first name only. Tell stories about strengths and value.';
         
       case 'about-me':
-        let aboutInstructions = 'Two-level nested bullet list. Informal tone. Max 900 characters. Include desire for small team (5-7 people) and ability to have impact.';
+        let aboutInstructions = 'Rich Text Format (RTF) with two-level nested bullet list. Informal tone. Max 900 characters. Include desire for small team (5-7 people) and ability to have impact.';
         if (options.companyInfo) {
           aboutInstructions += `\n\nInclude: "I'm excited about ${options.companyInfo} because..."`;
         }
@@ -406,9 +406,9 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
       .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
       .trim();
 
-    // For about-me type, convert markdown bullets to unicode
+    // For about-me type, return RTF content directly (no conversion needed)
     if (type === 'about-me') {
-      return this.convertMarkdownToUnicode(cleaned);
+      return cleaned;
     }
 
     // For other types, ensure single paragraph format if needed
