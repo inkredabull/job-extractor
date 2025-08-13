@@ -1584,30 +1584,64 @@ Your task:
 5. **CONNECT TO ROLE**: Explicitly tie the story back to how it demonstrates fit for this specific job and company
 6. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
 
-Please respond in the following format:
+IMPORTANT: Please respond directly in Rich Text Format (RTF) code. Do not use markdown formatting. Use RTF control codes for formatting and nested bullet lists.
 
-**EXECUTIVE SUMMARY:**
-[Create 2-3 bullet points following the format "<IMPACT> over <TIMEFRAME> as <ROLE>". Extract the most compelling achievements from the chosen story's results and present them in this concise format. For example: "• Reduced deployment time by 75% over 18 months as Engineering Manager" or "• Scaled team from 3 to 15 engineers over 2 years as Technical Lead"]
+Please respond in RTF format using the following structure:
 
-**SELECTED LINE ITEM:**
-[Quote the exact bullet point/line item from the CV that was chosen]
+{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+\\par \\li720 \\bullet \\b EXECUTIVE SUMMARY:\\b0
+\\par \\li1080 \\bullet [Create 2-3 bullet points following the format "<IMPACT> over <TIMEFRAME> as <ROLE>"]
+\\par \\li1080 \\bullet [Extract the most compelling achievements from the chosen story's results]
+\\par \\li1080 \\bullet [Example format: "Reduced deployment time by 75% over 18 months as Engineering Manager"]
+\\par \\li0
 
-**STAR METHOD BREAKDOWN:**
-• **Situation**: [Inferred context and background circumstances]
-• **Task**: [Specific responsibility or challenge that needed to be addressed]  
-• **Actions**: [Detailed actions taken, decisions made, and approach used]
-• **Results**: [Complete recap of quantified outcomes, impact, and follow-up effects - expand on the key results mentioned at the beginning]
+\\par \\li720 \\bullet \\b SELECTED LINE ITEM:\\b0
+\\par \\li1080 \\bullet [Quote the exact bullet point/line item from the CV that was chosen]
+\\par \\li0
 
-**COMPANY VALUES ADDRESSED:**
-[List each company value and explain how this story would demonstrate it]
+\\par \\li720 \\bullet \\b STAR METHOD BREAKDOWN:\\b0
+\\par \\li1080 \\bullet \\b Situation:\\b0
+\\par \\li1440 \\bullet [Inferred context and background circumstances]
+\\par \\li1440 \\bullet [Additional situational details if relevant]
+\\par \\li1080 \\bullet \\b Task:\\b0
+\\par \\li1440 \\bullet [Specific responsibility or challenge that needed to be addressed]
+\\par \\li1440 \\bullet [Key objectives or goals that needed to be achieved]
+\\par \\li1080 \\bullet \\b Actions:\\b0
+\\par \\li1440 \\bullet [Detailed actions taken, decisions made, and approach used]
+\\par \\li1440 \\bullet [Break down into specific steps or strategies implemented]
+\\par \\li1440 \\bullet [Include any leadership, collaboration, or technical decisions]
+\\par \\li1080 \\bullet \\b Results:\\b0
+\\par \\li1440 \\bullet [Complete recap of quantified outcomes, impact, and follow-up effects]
+\\par \\li1440 \\bullet [Expand on the key results mentioned in the executive summary]
+\\par \\li1440 \\bullet [Include both immediate and long-term impacts]
+\\par \\li0
 
-**RELEVANCE TO THIS ROLE:**
-[Explicitly connect how this story demonstrates the candidate's fit for this specific job/company - tie the results and approach back to what the role requires and what the company values]
+\\par \\li720 \\bullet \\b COMPANY VALUES ADDRESSED:\\b0
+\\par \\li1080 \\bullet [List each company value and explain how this story would demonstrate it]
+\\par \\li1440 \\bullet [Specific example of how the story shows this value]
+\\par \\li1440 \\bullet [Connection between actions taken and value demonstrated]
+\\par \\li1080 \\bullet [Continue for each relevant company value]
+\\par \\li0
 
-**ALTERNATIVE LINE ITEMS CONSIDERED:**
-1. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
-2. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]  
-3. **"[Quote exact line item]"** - [Brief explanation of why it was considered but not chosen]
+\\par \\li720 \\bullet \\b RELEVANCE TO THIS ROLE:\\b0
+\\par \\li1080 \\bullet [Explicitly connect how this story demonstrates fit for this specific job/company]
+\\par \\li1440 \\bullet [Tie the results and approach back to what the role requires]
+\\par \\li1440 \\bullet [Show alignment with company needs and expectations]
+\\par \\li1440 \\bullet [Highlight transferable skills and experiences]
+\\par \\li0
+
+\\par \\li720 \\bullet \\b ALTERNATIVE LINE ITEMS CONSIDERED:\\b0
+\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
+\\par \\li1440 \\bullet [What made it a strong candidate]
+\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
+\\par \\li1440 \\bullet [Potential value it could have provided]
+\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
+\\par \\li1440 \\bullet [Why the selected story was ultimately better]
+\\par \\li0
+}
 
 Focus on line items that contain quantified achievements, leadership moments, technical innovations, or business impact that can be expanded into compelling interview stories.
 

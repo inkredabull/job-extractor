@@ -14,6 +14,7 @@ import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { execSync } from 'child_process';
 
 // Helper function to find CV file automatically
 async function findCvFile(): Promise<string> {
@@ -37,6 +38,77 @@ async function findCvFile(): Promise<string> {
   }
   
   throw new Error('CV file not found. Please create a cv.txt file in the current directory or specify the path.');
+}
+
+// Convert Markdown-style text to RTF format
+function convertMarkdownToRTF(content: string): string {
+  // RTF header
+  let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}';
+  
+  // Convert content line by line
+  const lines = content.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Handle different markdown elements
+    if (line.startsWith('**') && line.endsWith('**')) {
+      // Bold headers
+      const text = line.slice(2, -2);
+      rtf += `\\par \\b ${escapeRTF(text)}\\b0`;
+    } else if (line.match(/^(\s*)• /)) {
+      // Nested bullet points with indentation
+      const match = line.match(/^(\s*)• (.+)/);
+      if (match) {
+        const indentLevel = Math.floor(match[1].length / 2); // 2 spaces per indent level
+        const text = match[2];
+        const indent = '\\li' + (720 + indentLevel * 360); // 720 twips base + 360 per level
+        rtf += `\\par ${indent} \\bullet ${escapeRTF(text)}\\li0`;
+      }
+    } else if (line.match(/^(\s*)- /)) {
+      // Nested bullet points with dashes and indentation
+      const match = line.match(/^(\s*)- (.+)/);
+      if (match) {
+        const indentLevel = Math.floor(match[1].length / 2); // 2 spaces per indent level
+        const text = match[2];
+        const indent = '\\li' + (720 + indentLevel * 360); // 720 twips base + 360 per level
+        rtf += `\\par ${indent} \\bullet ${escapeRTF(text)}\\li0`;
+      }
+    } else if (line.startsWith('1. ') || line.match(/^\d+\. /)) {
+      // Numbered lists
+      const text = line.replace(/^\d+\. /, '');
+      rtf += `\\par ${escapeRTF(line.match(/^\d+/)?.[0] + '.')} ${escapeRTF(text)}`;
+    } else if (line.trim() === '') {
+      // Empty lines
+      rtf += '\\par';
+    } else {
+      // Regular text
+      rtf += `\\par ${escapeRTF(line)}`;
+    }
+  }
+  
+  rtf += '}';
+  return rtf;
+}
+
+// Escape special RTF characters
+function escapeRTF(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/{/g, '\\{')
+    .replace(/}/g, '\\}')
+    .replace(/\n/g, '\\par ');
+}
+
+// Copy content to clipboard using pbcopy
+async function copyToClipboard(content: string): Promise<void> {
+  try {
+    // Use pbcopy to copy RTF content to clipboard
+    execSync('pbcopy', { input: content });
+  } catch (error) {
+    console.warn('⚠️  Failed to copy to clipboard. Content saved to logs instead.');
+    throw error;
+  }
 }
 
 const program = new Command();
@@ -826,6 +898,21 @@ program
         if (options.content) {
           // Just output the content without any formatting
           console.log(result.content);
+        } else if (result.type === 'focus') {
+          // Special handling for focus stories - convert to RTF and copy to clipboard
+          console.log('✅ Focus Story Generation Complete');
+          console.log('=' .repeat(50));
+          console.log(`📝 Type: FOCUS STORY`);
+          console.log(`📊 Character Count: ${result.characterCount}`);
+          console.log('');
+          
+          // Copy RTF content directly to clipboard (LLM now generates RTF format)
+          if (result.content) {
+            await copyToClipboard(result.content);
+          }
+          
+          console.log('📋 Focus story copied to clipboard in Rich Text Format');
+          console.log('💡 Ready to paste into documents, emails, or notes');
         } else {
           console.log('✅ Interview Material Generation Complete');
           console.log('=' .repeat(50));
