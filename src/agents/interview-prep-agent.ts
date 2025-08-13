@@ -1584,7 +1584,7 @@ Your task:
 5. **CONNECT TO ROLE**: Explicitly tie the story back to how it demonstrates fit for this specific job and company
 6. **PROVIDE ALTERNATIVES**: Include 2-3 alternative line items that were strong candidates
 
-IMPORTANT: Please respond directly in Rich Text Format (RTF) code. Do not use markdown formatting. Use RTF control codes for formatting and nested bullet lists.
+IMPORTANT: Please respond directly in Rich Text Format (RTF) code. Do not use markdown formatting. Use RTF control codes for formatting and nested bullet lists with up to five levels of nesting.
 
 Please respond in RTF format using the following structure:
 
@@ -1602,44 +1602,84 @@ Please respond in RTF format using the following structure:
 \\par \\li720 \\bullet \\b STAR METHOD BREAKDOWN:\\b0
 \\par \\li1080 \\bullet \\b Situation:\\b0
 \\par \\li1440 \\bullet [Inferred context and background circumstances]
+\\par \\li1800 \\bullet [Environmental factors that influenced the situation]
+\\par \\li2160 \\bullet [Organizational context or constraints]
+\\par \\li2520 \\bullet [Specific stakeholders or team dynamics involved]
 \\par \\li1440 \\bullet [Additional situational details if relevant]
 \\par \\li1080 \\bullet \\b Task:\\b0
 \\par \\li1440 \\bullet [Specific responsibility or challenge that needed to be addressed]
+\\par \\li1800 \\bullet [Primary objectives that needed to be achieved]
+\\par \\li2160 \\bullet [Success criteria or metrics for evaluation]
+\\par \\li2520 \\bullet [Timeline constraints or deadlines involved]
 \\par \\li1440 \\bullet [Key objectives or goals that needed to be achieved]
 \\par \\li1080 \\bullet \\b Actions:\\b0
 \\par \\li1440 \\bullet [Detailed actions taken, decisions made, and approach used]
-\\par \\li1440 \\bullet [Break down into specific steps or strategies implemented]
+\\par \\li1800 \\bullet [Phase 1: Initial analysis and planning steps]
+\\par \\li2160 \\bullet [Research conducted or data gathered]
+\\par \\li2520 \\bullet [Stakeholder meetings or alignment activities]
+\\par \\li1800 \\bullet [Phase 2: Implementation and execution steps]
+\\par \\li2160 \\bullet [Technical decisions or architecture choices]
+\\par \\li2520 \\bullet [Team coordination or resource allocation]
+\\par \\li1800 \\bullet [Phase 3: Monitoring and optimization activities]
+\\par \\li2160 \\bullet [Quality assurance or testing procedures]
+\\par \\li2520 \\bullet [Feedback loops or iteration cycles implemented]
 \\par \\li1440 \\bullet [Include any leadership, collaboration, or technical decisions]
 \\par \\li1080 \\bullet \\b Results:\\b0
 \\par \\li1440 \\bullet [Complete recap of quantified outcomes, impact, and follow-up effects]
-\\par \\li1440 \\bullet [Expand on the key results mentioned in the executive summary]
-\\par \\li1440 \\bullet [Include both immediate and long-term impacts]
+\\par \\li1800 \\bullet [Immediate measurable results and metrics]
+\\par \\li2160 \\bullet [Performance improvements or efficiency gains]
+\\par \\li2520 \\bullet [Cost savings or revenue impact if applicable]
+\\par \\li1800 \\bullet [Long-term impact and sustained improvements]
+\\par \\li2160 \\bullet [Team or organizational benefits realized]
+\\par \\li2520 \\bullet [Scalability or replicability of the solution]
+\\par \\li1440 \\bullet [Recognition, feedback, or follow-up opportunities created]
 \\par \\li0
 
 \\par \\li720 \\bullet \\b COMPANY VALUES ADDRESSED:\\b0
-\\par \\li1080 \\bullet [List each company value and explain how this story would demonstrate it]
+\\par \\li1080 \\bullet [Company Value 1: Name and explanation]
 \\par \\li1440 \\bullet [Specific example of how the story shows this value]
+\\par \\li1800 \\bullet [Behavioral demonstration of the value]
+\\par \\li2160 \\bullet [Decision-making alignment with this value]
+\\par \\li2520 \\bullet [Outcomes that reinforce this value]
 \\par \\li1440 \\bullet [Connection between actions taken and value demonstrated]
+\\par \\li1080 \\bullet [Company Value 2: Name and explanation]
+\\par \\li1440 \\bullet [Specific example of how the story shows this value]
+\\par \\li1800 \\bullet [Leadership or collaboration example]
+\\par \\li2160 \\bullet [Problem-solving approach alignment]
 \\par \\li1080 \\bullet [Continue for each relevant company value]
 \\par \\li0
 
 \\par \\li720 \\bullet \\b RELEVANCE TO THIS ROLE:\\b0
 \\par \\li1080 \\bullet [Explicitly connect how this story demonstrates fit for this specific job/company]
 \\par \\li1440 \\bullet [Tie the results and approach back to what the role requires]
+\\par \\li1800 \\bullet [Technical skills demonstrated that match job requirements]
+\\par \\li2160 \\bullet [Leadership capabilities shown that align with role expectations]
+\\par \\li2520 \\bullet [Scale or complexity handled that matches company needs]
 \\par \\li1440 \\bullet [Show alignment with company needs and expectations]
+\\par \\li1800 \\bullet [Cultural fit demonstrated through approach taken]
+\\par \\li2160 \\bullet [Values alignment shown through decision-making]
 \\par \\li1440 \\bullet [Highlight transferable skills and experiences]
+\\par \\li1800 \\bullet [Direct skill transfer to new role responsibilities]
+\\par \\li2160 \\bullet [Adaptability and learning demonstrated]
 \\par \\li0
 
 \\par \\li720 \\bullet \\b ALTERNATIVE LINE ITEMS CONSIDERED:\\b0
-\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1080 \\bullet \\b "[Quote exact line item #1]"\\b0
 \\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
-\\par \\li1440 \\bullet [What made it a strong candidate]
-\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1800 \\bullet [Strengths this story would have demonstrated]
+\\par \\li2160 \\bullet [Company values it could have addressed]
+\\par \\li1800 \\bullet [Limitations compared to the selected story]
+\\par \\li2160 \\bullet [Why the selected story was ultimately better]
+\\par \\li1080 \\bullet \\b "[Quote exact line item #2]"\\b0
 \\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
-\\par \\li1440 \\bullet [Potential value it could have provided]
-\\par \\li1080 \\bullet \\b "[Quote exact line item]"\\b0
+\\par \\li1800 \\bullet [Potential value it could have provided]
+\\par \\li2160 \\bullet [Specific skills or experiences it would have highlighted]
+\\par \\li1800 \\bullet [Gap analysis compared to job requirements]
+\\par \\li1080 \\bullet \\b "[Quote exact line item #3]"\\b0
 \\par \\li1440 \\bullet [Brief explanation of why it was considered but not chosen]
-\\par \\li1440 \\bullet [Why the selected story was ultimately better]
+\\par \\li1800 \\bullet [What made it a strong candidate initially]
+\\par \\li2160 \\bullet [Specific achievements or metrics involved]
+\\par \\li1800 \\bullet [Reasoning for final selection decision]
 \\par \\li0
 }
 
