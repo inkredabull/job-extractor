@@ -1,8 +1,10 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
+import { TealTracker, getTealCredentials } from '../integrations/teal-tracker';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 export class JobExtractorAgent extends BaseAgent {
   constructor(config: AgentConfig) {
@@ -39,41 +41,34 @@ export class JobExtractorAgent extends BaseAgent {
         console.log(`👥 ${applicantInfo.count} applicants detected - competition level: ${applicantInfo.competitionLevel}`);
       }
       
-      // First, try to extract structured data (JSON-LD)
-      const structuredData = WebScraper.extractStructuredData(html);
+      // Extract job data from HTML/structured data
+      const jobData = await this.extractJobDataFromHtml(html, applicantInfo);
       
-      if (structuredData) {
-        console.log('🎯 Using structured data (JSON-LD)');
-        try {
-          const jobData = this.parseStructuredData(structuredData, applicantInfo);
-          return {
-            success: true,
-            data: jobData,
-          };
-        } catch (error) {
-          console.log('⚠️  Structured data parsing failed:', error instanceof Error ? error.message : 'Unknown error');
-          console.log('📄 Falling back to HTML scraping');
-        }
-      } else {
-        // Fallback to HTML scraping if no structured data
-        console.log('📄 Falling back to HTML scraping');
+      // Post to Teal using Puppeteer
+      await this.postToTealViaPuppeteer(jobData, url);
+      
+      // Generate job ID and save locally
+      const jobId = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
+      // Create job-specific subdirectory
+      const jobDir = path.join('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
       }
       
-      // HTML scraping fallback logic
-      const simplifiedHtml = WebScraper.simplifyHtml(html);
+      const logFileName = `job-${timestamp}.json`;
+      const logFilePath = path.join(jobDir, logFileName);
 
-      // Create prompt for LLM
-      const prompt = this.createExtractionPrompt(simplifiedHtml);
-
-      // Get LLM response with higher token limit for job extraction
-      const response = await this.makeOpenAIRequest(prompt, 4000);
-
-      // Parse JSON response
-      const jobData = this.parseJobData(response, applicantInfo);
+      // Save JSON to log file
+      const jobDataWithSource = { ...jobData, source: "extracted" };
+      const jsonOutput = JSON.stringify(jobDataWithSource, null, 2);
+      fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
+      console.log(`✅ Job information logged to ${logFilePath}`);
 
       return {
         success: true,
-        data: jobData,
+        data: jobDataWithSource,
       };
     } catch (error) {
       return {
@@ -775,10 +770,19 @@ Response format: ["term1", "term2", "term3", ...]`;
 
       fs.writeFileSync(filePath, JSON.stringify(emptyJobData, null, 2), 'utf-8');
       
+      // If we have enough data (title, company), post to Teal immediately
+      if (emptyJobData.title && emptyJobData.company) {
+        await this.postToTealViaPuppeteer(emptyJobData as JobListing);
+      }
+      
       console.log(`📁 Created job directory: logs/${jobId}`);
       console.log(`📄 Created empty job file: ${fileName}`);
-      console.log(`✏️  Edit the file to add job details, then run:`);
-      console.log(`   npm run dev extract-description ${jobId}`);
+      
+      if (!emptyJobData.title || !emptyJobData.company) {
+        console.log(`✏️  Edit the file to add missing job details, then run:`);
+        console.log(`   npm run dev post-to-teal ${jobId}`);
+        console.log(`   npm run dev extract-description ${jobId}`);
+      }
       
       return { jobId, filePath };
     } catch (error) {
@@ -859,5 +863,64 @@ Instructions:
 - Focus on what would attract qualified candidates
 
 Return only the synthesized job description text, no additional formatting or commentary.`;
+  }
+
+  private async extractJobDataFromHtml(html: string, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): Promise<JobListing> {
+    // First, try to extract structured data (JSON-LD)
+    const structuredData = WebScraper.extractStructuredData(html);
+    
+    if (structuredData) {
+      console.log('🎯 Using structured data (JSON-LD)');
+      try {
+        return this.parseStructuredData(structuredData, applicantInfo);
+      } catch (error) {
+        console.log('⚠️  Structured data parsing failed:', error instanceof Error ? error.message : 'Unknown error');
+        console.log('📄 Falling back to HTML scraping');
+      }
+    } else {
+      // Fallback to HTML scraping if no structured data
+      console.log('📄 Falling back to HTML scraping');
+    }
+    
+    // HTML scraping fallback logic
+    const simplifiedHtml = WebScraper.simplifyHtml(html);
+
+    // Create prompt for LLM
+    const prompt = this.createExtractionPrompt(simplifiedHtml);
+
+    // Get LLM response with higher token limit for job extraction
+    const response = await this.makeOpenAIRequest(prompt, 4000);
+
+    // Parse JSON response
+    return this.parseJobData(response, applicantInfo);
+  }
+
+  async postToTealViaPuppeteer(jobData: JobListing, url?: string): Promise<void> {
+    try {
+      const credentials = getTealCredentials();
+      if (!credentials) {
+        console.log('⚠️  Teal credentials not found - skipping Teal posting');
+        console.log('   Set TEAL_EMAIL and TEAL_PASSWORD environment variables to enable Teal integration');
+        return;
+      }
+
+      console.log('🔖 Posting job to Teal via Puppeteer...');
+      
+      const tealTracker = new TealTracker(credentials);
+      await tealTracker.initialize();
+      
+      const success = await tealTracker.addJob(jobData, url);
+      
+      if (success) {
+        console.log('✅ Successfully posted job to Teal tracker');
+      } else {
+        console.log('❌ Failed to post job to Teal tracker');
+      }
+      
+      await tealTracker.close();
+      
+    } catch (error) {
+      console.error('❌ Error posting to Teal:', error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 }

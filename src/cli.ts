@@ -461,6 +461,64 @@ program
   });
 
 program
+  .command('post-to-teal')
+  .description('Post an existing job to Teal using Puppeteer')
+  .argument('<jobId>', 'Job ID to post to Teal')
+  .action(async (jobId: string) => {
+    try {
+      console.log('🔖 Posting job to Teal...');
+      console.log(`📊 Job ID: ${jobId}`);
+      console.log('');
+
+      const jobDir = path.join('logs', jobId);
+      
+      // Check if job directory exists
+      try {
+        await fs.access(jobDir);
+      } catch {
+        console.error(`❌ Job directory not found: ${jobDir}`);
+        process.exit(1);
+      }
+
+      // Find the most recent job JSON file
+      const files = await fs.readdir(jobDir);
+      const jobFiles = files
+        .filter(file => file.startsWith('job-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+
+      if (jobFiles.length === 0) {
+        console.error(`❌ No job JSON files found in ${jobDir}`);
+        process.exit(1);
+      }
+
+      const jobFilePath = path.join(jobDir, jobFiles[0]);
+      
+      // Read and parse the job JSON file
+      const jobDataRaw = await fs.readFile(jobFilePath, 'utf-8');
+      const jobData = JSON.parse(jobDataRaw);
+
+      // Validate required fields
+      if (!jobData.title || !jobData.company) {
+        console.error('❌ Job must have title and company to post to Teal');
+        console.error('   Edit the job JSON file to add missing information');
+        process.exit(1);
+      }
+
+      // Post to Teal via Puppeteer
+      const config = getConfig();
+      const agent = new JobExtractorAgent(config);
+      
+      await agent.postToTealViaPuppeteer(jobData, '');
+      console.log('✅ Job posting to Teal completed');
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
   .command('extract-for-eval')
   .description('Extract descriptions from all job directories to data/ and update index.jsonl')
   .action(async () => {
