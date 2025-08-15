@@ -230,14 +230,23 @@ JSON:`;
       // Extract salary if available in structured data
       if (jsonLd.baseSalary || jsonLd.salary) {
         const salaryData = jsonLd.baseSalary || jsonLd.salary;
-        const minValue = salaryData.value?.minValue || salaryData.minValue;
-        const maxValue = salaryData.value?.maxValue || salaryData.maxValue;
+        let minValue = salaryData.value?.minValue || salaryData.minValue;
+        let maxValue = salaryData.value?.maxValue || salaryData.maxValue;
+        let currency = salaryData.currency || 'USD';
+        
+        // Handle number values by converting to formatted strings
+        if (typeof minValue === 'number') {
+          minValue = `$${minValue.toLocaleString()}`;
+        }
+        if (typeof maxValue === 'number') {
+          maxValue = `$${maxValue.toLocaleString()}`;
+        }
         
         if (minValue || maxValue) {
           jobData.salary = {
             min: minValue || '',
             max: maxValue || '',
-            currency: salaryData.currency || 'USD',
+            currency: currency,
           };
           salaryFound = true;
         }
@@ -277,6 +286,32 @@ JSON:`;
     
     if (typeof jobLocation === 'string') return jobLocation;
     
+    // Handle array of locations (common in Ashby)
+    if (Array.isArray(jobLocation)) {
+      const locations = jobLocation.map(loc => {
+        if (loc.address) {
+          const address = loc.address;
+          if (address.addressLocality && address.addressRegion) {
+            return `${address.addressLocality}, ${address.addressRegion}`;
+          }
+          if (address.addressLocality) {
+            return address.addressLocality;
+          }
+          if (address.addressRegion && address.addressCountry) {
+            return `${address.addressRegion}, ${address.addressCountry}`;
+          }
+          if (address.addressCountry) {
+            return address.addressCountry;
+          }
+        }
+        return loc.name || '';
+      }).filter(loc => loc);
+      
+      // Join multiple locations with " or "
+      return locations.length > 0 ? locations.join(' or ') : '';
+    }
+    
+    // Handle single location object
     if (jobLocation.address) {
       const address = jobLocation.address;
       if (address.addressLocality && address.addressRegion) {
