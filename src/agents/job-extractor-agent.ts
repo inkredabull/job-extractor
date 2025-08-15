@@ -44,9 +44,6 @@ export class JobExtractorAgent extends BaseAgent {
       // Extract job data from HTML/structured data
       const jobData = await this.extractJobDataFromHtml(html, applicantInfo);
       
-      // Post to Teal using Puppeteer
-      await this.postToTealViaPuppeteer(jobData, url);
-      
       // Generate job ID and save locally
       const jobId = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
