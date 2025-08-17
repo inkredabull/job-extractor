@@ -15,11 +15,11 @@ function createGutter() {
       <button id="close-gutter">×</button>
     </div>
     <div class="gutter-content">
-      <div class="job-description-section">
-        <h4>📄 Job Description</h4>
-        <p>Auto-extracted job description (editable):</p>
-        <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically...">${extractedJobDescription}</textarea>
-        <button id="refresh-job-description" class="refresh-btn">🔄 Re-extract</button>
+      <div class="extract-section">
+        <h4>🚀 Extract</h4>
+        <p>Extract job information from this page using CLI tool:</p>
+        <button id="extract-job" class="extract-btn">Extract</button>
+        <div id="extract-status" class="extract-status" style="display: none;"></div>
       </div>
       
       <div class="llm-interface">
@@ -49,6 +49,13 @@ function createGutter() {
           <ul id="questions-list"></ul>
         </div>
       </div>
+      
+      <div class="job-description-section">
+        <h4>📄 Job Description</h4>
+        <p>Auto-extracted job description (editable):</p>
+        <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically...">${extractedJobDescription}</textarea>
+        <button id="refresh-job-description" class="refresh-btn">🔄 Re-extract</button>
+      </div>
     </div>
   `;
   
@@ -74,6 +81,9 @@ function createGutter() {
     const textarea = document.getElementById('job-description');
     textarea.value = extractedJobDescription;
   });
+  
+  // Add extract job functionality
+  document.getElementById('extract-job').addEventListener('click', handleExtractJob);
   
   // Extract job description automatically when gutter opens
   extractJobDescription();
@@ -288,6 +298,77 @@ function generateMockResponse(query) {
   }
   
   return responses.default;
+}
+
+// Handle extract job functionality
+async function handleExtractJob() {
+  const extractBtn = document.getElementById('extract-job');
+  const statusDiv = document.getElementById('extract-status');
+  
+  // Show loading state
+  extractBtn.textContent = 'Extracting...';
+  extractBtn.disabled = true;
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<div class="loading">🚀 Running extraction...</div>';
+  statusDiv.className = 'extract-status loading';
+  
+  try {
+    // Send message to background script to execute CLI command
+    const response = await chrome.runtime.sendMessage({
+      action: 'extractJob',
+      url: window.location.href
+    });
+    
+    if (response.success) {
+      statusDiv.innerHTML = `
+        <div class="success-message">
+          <span class="status-indicator success">✓</span>
+          <strong>Success!</strong> Job extracted successfully
+          <br><small>Job ID: ${response.jobId}</small>
+          <br><small>Saved to: ${response.filePath}</small>
+        </div>
+      `;
+      statusDiv.className = 'extract-status success';
+      
+      // Update the job description textarea if data is available
+      if (response.jobData && response.jobData.description) {
+        const textarea = document.getElementById('job-description');
+        textarea.value = response.jobData.description;
+        extractedJobDescription = response.jobData.description;
+      }
+      
+    } else {
+      statusDiv.innerHTML = `
+        <div class="error-message">
+          <span class="status-indicator error">✗</span>
+          <strong>Error:</strong> ${response.error || 'Extraction failed'}
+        </div>
+      `;
+      statusDiv.className = 'extract-status error';
+    }
+    
+  } catch (error) {
+    statusDiv.innerHTML = `
+      <div class="error-message">
+        <span class="status-indicator error">✗</span>
+        <strong>Error:</strong> Failed to execute extraction
+        <br><small>${error.message}</small>
+      </div>
+    `;
+    statusDiv.className = 'extract-status error';
+    console.error('Job Extractor: Extract job failed', error);
+  }
+  
+  // Reset button state
+  extractBtn.textContent = 'Extract';
+  extractBtn.disabled = false;
+  
+  // Hide status after 5 seconds if successful
+  if (statusDiv.className.includes('success')) {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 5000);
+  }
 }
 
 // Analyze page content for questions

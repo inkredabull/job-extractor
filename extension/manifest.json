@@ -9,10 +9,10 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "http://localhost:3001/*"
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Job Extractor Assistant"
   },
   "content_scripts": [

@@ -18,10 +18,17 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     this.mode = mode;
   }
 
-  async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true): Promise<ResumeResult> {
+  async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true, generate: boolean | string = false): Promise<ResumeResult> {
     try {
       // Load job data
-      const jobData = this.loadJobData(jobId);
+      let jobData = this.loadJobData(jobId);
+      
+      // If generate flag is provided, check if we need to generate job description
+      if (generate !== false && (!jobData.description || jobData.description.trim() === '' || this.isGenericDescription(jobData.description))) {
+        console.log('🤖 Generating job description from company information...');
+        const companyUrl = typeof generate === 'string' ? generate : undefined;
+        jobData = await this.generateJobDescription(jobData, jobId, companyUrl);
+      }
       
       // Check if this is the first time creating a resume or if we should regenerate
       const isFirstGeneration = this.isFirstGeneration(jobId);
@@ -986,6 +993,133 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       }
     } catch (error) {
       console.warn(`⚠️  Failed to run auto-critique for job ${jobId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private isGenericDescription(description: string): boolean {
+    // Check if the description contains generic placeholder text
+    const genericPhrases = [
+      'We are seeking a talented',
+      'Tech Company Inc.',
+      'Software Engineer to join our team',
+      'competitive salary, health insurance, and flexible work hours',
+      'Bachelor\'s degree in Computer Science, proficiency in Java and Python'
+    ];
+    
+    return genericPhrases.some(phrase => description.includes(phrase));
+  }
+
+  private async generateJobDescription(jobData: JobListing, jobId: string, companyUrl?: string): Promise<JobListing> {
+    try {
+      // Fetch company information if URL is provided
+      let companyInfo = '';
+      
+      if (companyUrl) {
+        try {
+          console.log(`🌐 Fetching company information from: ${companyUrl}`);
+          companyInfo = await this.fetchCompanyInfo(companyUrl);
+        } catch (error) {
+          console.log(`⚠️  Could not fetch company info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          companyInfo = `Information about ${jobData.company}`;
+        }
+      } else {
+        console.log(`📋 No company URL provided, generating with basic company information`);
+        companyInfo = `Information about ${jobData.company}`;
+      }
+
+      const prompt = `You are a professional job description generator. Based on the limited information provided, create a realistic and detailed job description that someone with this job title would likely have at this company.
+
+**Job Information:**
+- Title: ${jobData.title}
+- Company: ${jobData.company}
+- Location: ${jobData.location || 'Not specified'}
+
+**Company Background:**
+${companyInfo || `${jobData.company} is a company in the technology/business sector.`}
+
+**Instructions:**
+Create a comprehensive job description that includes:
+1. Brief company overview (if not already covered above)
+2. Role summary and key objectives
+3. Primary responsibilities (5-8 bullet points)
+4. Required qualifications and skills
+5. Preferred qualifications
+6. What the person will accomplish in this role
+7. Growth opportunities
+8. Benefits (general industry-standard benefits)
+
+Make this specific to the job title "${jobData.title}" and realistic for what someone in this role would do at ${jobData.company}. The description should be professional, detailed, and sound like it came from the company's actual HR department.
+
+Do not include salary information. Focus on making this sound authentic and role-appropriate.
+
+Return ONLY the job description text, no additional formatting or commentary.`;
+
+      console.log('🤖 Generating job description with AI...');
+      const generatedDescription = await this.makeClaudeRequest(prompt);
+      
+      // Update the job data
+      const updatedJobData = {
+        ...jobData,
+        description: generatedDescription.trim()
+      };
+      
+      // Save the updated job data back to the job file
+      this.saveUpdatedJobData(jobId, updatedJobData);
+      
+      console.log('✅ Job description generated and saved');
+      return updatedJobData;
+      
+    } catch (error) {
+      console.warn(`⚠️  Failed to generate job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return jobData; // Return original job data if generation fails
+    }
+  }
+
+
+  private async fetchCompanyInfo(url: string): Promise<string> {
+    try {
+      // Import WebScraper dynamically to avoid circular dependencies
+      const { WebScraper } = require('../utils/web-scraper');
+      
+      const html = await WebScraper.fetchHtml(url);
+      const simplifiedHtml = WebScraper.simplifyHtml(html);
+      
+      // Use AI to extract key company information
+      const prompt = `Extract key company information from the following website content. Focus on:
+- Company mission and values
+- Products or services offered  
+- Company size and stage (startup, established, etc.)
+- Industry and market focus
+- Culture and work environment
+
+Provide a concise 2-3 paragraph summary that would be useful for understanding what this company does and what it would be like to work there.
+
+Website content:
+${simplifiedHtml.slice(0, 8000)}...`;
+
+      const companyInfo = await this.makeClaudeRequest(prompt);
+      return companyInfo.trim();
+      
+    } catch (error) {
+      throw new Error(`Failed to fetch company information: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private saveUpdatedJobData(jobId: string, jobData: JobListing): void {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `job-${timestamp}.json`;
+      const filePath = path.join(jobDir, fileName);
+      
+      const updatedJobData = { ...jobData, source: 'generated' } as JobListing & { source: string };
+      const jsonOutput = JSON.stringify(updatedJobData, null, 2);
+      
+      fs.writeFileSync(filePath, jsonOutput, 'utf-8');
+      console.log(`📄 Updated job data saved to: ${fileName}`);
+      
+    } catch (error) {
+      console.warn(`⚠️  Failed to save updated job data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

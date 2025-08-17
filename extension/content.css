@@ -165,6 +165,7 @@ html.job-extractor-gutter-open {
   background: white;
   border-radius: 8px;
   padding: 20px;
+  margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -184,6 +185,9 @@ html.job-extractor-gutter-open {
 
 .input-section {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 #llm-input {
@@ -194,7 +198,6 @@ html.job-extractor-gutter-open {
   font-size: 14px;
   font-family: inherit;
   height: 44px;
-  margin-bottom: 12px;
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
@@ -300,6 +303,7 @@ html.job-extractor-gutter-open {
 
 .current-url {
   margin-top: 20px;
+  margin-bottom: 16px;
   padding: 12px;
   background: #f5f5f5;
   border-radius: 4px;
@@ -308,6 +312,8 @@ html.job-extractor-gutter-open {
 
 .current-url strong {
   color: #333;
+  display: block;
+  margin-bottom: 4px;
 }
 
 #current-url-display {
@@ -400,4 +406,105 @@ html.job-extractor-gutter-open {
   body.job-extractor-gutter-open {
     width: 0% !important;
   }
+}
+
+/* Extract Section Styles */
+.extract-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.extract-section h4 {
+  margin: 0 0 8px 0;
+  color: #1a73e8;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.extract-section p {
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+  color: #666;
+  font-size: 14px;
+}
+
+.extract-btn {
+  background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.extract-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1557b0 0%, #0f4c75 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+.extract-btn:active:not(:disabled) {
+  transform: translateY(0px);
+  box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
+}
+
+.extract-btn:disabled {
+  background: linear-gradient(135deg, #cccccc 0%, #999999 100%);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.extract-status {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.extract-status.loading {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.extract-status.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.extract-status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.extract-status .loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extract-status .success-message,
+.extract-status .error-message {
+  display: block;
+}
+
+.extract-status small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
 }

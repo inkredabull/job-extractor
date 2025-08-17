@@ -15,7 +15,8 @@
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist",
     "mcp-server": "node mcp-server.js",
-    "mcp-server:llm": "node mcp-server.js --llm"
+    "mcp-server:llm": "node mcp-server.js --llm",
+    "cli-server": "node extension/cli-server.js"
   },
   "keywords": [
     "job",
@@ -34,7 +35,9 @@
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "commander": "^11.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "openai": "^4.24.0",
     "puppeteer": "^21.11.0"
   },

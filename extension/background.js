@@ -16,8 +16,37 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Handle extension icon click
 chrome.action.onClicked.addListener((tab) => {
-  // The popup will handle the interaction, but we can add additional logic here if needed
   console.log('Extension icon clicked for tab:', tab.url);
+  
+  // Send message to content script to toggle the assistant panel
+  chrome.tabs.sendMessage(tab.id, {action: 'toggleGutter'}, function(response) {
+    if (chrome.runtime.lastError) {
+      console.log('Content script not found, injecting it...');
+      // Content script not ready, inject it manually
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      }, () => {
+        // Wait a moment for script to initialize, then try again
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, {action: 'toggleGutter'}, function(response) {
+            if (response?.success) {
+              console.log('Panel toggled successfully:', response.isOpen ? 'opened' : 'closed');
+            } else {
+              console.error('Failed to toggle panel after injection');
+            }
+          });
+        }, 300);
+      });
+      return;
+    }
+    
+    if (response?.success) {
+      console.log('Panel toggled successfully:', response.isOpen ? 'opened' : 'closed');
+    } else {
+      console.error('Failed to toggle panel');
+    }
+  });
 });
 
 // Message handling for future communication between components
@@ -30,6 +59,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
     case 'callMCPServer':
       handleMCPServerCall(request, sendResponse);
+      return true; // Keep message channel open for async response
+      
+    case 'extractJob':
+      handleExtractJob(request, sendResponse);
       return true; // Keep message channel open for async response
       
     default:
@@ -335,6 +368,78 @@ function extractExperienceAreas(accomplishments) {
   });
   
   return Array.from(areas);
+}
+
+// Handle extract job CLI execution
+async function handleExtractJob(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Handling extract job request for URL:', request.url);
+    
+    // Make request to local CLI server to execute extract command
+    const extractResponse = await callLocalCLIServer(request.url);
+    
+    sendResponse({
+      success: true,
+      jobId: extractResponse.jobId,
+      filePath: extractResponse.filePath,
+      jobData: extractResponse.jobData
+    });
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Extract job failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call local CLI server to execute extract command
+async function callLocalCLIServer(url) {
+  try {
+    console.log('Job Extractor Background: Calling CLI server for extraction');
+    
+    const response = await fetch('http://localhost:3001/extract', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: url }),
+      signal: AbortSignal.timeout(60000) // 60 second timeout for extraction
+    });
+    
+    console.log('Job Extractor Background: CLI server response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`CLI server responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Job Extractor Background: CLI server response data:', data);
+    
+    if (!data.success) {
+      throw new Error(data.error || 'CLI extraction failed');
+    }
+    
+    return {
+      jobId: data.jobId,
+      filePath: data.filePath,
+      jobData: data.jobData
+    };
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to call CLI server:', error);
+    
+    // Provide a helpful error message
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      throw new Error('Extraction timed out - job sites may take a while to process');
+    } else if (error.message.includes('fetch')) {
+      throw new Error('Could not connect to CLI server. Make sure to run: npm run cli-server');
+    } else {
+      throw error;
+    }
+  }
 }
 
 console.log('Job Extractor Assistant: Background script loaded');

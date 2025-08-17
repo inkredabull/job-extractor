@@ -601,6 +601,8 @@ program
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Force regeneration of tailored content (skip cache)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
+  .option('--generate', 'Generate a detailed job description if missing or generic')
+  .option('--company-url <url>', 'Company URL to use for generating job description context')
   .action(async (jobId: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
@@ -624,7 +626,16 @@ program
       
       const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, 4, mode);
       
-      const result = await creator.createResume(jobId, cvFile, options.output, !!options.regen);
+      // Show generate mode if enabled
+      if (options.generate) {
+        console.log('🤖 Job description generation enabled');
+        if (options.companyUrl) {
+          console.log(`🌐 Using company URL: ${options.companyUrl}`);
+        }
+      }
+      
+      const generateParam = options.generate ? (options.companyUrl || true) : false;
+      const result = await creator.createResume(jobId, cvFile, options.output, !!options.regen, generateParam);
       
       if (result.success) {
         console.log('✅ Resume Generation Complete');

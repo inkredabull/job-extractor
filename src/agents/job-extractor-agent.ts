@@ -802,19 +802,14 @@ Response format: ["term1", "term2", "term3", ...]`;
 
       fs.writeFileSync(filePath, JSON.stringify(emptyJobData, null, 2), 'utf-8');
       
-      // If we have enough data (title, company), post to Teal immediately
-      if (emptyJobData.title && emptyJobData.company) {
-        await this.postToTealViaPuppeteer(emptyJobData as JobListing);
-      }
-      
       console.log(`📁 Created job directory: logs/${jobId}`);
       console.log(`📄 Created empty job file: ${fileName}`);
       
-      if (!emptyJobData.title || !emptyJobData.company) {
-        console.log(`✏️  Edit the file to add missing job details, then run:`);
-        console.log(`   npm run dev post-to-teal ${jobId}`);
-        console.log(`   npm run dev extract-description ${jobId}`);
-      }
+      console.log(`📝 Next steps:`);
+      console.log(`1. Edit the JSON file to add any missing job details`);
+      console.log(`2. Run: npm run dev post-to-teal ${jobId} (if you want to add to Teal)`);
+      console.log(`3. Run: npm run dev extract-description ${jobId}`);
+      console.log(`4. Run: npm run dev score ${jobId}`);
       
       return { jobId, filePath };
     } catch (error) {

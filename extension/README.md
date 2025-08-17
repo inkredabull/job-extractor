@@ -12,18 +12,29 @@ A Chrome extension companion for the Job Extractor CLI tool that provides a righ
 
 ## Installation (Developer Mode)
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top right corner
-3. Click "Load unpacked" and select the `extension` directory
-4. The extension will appear in your extensions toolbar
+1. Install dependencies (if not already installed):
+   ```bash
+   npm install
+   ```
+
+2. Start the CLI server (required for Extract functionality):
+   ```bash
+   npm run cli-server
+   ```
+   This runs a local server on http://localhost:3001 that executes CLI commands.
+
+3. Open Chrome and navigate to `chrome://extensions/`
+4. Enable "Developer mode" in the top right corner
+5. Click "Load unpacked" and select the `extension` directory
+6. The extension will appear in your extensions toolbar
 
 ## Usage
 
 ### Opening/Closing the Panel
 
-**Method 1: Extension Popup**
+**Method 1: Browser Icon Click**
 - Click the 🎯 Job Extractor Assistant icon in your browser toolbar
-- Click "Open Assistant Panel" or "Close Assistant Panel"
+- The panel will toggle open/closed directly (no popup required)
 
 **Method 2: Keyboard Shortcut**
 - Press `Ctrl+Shift+J` (Windows/Linux) or `Cmd+Shift+J` (Mac)
@@ -34,8 +45,12 @@ A Chrome extension companion for the Job Extractor CLI tool that provides a righ
 
 ### Current Features
 
-- **Welcome Message**: Displays "Hello World!" and introduction
-- **Feature Preview**: Shows upcoming functionality
+- **Extract Section**: One-click job extraction using the CLI tool
+  - Click "Extract" button to run `npm run dev extract` on current URL
+  - Shows real-time extraction status and results
+  - Automatically populates job description when successful
+- **AI Assistant**: Interactive Q&A with CV-aware responses
+- **Job Description**: Auto-extracted and editable job description
 - **Current URL Display**: Shows the URL of the current page
 - **Responsive Layout**: Panel width adjusts based on screen size:
   - Large screens (>1200px): 33% width
@@ -49,11 +64,11 @@ A Chrome extension companion for the Job Extractor CLI tool that provides a righ
 ```
 extension/
 ├── manifest.json       # Extension manifest (Manifest V3)
-├── popup.html         # Popup interface
-├── popup.js          # Popup functionality
 ├── content.js        # Content script (main functionality)
 ├── content.css       # Styling for the gutter panel
 ├── background.js     # Background service worker
+├── popup.html.unused # Former popup interface (unused)
+├── popup.js.unused   # Former popup functionality (unused)
 ├── icons/            # Extension icons
 │   ├── icon16.svg
 │   ├── icon48.svg
@@ -68,9 +83,9 @@ extension/
 - Handles show/hide animations
 - Listens for messages from popup and keyboard shortcuts
 
-**Popup (`popup.html/js`)**
-- Provides browser toolbar interface
-- Communicates with content script to control panel state
+**Browser Action**
+- Clicking the extension icon directly toggles the panel
+- No popup interface required - streamlined user experience
 
 **Background Script (`background.js`)**
 - Handles extension installation and settings
