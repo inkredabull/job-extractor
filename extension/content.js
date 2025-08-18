@@ -50,11 +50,46 @@ function createGutter() {
         </div>
       </div>
       
-      <div class="job-description-section">
-        <h4>📄 Job Description</h4>
-        <p>Auto-extracted job description (editable):</p>
-        <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically...">${extractedJobDescription}</textarea>
-        <button id="refresh-job-description" class="refresh-btn">🔄 Re-extract</button>
+      <div class="teal-tracking-section">
+        <h4>🔖 Extract & Track</h4>
+        <p>Extract job data and track in Teal job tracker:</p>
+        <button id="track-in-teal" class="track-btn">Extract & Track</button>
+        <div id="teal-status" class="teal-status" style="display: none;"></div>
+      </div>
+      
+      <div class="job-information-section">
+        <h4>📄 Job Information</h4>
+        <p>Auto-extracted job details (editable):</p>
+        
+        <div class="form-field">
+          <label for="job-title">Job Title:</label>
+          <input type="text" id="job-title" class="job-input" placeholder="Job title will be extracted automatically...">
+        </div>
+        
+        <div class="form-field">
+          <label for="company-name">Company:</label>
+          <input type="text" id="company-name" class="job-input" placeholder="Company name will be extracted automatically...">
+        </div>
+        
+        <div class="form-field">
+          <label for="job-location">Location:</label>
+          <input type="text" id="job-location" class="job-input" placeholder="Job location will be extracted automatically...">
+        </div>
+        
+        <div class="form-field">
+          <label for="job-url">Job URL:</label>
+          <input type="text" id="job-url" class="job-input" placeholder="Current page URL">
+        </div>
+        
+        <div class="form-field">
+          <label for="job-description">Description:</label>
+          <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically..."></textarea>
+        </div>
+        
+        <div class="button-group">
+          <button id="refresh-job-info" class="refresh-btn small">🔄 Re-extract</button>
+          <button id="track-job-info" class="track-btn">🔖 Track in Teal</button>
+        </div>
       </div>
     </div>
   `;
@@ -75,23 +110,256 @@ function createGutter() {
     }
   });
   
-  // Add refresh job description functionality
-  document.getElementById('refresh-job-description').addEventListener('click', function() {
-    extractJobDescription();
-    const textarea = document.getElementById('job-description');
-    textarea.value = extractedJobDescription;
+  // Add re-extract job information functionality
+  document.getElementById('refresh-job-info').addEventListener('click', function() {
+    extractJobInformation();
   });
+  
+  // Add track job from form fields functionality
+  document.getElementById('track-job-info').addEventListener('click', handleTrackFromForm);
   
   // Add extract job functionality
   document.getElementById('extract-job').addEventListener('click', handleExtractJob);
   
-  // Extract job description automatically when gutter opens
-  extractJobDescription();
+  // Add Teal tracking functionality
+  document.getElementById('track-in-teal').addEventListener('click', handleTealTracking);
+  
+  // Extract job information automatically when gutter opens (with slight delay for DOM)
+  setTimeout(() => {
+    extractJobInformation();
+  }, 3000);
   
   // Analyze page content for questions
   analyzePageContent();
   
   console.log('Job Extractor: Gutter created');
+}
+
+// Extract comprehensive job information from the current page
+function extractJobInformation() {
+  console.log('🔍 Job Extractor: Starting comprehensive job information extraction');
+  console.log('🔍 Current page URL:', window.location.href);
+  console.log('🔍 Page title:', document.title);
+  
+  // Debug: Check what H1 elements exist
+  const h1Elements = document.querySelectorAll('h1');
+  console.log('🔍 Found H1 elements:', Array.from(h1Elements).map(el => el.textContent?.trim()));
+  
+  // Debug: Check what elements have "job" or "title" in their attributes
+  const jobElements = document.querySelectorAll('[class*="job"], [data-testid*="job"], [class*="title"]');
+  console.log('🔍 Found job-related elements:', jobElements.length);
+  
+  // Extract job title
+  const jobTitle = extractJobTitle();
+  const titleField = document.getElementById('job-title');
+  if (titleField) {
+    titleField.value = jobTitle;
+    titleField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  
+  // Extract company name
+  const companyName = extractCompanyName();
+  const companyField = document.getElementById('company-name');
+  if (companyField) {
+    companyField.value = companyName;
+    companyField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  
+  // Extract location
+  const location = extractJobLocation();
+  const locationField = document.getElementById('job-location');
+  if (locationField) {
+    // Only set value if it's actually visible text
+    const cleanedLocation = location && location.trim().length > 0 ? location : '';
+    locationField.value = cleanedLocation;
+    locationField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  
+  // Extract job description
+  extractJobDescription();
+  const descriptionField = document.getElementById('job-description');
+  if (descriptionField) descriptionField.value = extractedJobDescription;
+  
+  // Set the current URL
+  const urlField = document.getElementById('job-url');
+  if (urlField) urlField.value = window.location.href;
+  
+  console.log('Job Extractor: Job information extracted:', {
+    title: jobTitle,
+    company: companyName,
+    location: location,
+    url: window.location.href,
+    hasDescription: extractedJobDescription.length > 0
+  });
+  
+  // Debug: Check if fields exist and were populated
+  console.log('Job Extractor: Field population check:', {
+    titleField: !!document.getElementById('job-title'),
+    titleValue: document.getElementById('job-title')?.value,
+    companyField: !!document.getElementById('company-name'),
+    companyValue: document.getElementById('company-name')?.value,
+    locationField: !!document.getElementById('job-location'),
+    locationValue: document.getElementById('job-location')?.value,
+    urlField: !!document.getElementById('job-url'),
+    urlValue: document.getElementById('job-url')?.value
+  });
+}
+
+// Extract job title from the current page
+function extractJobTitle() {
+  const titleSelectors = [
+    'h1[data-testid*="job"]',
+    'h1[data-testid*="title"]',
+    '[data-testid*="job-title"]',
+    '[data-testid*="jobTitle"]',
+    '.job-title',
+    '.position-title',
+    '.role-title',
+    'h1:first-of-type',
+    '.job-header h1',
+    '.job-post-title',
+    '[class*="job"][class*="title"]',
+    '[data-automation-id*="title"]'
+  ];
+  
+  for (const selector of titleSelectors) {
+    const element = document.querySelector(selector);
+    if (element && element.textContent.trim()) {
+      return cleanText(element.textContent);
+    }
+  }
+  
+  // Fallback: try to extract from page title
+  const pageTitle = document.title.split('|')[0].split('-')[0].split('at')[0].trim();
+  if (pageTitle && pageTitle.length > 3) {
+    return pageTitle;
+  }
+  
+  return '';
+}
+
+// Extract company name from the current page
+function extractCompanyName() {
+  const companySelectors = [
+    '[data-testid*="company"]',
+    '.company-name',
+    '.employer-name',
+    '.job-company',
+    '[class*="company"][class*="name"]',
+    '[data-automation-id*="company"]',
+    '.company',
+    '[class*="employer"]'
+  ];
+  
+  for (const selector of companySelectors) {
+    const element = document.querySelector(selector);
+    if (element && element.textContent.trim()) {
+      return cleanText(element.textContent);
+    }
+  }
+  
+  // Linear/Ashby specific: Check for company in URL or page structure
+  if (window.location.href.includes('linear.app/careers')) {
+    return 'Linear';
+  }
+  
+  // Check for company logo or branding elements
+  const logoSelectors = ['[alt*="logo" i]', '[class*="logo"]', 'img[src*="logo"]'];
+  for (const selector of logoSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const alt = element.getAttribute('alt');
+      if (alt && alt.toLowerCase().includes('logo')) {
+        return alt.replace(/logo/gi, '').trim();
+      }
+    }
+  }
+  
+  // Fallback: try to extract from page title or meta tags
+  const metaCompany = document.querySelector('meta[property="og:site_name"]');
+  if (metaCompany && metaCompany.content) {
+    return metaCompany.content;
+  }
+  
+  // Try extracting from page title (after "at")
+  const titleParts = document.title.split(' at ');
+  if (titleParts.length > 1) {
+    return titleParts[1].split('|')[0].split('-')[0].trim();
+  }
+  
+  // Try extracting from URL subdomain
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  if (parts.length >= 2 && parts[0] !== 'www') {
+    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  }
+  
+  return '';
+}
+
+// Extract job location from the current page
+function extractJobLocation() {
+  const locationSelectors = [
+    '[data-testid*="location"]',
+    '.job-location',
+    '.location',
+    '[class*="location"]',
+    '[data-automation-id*="location"]',
+    '.job-info .location',
+    '[class*="job"][class*="location"]'
+  ];
+  
+  for (const selector of locationSelectors) {
+    const element = document.querySelector(selector);
+    if (element && element.textContent.trim()) {
+      const cleaned = cleanText(element.textContent);
+      if (cleaned && cleaned.length > 0) {
+        return cleaned;
+      }
+    }
+  }
+  
+  // Look for common location text patterns
+  const textContent = document.body.textContent || '';
+  const locationPatterns = [
+    /(?:Location|Based in|Office|Work from):\s*([^\.]+)/i,
+    /(Remote|Hybrid|On-site)\s*[-,]?\s*([A-Za-z\s,]+)/i,
+    /(San Francisco|New York|London|Berlin|Remote|Hybrid)/i
+  ];
+  
+  for (const pattern of locationPatterns) {
+    const match = textContent.match(pattern);
+    if (match) {
+      const locationText = cleanText(match[1] || match[0]);
+      if (locationText && locationText.length > 0 && locationText.length < 100) {
+        return locationText;
+      }
+    }
+  }
+  
+  // Check for specific text content that might indicate location
+  const allText = Array.from(document.querySelectorAll('*'))
+    .map(el => el.textContent?.trim())
+    .filter(text => text && text.length < 50 && text.length > 2);
+    
+  const locationKeywords = ['Remote', 'Hybrid', 'San Francisco', 'New York', 'London', 'Berlin', 'Austin', 'Seattle', 'Boston'];
+  
+  for (const keyword of locationKeywords) {
+    const found = allText.find(text => 
+      text.includes(keyword) && 
+      !text.includes('Experience') && 
+      !text.includes('Requirements') &&
+      !text.includes('Skills')
+    );
+    if (found) {
+      const cleaned = cleanText(found);
+      if (cleaned && cleaned.length > 0 && cleaned.length < 100) {
+        return cleaned;
+      }
+    }
+  }
+  
+  return '';
 }
 
 // Extract job description from the current page
@@ -199,9 +467,17 @@ function extractJobDescription() {
 
 // Clean extracted text
 function cleanText(text) {
+  if (!text) return '';
+  
   return text
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace &amp; with &
+    .replace(/&lt;/g, '<') // Replace &lt; with <
+    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/[\r\n\t]+/g, ' ') // Replace line breaks and tabs with space
     .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
-    .replace(/[\r\n]+/g, '\n') // Normalize line breaks
     .trim()
     .substring(0, 2000); // Limit length to avoid overly long descriptions
 }
@@ -298,6 +574,149 @@ function generateMockResponse(query) {
   }
   
   return responses.default;
+}
+
+// Handle Teal tracking functionality
+async function handleTealTracking() {
+  const trackBtn = document.getElementById('track-in-teal');
+  const statusDiv = document.getElementById('teal-status');
+  
+  // Show loading state
+  trackBtn.textContent = 'Extracting...';
+  trackBtn.disabled = true;
+  statusDiv.style.display = 'block';
+  statusDiv.innerHTML = '<div class="loading">🚀 Extracting job data...</div>';
+  statusDiv.className = 'teal-status loading';
+  
+  try {
+    // First, extract job data server-side to get normalized JSON
+    statusDiv.innerHTML = '<div class="loading">🚀 Extracting job data from page...</div>';
+    
+    const extractResponse = await chrome.runtime.sendMessage({
+      action: 'extractJob',
+      url: window.location.href
+    });
+    
+    if (!extractResponse.success) {
+      throw new Error(extractResponse.error || 'Failed to extract job data');
+    }
+    
+    // Update status to show we're opening Teal
+    statusDiv.innerHTML = '<div class="loading">🔖 Opening Teal and filling form...</div>';
+    trackBtn.textContent = 'Opening...';
+    
+    // Use the extracted job data for Teal form filling, with fallback to form fields
+    const jobInfo = extractResponse.jobData || {
+      title: document.getElementById('job-title')?.value || 'Unknown Title',
+      company: document.getElementById('company-name')?.value || 'Unknown Company',
+      location: document.getElementById('job-location')?.value || 'Unknown Location',
+      url: document.getElementById('job-url')?.value || window.location.href,
+      description: document.getElementById('job-description')?.value || 'No description available'
+    };
+    
+    // Send extracted job info to background script to handle the new tab and automation
+    const response = await chrome.runtime.sendMessage({
+      action: 'openTealAndFill',
+      jobInfo: jobInfo
+    });
+    
+    if (response.success) {
+      // Show success message
+      statusDiv.innerHTML = `
+        <div class="success-message">
+          <span class="status-indicator success">✓</span>
+          <strong>Success!</strong> Job extracted and Teal opened
+          <br><small>Job ID: ${extractResponse.jobId}</small>
+          <br><small>Form being auto-filled in new tab</small>
+        </div>
+      `;
+      statusDiv.className = 'teal-status success';
+    } else {
+      statusDiv.innerHTML = `
+        <div class="error-message">
+          <span class="status-indicator error">✗</span>
+          <strong>Error:</strong> ${response.error || 'Failed to open Teal'}
+        </div>
+      `;
+      statusDiv.className = 'teal-status error';
+    }
+    
+  } catch (error) {
+    statusDiv.innerHTML = `
+      <div class="error-message">
+        <span class="status-indicator error">✗</span>
+        <strong>Error:</strong> ${error.message}
+        <br><small>Failed to extract job or open Teal</small>
+      </div>
+    `;
+    statusDiv.className = 'teal-status error';
+    console.error('Job Extractor: Teal tracking failed', error);
+  }
+  
+  // Reset button state
+  trackBtn.textContent = 'Extract & Track';
+  trackBtn.disabled = false;
+  
+  // Hide status after 8 seconds if successful (longer to show job ID)
+  if (statusDiv.className.includes('success')) {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 8000);
+  }
+}
+
+// Handle tracking job using form field values
+async function handleTrackFromForm() {
+  const trackBtn = document.getElementById('track-job-info');
+  
+  // Show loading state
+  trackBtn.textContent = 'Opening Teal...';
+  trackBtn.disabled = true;
+  
+  try {
+    // Get values directly from form fields
+    const jobInfo = {
+      title: document.getElementById('job-title')?.value?.trim() || '',
+      company: document.getElementById('company-name')?.value?.trim() || '',
+      location: document.getElementById('job-location')?.value?.trim() || '',
+      url: document.getElementById('job-url')?.value?.trim() || window.location.href,
+      description: document.getElementById('job-description')?.value?.trim() || ''
+    };
+    
+    // Validate that we have at least title and company
+    if (!jobInfo.title) {
+      alert('Please enter a job title before tracking');
+      return;
+    }
+    
+    if (!jobInfo.company) {
+      alert('Please enter a company name before tracking');
+      return;
+    }
+    
+    console.log('Job Extractor: Tracking job from form fields:', jobInfo);
+    
+    // Send job info directly to background script to open Teal tab
+    const response = await chrome.runtime.sendMessage({
+      action: 'openTealAndFill',
+      jobInfo: jobInfo
+    });
+    
+    if (response.success) {
+      console.log('✅ Successfully opened Teal tab with job information');
+    } else {
+      console.error('❌ Failed to open Teal:', response.error);
+      alert(`Failed to open Teal: ${response.error}`);
+    }
+    
+  } catch (error) {
+    console.error('Job Extractor: Track from form failed', error);
+    alert(`Error: ${error.message}`);
+  } finally {
+    // Reset button state
+    trackBtn.textContent = '🔖 Track in Teal';
+    trackBtn.disabled = false;
+  }
 }
 
 // Handle extract job functionality

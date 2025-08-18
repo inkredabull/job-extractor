@@ -10,7 +10,8 @@
   ],
   "host_permissions": [
     "http://localhost:3000/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "https://app.tealhq.com/*"
   ],
   "action": {
     "default_title": "Job Extractor Assistant"

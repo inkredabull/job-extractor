@@ -1,7 +1,6 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
-import { TealTracker, getTealCredentials } from '../integrations/teal-tracker';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -807,9 +806,9 @@ Response format: ["term1", "term2", "term3", ...]`;
       
       console.log(`📝 Next steps:`);
       console.log(`1. Edit the JSON file to add any missing job details`);
-      console.log(`2. Run: npm run dev post-to-teal ${jobId} (if you want to add to Teal)`);
-      console.log(`3. Run: npm run dev extract-description ${jobId}`);
-      console.log(`4. Run: npm run dev score ${jobId}`);
+      console.log(`2. Run: npm run dev extract-description ${jobId}`);
+      console.log(`3. Run: npm run dev score ${jobId}`);
+      console.log(`💡 To add to Teal: Use the Chrome extension's Track button`);
       
       return { jobId, filePath };
     } catch (error) {
@@ -922,32 +921,5 @@ Return only the synthesized job description text, no additional formatting or co
     return this.parseJobData(response, applicantInfo);
   }
 
-  async postToTealViaPuppeteer(jobData: JobListing, url?: string): Promise<void> {
-    try {
-      const credentials = getTealCredentials();
-      if (!credentials) {
-        console.log('⚠️  Teal credentials not found - skipping Teal posting');
-        console.log('   Set TEAL_EMAIL and TEAL_PASSWORD environment variables to enable Teal integration');
-        return;
-      }
 
-      console.log('🔖 Posting job to Teal via Puppeteer...');
-      
-      const tealTracker = new TealTracker(credentials);
-      await tealTracker.initialize();
-      
-      const success = await tealTracker.addJob(jobData, url);
-      
-      if (success) {
-        console.log('✅ Successfully posted job to Teal tracker');
-      } else {
-        console.log('❌ Failed to post job to Teal tracker');
-      }
-      
-      await tealTracker.close();
-      
-    } catch (error) {
-      console.error('❌ Error posting to Teal:', error instanceof Error ? error.message : 'Unknown error');
-    }
-  }
 }

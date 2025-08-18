@@ -65,6 +65,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleExtractJob(request, sendResponse);
       return true; // Keep message channel open for async response
       
+    case 'trackInTeal':
+      // Legacy - Teal tracking now handled by openTealAndFill
+      sendResponse({success: false, error: 'Use openTealAndFill instead'});
+      break;
+      
+    case 'openTealAndFill':
+      handleOpenTealAndFill(request, sendResponse);
+      return true; // Keep message channel open for async response
+      
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -439,6 +448,295 @@ async function callLocalCLIServer(url) {
     } else {
       throw error;
     }
+  }
+}
+
+
+// Handle opening Teal tab and filling form
+async function handleOpenTealAndFill(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Opening Teal tab and filling form');
+    console.log('Job info:', request.jobInfo);
+    
+    // Create new tab for Teal
+    const tab = await chrome.tabs.create({
+      url: 'https://app.tealhq.com/job-tracker',
+      active: true
+    });
+    
+    // Wait for tab to load, then inject the form-filling script
+    chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
+      if (tabId === tab.id && changeInfo.status === 'complete') {
+        // Remove listener to avoid multiple executions
+        chrome.tabs.onUpdated.removeListener(listener);
+        
+        // Add delay before injection to ensure tab is fully loaded
+        setTimeout(() => {
+          console.log('Job Extractor Background: Attempting to inject form filling script...');
+          
+          // Inject the Teal form-filling script
+          chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: fillTealForm,
+            args: [request.jobInfo]
+          }).then((results) => {
+            console.log('Job Extractor Background: Form filling script injected successfully');
+            console.log('Job Extractor Background: Injection results:', results);
+            if (results && results[0] && results[0].error) {
+              console.error('Job Extractor Background: Script execution error:', results[0].error);
+            }
+          }).catch((error) => {
+            console.error('Job Extractor Background: Failed to inject script:', error);
+            console.error('Error details:', {
+              message: error.message,
+              stack: error.stack,
+              name: error.name
+            });
+          });
+        }, 1000); // Wait 1 second after page complete
+      }
+    });
+    
+    sendResponse({
+      success: true,
+      message: 'Teal tab opened and automation started'
+    });
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to open Teal tab:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Function to be injected into Teal tab for form filling
+function fillTealForm(jobInfo) {
+  // Immediate test log
+  console.log('🎯 TEAL FORM FILLER: Script successfully injected and executing!');
+  console.log('🎯 TEAL FORM FILLER: Received normalized job data:', jobInfo);
+  console.log('🎯 TEAL FORM FILLER: Job fields:', {
+    title: jobInfo.title,
+    company: jobInfo.company,
+    location: jobInfo.location,
+    url: jobInfo.url,
+    hasDescription: !!jobInfo.description
+  });
+  console.log('🎯 TEAL FORM FILLER: Current URL:', window.location.href);
+  console.log('🎯 TEAL FORM FILLER: Document ready state:', document.readyState);
+  
+  try {
+    console.log('Teal Form Filler: Starting automation with job info:', jobInfo);
+  
+  // Function to wait for element to appear
+  function waitForElement(selector, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      
+      function checkForElement() {
+        const element = document.querySelector(selector);
+        if (element) {
+          resolve(element);
+          return;
+        }
+        
+        if (Date.now() - startTime > timeout) {
+          reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+          return;
+        }
+        
+        setTimeout(checkForElement, 100);
+      }
+      
+      checkForElement();
+    });
+  }
+  
+  // Function to find add button by text content
+  function findAddJobButton() {
+    const buttons = document.querySelectorAll('button');
+    console.log(`Teal Form Filler: Found ${buttons.length} buttons on page`);
+    
+    for (const button of buttons) {
+      const text = button.textContent.toLowerCase();
+      console.log(`Teal Form Filler: Button text: "${text}"`);
+      
+      if ((text.includes('add') && text.includes('job')) || 
+          (text.includes('new') && text.includes('job')) ||
+          text.includes('add a new job')) {
+        console.log(`Teal Form Filler: Found matching button: "${button.textContent}"`);
+        return button;
+      }
+    }
+    
+    // Also check for buttons with + symbols or icons
+    for (const button of buttons) {
+      if (button.textContent.includes('+') || 
+          button.querySelector('svg') || 
+          button.classList.toString().toLowerCase().includes('add')) {
+        console.log(`Teal Form Filler: Found potential add button (icon/class): "${button.textContent}"`);
+        return button;
+      }
+    }
+    
+    return null;
+  }
+  
+  // Wait longer for page to be fully loaded and interactive
+  setTimeout(async () => {
+    try {
+      console.log('Teal Form Filler: Page should be loaded, starting button search...');
+      console.log('Teal Form Filler: Current URL:', window.location.href);
+      console.log('Teal Form Filler: Document ready state:', document.readyState);
+      
+      // Wait a bit more for any dynamic content to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Look for and click the "Add a new job" button
+      console.log('Teal Form Filler: Looking for "Add a new job" button...');
+      
+      let addButton = findAddJobButton();
+      
+      // If still not found, try waiting a bit more and search again
+      if (!addButton) {
+        console.log('Teal Form Filler: Button not found on first attempt, waiting and retrying...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        addButton = findAddJobButton();
+      }
+      
+      if (!addButton) {
+        console.log('Teal Form Filler: Could not find "Add a new job" button');
+        console.log('Teal Form Filler: Available buttons:');
+        document.querySelectorAll('button').forEach((btn, i) => {
+          console.log(`  ${i + 1}. "${btn.textContent.trim()}" (classes: ${btn.className})`);
+        });
+        return;
+      }
+      
+      // Click the button
+      console.log('Teal Form Filler: Clicking add job button...');
+      addButton.click();
+      
+      // Also try triggering other events in case click doesn't work
+      addButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      addButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      addButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      
+      // Wait for modal to appear
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Fill in the form fields
+      console.log('Teal Form Filler: Attempting to fill job information...');
+      
+      const formFieldMappings = [
+        // Job Title field (name="role")
+        {
+          selectors: ['input[name="role"]', 'input[placeholder="Job Title"]', 'input[placeholder*="title" i]'],
+          value: jobInfo.title,
+          name: 'Job Title'
+        },
+        // URL field (name="url")
+        {
+          selectors: ['input[name="url"]', 'input[placeholder="URL for Original Posting"]', 'input[placeholder*="url" i]'],
+          value: jobInfo.url || window.location.href,
+          name: 'Job URL'
+        },
+        // Company field (name="company_name")
+        {
+          selectors: ['input[name="company_name"]', 'input[placeholder="Company Name"]', 'input[placeholder*="company" i]'],
+          value: jobInfo.company,
+          name: 'Company Name'
+        },
+        // Location field (name="location")
+        {
+          selectors: ['input[name="location"]', 'input[placeholder="Location"]', 'input[placeholder*="location" i]'],
+          value: jobInfo.location,
+          name: 'Location'
+        },
+        // Description field (contenteditable div with TipTap editor)
+        {
+          selectors: ['.tiptap.ProseMirror', '[contenteditable="true"]', 'textarea[placeholder*="description" i]'],
+          value: jobInfo.description,
+          name: 'Job Description',
+          isContentEditable: true
+        }
+      ];
+      
+      for (const field of formFieldMappings) {
+        if (!field.value) continue; // Skip empty fields
+        
+        let fieldFilled = false;
+        for (const selector of field.selectors) {
+          try {
+            const element = document.querySelector(selector);
+            if (element) {
+              if (field.isContentEditable) {
+                // Handle contenteditable TipTap editor for job description
+                element.click();
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wait for editor to focus
+                
+                // Clear existing content and add new content
+                element.focus();
+                
+                // Try multiple approaches to clear and fill the contenteditable element
+                try {
+                  // Method 1: Simple textContent replacement (most reliable)
+                  element.textContent = field.value;
+                } catch (e1) {
+                  try {
+                    // Method 2: innerHTML approach
+                    element.innerHTML = field.value.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                  } catch (e2) {
+                    try {
+                      // Method 3: Selection API approach (if available)
+                      const range = document.createRange();
+                      range.selectNodeContents(element);
+                      const selection = window.getSelection();
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                      document.execCommand('insertText', false, field.value);
+                    } catch (e3) {
+                      console.error('Teal Form Filler: All methods failed for contenteditable:', e3);
+                    }
+                  }
+                }
+              } else {
+                // Handle regular input fields
+                element.focus();
+                element.select();
+                element.value = field.value;
+                
+                // Trigger input events to notify React/Vue of the change
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              fieldFilled = true;
+              console.log(`Teal Form Filler: Filled ${field.name}: ${field.value.substring(0, 50)}${field.value.length > 50 ? '...' : ''}`);
+              break;
+            }
+          } catch (error) {
+            console.error(`Teal Form Filler: Error filling ${field.name}:`, error);
+          }
+        }
+        
+        if (!fieldFilled) {
+          console.log(`Teal Form Filler: Could not find field for ${field.name}`);
+        }
+        
+        // Small delay between fields
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      console.log('Teal Form Filler: Form filling completed!');
+      
+    } catch (error) {
+      console.error('Teal Form Filler: Error during form filling:', error);
+    }
+  }, 5000); // Wait 5 seconds for page to load
+  } catch (globalError) {
+    console.error('Teal Form Filler: Critical error in fillTealForm:', globalError);
   }
 }
 

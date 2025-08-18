@@ -104,6 +104,63 @@ app.post('/extract', async (req, res) => {
   }
 });
 
+// Teal tracking endpoint
+app.post('/teal-track', async (req, res) => {
+  try {
+    const { jobInfo } = req.body;
+    
+    if (!jobInfo) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job info is required'
+      });
+    }
+    
+    console.log(`CLI Server: Tracking job in Teal:`, jobInfo);
+    
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..');
+    process.chdir(projectDir);
+    
+    // Create a temporary file with job data for the CLI command
+    const tempJobFile = path.join(projectDir, 'temp-job-data.json');
+    fs.writeFileSync(tempJobFile, JSON.stringify(jobInfo, null, 2));
+    
+    try {
+      // Note: Teal automation now handled by Chrome extension, not CLI
+      console.log(`CLI Server: Teal automation request received but deprecated`);
+      
+      res.json({
+        success: false,
+        error: 'Teal automation is now handled by the Chrome extension. Use the Track button in the extension panel.'
+      });
+      
+    } finally {
+      // Clean up temporary file
+      try {
+        fs.unlinkSync(tempJobFile);
+      } catch (cleanupError) {
+        console.log('CLI Server: Could not clean up temp file:', cleanupError.message);
+      }
+    }
+    
+  } catch (error) {
+    console.error('CLI Server: Teal tracking failed:', error);
+    
+    let errorMessage = error.message;
+    if (error.message.includes('TIMEOUT')) {
+      errorMessage = 'Teal automation timed out - browser automation may take longer';
+    } else if (error.message.includes('navigation')) {
+      errorMessage = 'Could not navigate to Teal - check your internet connection';
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Job Extractor CLI Server running on http://localhost:${PORT}`);
