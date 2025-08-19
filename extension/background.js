@@ -92,22 +92,22 @@ async function handleMCPServerCall(request, sendResponse) {
     const jobDescription = request.args.jobDescription || '';
     console.log('Job Extractor Background: Job description provided:', jobDescription ? 'Yes' : 'No');
     
-    // Test if local MCP server is running
-    const mcpServerRunning = await testMCPServerConnection();
+    // Test if local unified server is running
+    const unifiedServerRunning = await testUnifiedServerConnection();
     
-    if (mcpServerRunning) {
-      console.log('Job Extractor Background: MCP server is running, using real CV data');
+    if (unifiedServerRunning) {
+      console.log('Job Extractor Background: Unified server is running, using real CV data');
       
-      // Make request to local MCP server
-      const mcpResponse = await callLocalMCPServer(request.args.question, jobDescription);
+      // Make request to local unified server
+      const cvResponse = await callLocalUnifiedServer(request.args.question, jobDescription);
       
       sendResponse({
         success: true,
-        data: mcpResponse
+        data: cvResponse
       });
     } else {
-      console.error('Job Extractor Background: MCP server is not running on localhost:3000');
-      console.error('Job Extractor Background: Please start MCP server with: npm run mcp-server');
+      console.error('Job Extractor Background: Unified server is not running on localhost:3000');
+      console.error('Job Extractor Background: Please start unified server with: npm run unified-server');
       
       // Fallback to sample CV content for testing
       const sampleCV = `KEY ACCOMPLISHMENTS
@@ -131,7 +131,7 @@ STRENGTHS
       sendResponse({
         success: true,
         data: cvResponse,
-        warning: 'Using sample CV data - MCP server not running. Start with: npm run mcp-server'
+        warning: 'Using sample CV data - unified server not running. Start with: npm run unified-server'
       });
     }
     
@@ -144,10 +144,10 @@ STRENGTHS
   }
 }
 
-// Test if MCP server is running
-async function testMCPServerConnection() {
+// Test if unified server is running
+async function testUnifiedServerConnection() {
   try {
-    console.log('Job Extractor Background: Testing MCP server connection...');
+    console.log('Job Extractor Background: Testing unified server connection...');
     const response = await fetch('http://localhost:3000/health', {
       method: 'GET',
       mode: 'cors',
@@ -159,18 +159,18 @@ async function testMCPServerConnection() {
     
     console.log('Job Extractor Background: Health check response status:', response.status);
     const result = response.ok;
-    console.log('Job Extractor Background: MCP server connection test result:', result);
+    console.log('Job Extractor Background: Unified server connection test result:', result);
     return result;
   } catch (error) {
-    console.error('Job Extractor Background: MCP server connection test failed:', error.message, error);
+    console.error('Job Extractor Background: Unified server connection test failed:', error.message, error);
     return false;
   }
 }
 
-// Call local MCP server
-async function callLocalMCPServer(question, jobDescription = '') {
+// Call local unified server for CV questions
+async function callLocalUnifiedServer(question, jobDescription = '') {
   try {
-    console.log('Job Extractor Background: Calling MCP server with question:', question);
+    console.log('Job Extractor Background: Calling unified server with question:', question);
     const requestBody = { question: question };
     
     // Include job description context if available
@@ -189,20 +189,20 @@ async function callLocalMCPServer(question, jobDescription = '') {
       signal: AbortSignal.timeout(15000) // 15 second timeout
     });
     
-    console.log('Job Extractor Background: MCP server response status:', response.status);
+    console.log('Job Extractor Background: Unified server response status:', response.status);
     
     if (!response.ok) {
-      throw new Error(`MCP server responded with status: ${response.status}`);
+      throw new Error(`Unified server responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Job Extractor Background: MCP server response data:', data);
-    const result = data.response || data.answer || 'No response from MCP server';
+    console.log('Job Extractor Background: Unified server response data:', data);
+    const result = data.response || data.answer || 'No response from unified server';
     console.log('Job Extractor Background: Returning CV response, length:', result.length);
     return result;
     
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call MCP server:', error);
+    console.error('Job Extractor Background: Failed to call unified server:', error);
     throw error;
   }
 }
@@ -388,8 +388,8 @@ async function handleExtractJob(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling extract job request for URL:', request.url);
     
-    // Make request to local CLI server to execute extract command
-    const extractResponse = await callLocalCLIServer(request.url);
+    // Make request to local unified server to execute extract command
+    const extractResponse = await callLocalUnifiedServerForExtract(request.url);
     
     sendResponse({
       success: true,
@@ -407,12 +407,12 @@ async function handleExtractJob(request, sendResponse) {
   }
 }
 
-// Call local CLI server to execute extract command
-async function callLocalCLIServer(url) {
+// Call local unified server to execute extract command
+async function callLocalUnifiedServerForExtract(url) {
   try {
-    console.log('Job Extractor Background: Calling CLI server for extraction');
+    console.log('Job Extractor Background: Calling unified server for extraction');
     
-    const response = await fetch('http://localhost:3001/extract', {
+    const response = await fetch('http://localhost:3000/extract', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -422,17 +422,17 @@ async function callLocalCLIServer(url) {
       signal: AbortSignal.timeout(60000) // 60 second timeout for extraction
     });
     
-    console.log('Job Extractor Background: CLI server response status:', response.status);
+    console.log('Job Extractor Background: Unified server response status:', response.status);
     
     if (!response.ok) {
-      throw new Error(`CLI server responded with status: ${response.status}`);
+      throw new Error(`Unified server responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Job Extractor Background: CLI server response data:', data);
+    console.log('Job Extractor Background: Unified server response data:', data);
     
     if (!data.success) {
-      throw new Error(data.error || 'CLI extraction failed');
+      throw new Error(data.error || 'Unified server extraction failed');
     }
     
     return {
@@ -442,13 +442,13 @@ async function callLocalCLIServer(url) {
     };
     
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call CLI server:', error);
+    console.error('Job Extractor Background: Failed to call unified server:', error);
     
     // Provide a helpful error message
     if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
       throw new Error('Extraction timed out - job sites may take a while to process');
     } else if (error.message.includes('fetch')) {
-      throw new Error('Could not connect to CLI server. Make sure to run: npm run cli-server');
+      throw new Error('Could not connect to unified server. Make sure to run: npm run unified-server');
     } else {
       throw error;
     }
@@ -461,8 +461,8 @@ async function handleExtractFromJson(request, sendResponse) {
     console.log('Job Extractor Background: Handling extract from JSON request');
     console.log('Job data:', request.jobData);
     
-    // Send JSON payload to CLI server with type='json' flag
-    const extractResponse = await callLocalCLIServerWithJson(request.jobData);
+    // Send JSON payload to unified server with type='json' flag
+    const extractResponse = await callLocalUnifiedServerWithJson(request.jobData);
     
     sendResponse({
       success: true,
@@ -480,12 +480,12 @@ async function handleExtractFromJson(request, sendResponse) {
   }
 }
 
-// Call local CLI server with JSON data
-async function callLocalCLIServerWithJson(jobData) {
+// Call local unified server with JSON data
+async function callLocalUnifiedServerWithJson(jobData) {
   try {
-    console.log('Job Extractor Background: Calling CLI server for JSON extraction');
+    console.log('Job Extractor Background: Calling unified server for JSON extraction');
     
-    const response = await fetch('http://localhost:3001/extract', {
+    const response = await fetch('http://localhost:3000/extract', {
       method: 'POST',
       mode: 'cors',
       headers: {
@@ -498,17 +498,17 @@ async function callLocalCLIServerWithJson(jobData) {
       signal: AbortSignal.timeout(30000) // 30 second timeout for JSON processing
     });
     
-    console.log('Job Extractor Background: CLI server response status:', response.status);
+    console.log('Job Extractor Background: Unified server response status:', response.status);
     
     if (!response.ok) {
-      throw new Error(`CLI server responded with status: ${response.status}`);
+      throw new Error(`Unified server responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Job Extractor Background: CLI server response data:', data);
+    console.log('Job Extractor Background: Unified server response data:', data);
     
     if (!data.success) {
-      throw new Error(data.error || 'CLI JSON extraction failed');
+      throw new Error(data.error || 'Unified server JSON extraction failed');
     }
     
     return {
@@ -518,13 +518,13 @@ async function callLocalCLIServerWithJson(jobData) {
     };
     
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call CLI server with JSON:', error);
+    console.error('Job Extractor Background: Failed to call unified server with JSON:', error);
     
     // Provide a helpful error message
     if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
       throw new Error('JSON processing timed out');
     } else if (error.message.includes('fetch')) {
-      throw new Error('Could not connect to CLI server. Make sure to run: npm run cli-server');
+      throw new Error('Could not connect to unified server. Make sure to run: npm run unified-server');
     } else {
       throw error;
     }

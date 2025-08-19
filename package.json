@@ -14,9 +14,10 @@
     "test:watch": "jest --watch --config jest.config.js",
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist",
-    "mcp-server": "node mcp-server.js",
-    "mcp-server:llm": "node mcp-server.js --llm",
-    "cli-server": "node extension/cli-server.js"
+    "unified-server": "node unified-server.js",
+    "unified-server:llm": "node unified-server.js --llm",
+    "mcp-server": "echo 'DEPRECATED: Use npm run unified-server instead' && node unified-server.js",
+    "cli-server": "echo 'DEPRECATED: Use npm run unified-server instead' && node unified-server.js"
   },
   "keywords": [
     "job",
