@@ -72,6 +72,14 @@ function createGutter() {
           <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically..."></textarea>
         </div>
         
+        <div class="form-field">
+          <label class="radio-label">
+            <input type="checkbox" id="track-in-teal-checkbox" class="teal-checkbox" checked>
+            <span class="checkmark"></span>
+            Track in Teal?
+          </label>
+        </div>
+        
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
         </div>
@@ -670,7 +678,11 @@ async function handleTrackFromForm() {
       return;
     }
     
+    // Check if Teal tracking is enabled
+    const shouldTrackInTeal = document.getElementById('track-in-teal-checkbox')?.checked || false;
+    
     console.log('Job Extractor: Tracking job from form fields:', jobInfo);
+    console.log('Job Extractor: Track in Teal enabled:', shouldTrackInTeal);
     
     // Send JSON payload to extract functionality server-side
     const extractResponse = await chrome.runtime.sendMessage({
@@ -681,18 +693,23 @@ async function handleTrackFromForm() {
     if (extractResponse.success) {
       console.log('✅ Successfully saved job data server-side:', extractResponse.jobId);
       
-      // Now open Teal tab with the processed job information
-      trackBtn.textContent = 'Opening Teal...';
-      const tealResponse = await chrome.runtime.sendMessage({
-        action: 'openTealAndFill',
-        jobInfo: jobInfo
-      });
-      
-      if (tealResponse.success) {
-        console.log('✅ Successfully opened Teal tab with job information');
+      // Conditionally open Teal tab based on checkbox state
+      if (shouldTrackInTeal) {
+        trackBtn.textContent = 'Opening Teal...';
+        const tealResponse = await chrome.runtime.sendMessage({
+          action: 'openTealAndFill',
+          jobInfo: jobInfo
+        });
+        
+        if (tealResponse.success) {
+          console.log('✅ Successfully opened Teal tab with job information');
+        } else {
+          console.error('❌ Failed to open Teal:', tealResponse.error);
+          alert(`Failed to open Teal: ${tealResponse.error}`);
+        }
       } else {
-        console.error('❌ Failed to open Teal:', tealResponse.error);
-        alert(`Failed to open Teal: ${tealResponse.error}`);
+        console.log('📝 Job data saved successfully (Teal tracking disabled)');
+        alert('Job data saved successfully!');
       }
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
