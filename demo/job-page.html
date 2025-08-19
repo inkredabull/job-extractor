@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founding Engineer - Zenith AI | Join Our Mission</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .job-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .job-header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 3rem 2rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .job-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(50px, -50px);
+        }
+
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .company-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .company-details h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .company-name {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .meta-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.8;
+        }
+
+        .job-content {
+            padding: 3rem 2rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 2px;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #4a5568;
+            margin-bottom: 2rem;
+        }
+
+        .highlight-text {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .requirement-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .requirement-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            margin: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+        }
+
+        .experience-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .salary-range {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-item:hover {
+            border-color: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+        }
+
+        .benefit-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .tech-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            border-color: #4f46e5;
+            background: #f7fafc;
+        }
+
+        .apply-section {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .apply-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .apply-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .apply-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 1rem 3rem;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        .apply-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.6);
+        }
+
+        .company-culture {
+            background: linear-gradient(135deg, #f0fff4 0%, #ecfdf5 100%);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid #d1fae5;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .job-header {
+                padding: 2rem 1.5rem 1.5rem;
+            }
+            
+            .company-details h1 {
+                font-size: 2rem;
+            }
+            
+            .job-content {
+                padding: 2rem 1.5rem;
+            }
+            
+            .requirements-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .applicant-count {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="job-card">
+            <div class="job-header">
+                <div class="company-info">
+                    <div class="company-logo">ZA</div>
+                    <div class="company-details">
+                        <h1>Founding Engineer</h1>
+                        <div class="company-name">Zenith AI</div>
+                    </div>
+                </div>
+                
+                <div class="job-meta">
+                    <div class="meta-item">
+                        <svg class="meta-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>San Francisco, CA / Remote</span>
+                    </div>
+                    <div class="meta-item">
+                        <svg class="meta-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>Full-time</span>
+                    </div>
+                    <div class="meta-item">
+                        <svg class="meta-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Equity: 0.5% - 2.0%</span>
+                    </div>
+                    <div class="applicant-count">
+                        <span>23 applicants</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="job-content">
+                <div class="section">
+                    <h2 class="section-title">About the Role</h2>
+                    <div class="description">
+                        Join <span class="highlight-text">Zenith AI</span> as our <strong>Founding Engineer</strong> and help shape the future of AI-powered productivity tools. We're building the next generation of intelligent automation platforms that will revolutionize how teams collaborate and get work done.
+                        
+                        <br><br>As one of our first engineering hires, you'll have the unique opportunity to architect our core platform from the ground up, working directly with our founding team to define the technical vision and build scalable systems that will serve millions of users.
+                        
+                        <br><br>You'll be working on cutting-edge problems in <strong>machine learning infrastructure</strong>, <strong>real-time collaboration</strong>, and <strong>distributed systems</strong>, while having significant impact on product direction and company culture.
+                    </div>
+
+                    <div class="salary-range">
+                        💰 $160,000 - $220,000 + equity + benefits
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">What You'll Do</h2>
+                    <div class="description">
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin-bottom: 1rem; padding-left: 1.5rem; position: relative;">
+                                <span style="position: absolute; left: 0; color: #4f46e5; font-weight: bold;">🚀</span>
+                                Design and build our core AI infrastructure using <strong>Python</strong>, <strong>TypeScript</strong>, and modern cloud technologies
+                            </li>
+                            <li style="margin-bottom: 1rem; padding-left: 1.5rem; position: relative;">
+                                <span style="position: absolute; left: 0; color: #4f46e5; font-weight: bold;">⚡</span>
+                                Develop real-time collaboration features with <strong>WebRTC</strong>, <strong>WebSockets</strong>, and <strong>React</strong>
+                            </li>
+                            <li style="margin-bottom: 1rem; padding-left: 1.5rem; position: relative;">
+                                <span style="position: absolute; left: 0; color: #4f46e5; font-weight: bold;">🧠</span>
+                                Integrate cutting-edge ML models and optimize inference pipelines for production scale
+                            </li>
+                            <li style="margin-bottom: 1rem; padding-left: 1.5rem; position: relative;">
+                                <span style="position: absolute; left: 0; color: #4f46e5; font-weight: bold;">🏗️</span>
+                                Architect scalable microservices on <strong>AWS/GCP</strong> using <strong>Docker</strong> and <strong>Kubernetes</strong>
+                            </li>
+                            <li style="margin-bottom: 1rem; padding-left: 1.5rem; position: relative;">
+                                <span style="position: absolute; left: 0; color: #4f46e5; font-weight: bold;">📊</span>
+                                Build comprehensive monitoring, logging, and analytics systems
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Requirements & Experience</h2>
+                    <div class="requirements-grid">
+                        <div class="requirement-card">
+                            <div class="requirement-title">🎯 Required Skills</div>
+                            <div class="skill-tag">Python</div>
+                            <div class="skill-tag">TypeScript</div>
+                            <div class="skill-tag">React</div>
+                            <div class="skill-tag">Node.js</div>
+                            <div class="skill-tag">PostgreSQL</div>
+                            <div class="skill-tag">Redis</div>
+                            <div class="skill-tag">Docker</div>
+                            <div class="skill-tag">AWS/GCP</div>
+                        </div>
+                        
+                        <div class="requirement-card">
+                            <div class="requirement-title">✨ Preferred Skills</div>
+                            <div class="skill-tag">PyTorch</div>
+                            <div class="skill-tag">TensorFlow</div>
+                            <div class="skill-tag">GraphQL</div>
+                            <div class="skill-tag">Kubernetes</div>
+                            <div class="skill-tag">Terraform</div>
+                            <div class="skill-tag">WebRTC</div>
+                            <div class="skill-tag">Rust</div>
+                            <div class="skill-tag">Vector DBs</div>
+                        </div>
+                    </div>
+                    
+                    <div class="experience-badge">
+                        5+ years of full-stack engineering experience
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Our Tech Stack</h2>
+                    <div class="tech-stack">
+                        <div class="tech-item">🐍 Python + FastAPI</div>
+                        <div class="tech-item">⚛️ React + TypeScript</div>
+                        <div class="tech-item">🟢 Node.js + Express</div>
+                        <div class="tech-item">🐘 PostgreSQL + Prisma</div>
+                        <div class="tech-item">⚡ Redis + Bull</div>
+                        <div class="tech-item">🔥 PyTorch + Transformers</div>
+                        <div class="tech-item">☁️ AWS + Terraform</div>
+                        <div class="tech-item">🐳 Docker + Kubernetes</div>
+                        <div class="tech-item">📊 DataDog + Sentry</div>
+                        <div class="tech-item">🌐 Vercel + Cloudflare</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Benefits & Perks</h2>
+                    <div class="benefits-grid">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">💰</div>
+                            <span>Competitive salary + equity</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">🏥</div>
+                            <span>Premium health, dental, vision</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">🌴</div>
+                            <span>Unlimited PTO + mental health days</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">💻</div>
+                            <span>Top-tier equipment + $3k setup budget</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">🏠</div>
+                            <span>Remote-first + flexible hours</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">📚</div>
+                            <span>$2k/year learning & development</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">✈️</div>
+                            <span>Annual team retreats</span>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">👶</div>
+                            <span>16 weeks parental leave</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="company-culture">
+                    <h3 style="color: #065f46; margin-bottom: 1rem; font-size: 1.3rem;">🌟 Why Zenith AI?</h3>
+                    <p style="color: #047857; line-height: 1.7;">
+                        We're a tight-knit team of 8 passionate builders backed by <strong>Andreessen Horowitz</strong> and <strong>General Catalyst</strong>. 
+                        Our founders previously built and sold companies to Google and Microsoft, and we're on a mission to create 
+                        the most intuitive AI-powered productivity platform ever built. Join us in the early days and help shape 
+                        the future of work! 🚀
+                    </p>
+                </div>
+            </div>
+
+            <div class="apply-section">
+                <h2 class="apply-title">Ready to Build the Future?</h2>
+                <p class="apply-subtitle">
+                    Join our founding team and make a massive impact from day one
+                </p>
+                <button class="apply-button" onclick="window.open('mailto:careers@zenith-ai.com?subject=Founding Engineer Application', '_blank')">
+                    Apply Now
+                </button>
+                <div style="margin-top: 1.5rem; opacity: 0.8; font-size: 0.9rem;">
+                    📧 careers@zenith-ai.com | 🌐 www.zenith-ai.com
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive elements for demo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate skill tags on hover
+            const skillTags = document.querySelectorAll('.skill-tag');
+            skillTags.forEach(tag => {
+                tag.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.transition = 'transform 0.2s ease';
+                });
+                tag.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+
+            // Add click tracking for demo
+            document.querySelector('.apply-button').addEventListener('click', function() {
+                console.log('Apply button clicked - this would normally open application form');
+            });
+        });
+    </script>
+</body>
+</html>
