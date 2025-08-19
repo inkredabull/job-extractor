@@ -10,18 +10,31 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extractFromInput(input: string, type: 'url' | 'html' | 'json', options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+    console.log(`🔧 JobExtractorAgent.extractFromInput called with type: "${type}"`);
+    console.log(`🔧 Type comparison - type === 'json': ${type === 'json'}`);
+    console.log(`🔧 Type comparison - type === 'jsonfile': ${type === 'jsonfile'}`);
+    console.log(`🔧 Type comparison - type === 'url': ${type === 'url'}`);
+    console.log(`🔧 Type comparison - type === 'html': ${type === 'html'}`);
+    
     switch (type) {
       case 'url':
+        console.log(`🔧 Calling extractFromUrl`);
         return this.extractFromUrl(input, options);
       case 'html':
+        console.log(`🔧 Calling extractFromHtml`);
         return this.extractFromHtml(input, options);
       case 'json':
+        console.log(`🔧 Calling extractFromJson`);
         return this.extractFromJson(input, options);
+      case 'jsonfile':
+        console.log(`🔧 Calling extractFromJsonFile`);
+        return this.extractFromJsonFile(input, options);
       default:
+        console.log(`🔧 Invalid type detected: "${type}"`);
         return {
           success: false,
-          error: `Invalid input type: ${type}. Must be 'url', 'html', or 'json'`
+          error: `Invalid input type: ${type}. Must be 'url', 'html', 'json', or 'jsonfile'`
         };
     }
   }
@@ -144,6 +157,24 @@ export class JobExtractorAgent extends BaseAgent {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+    try {
+      console.log(`🔧 Reading JSON file: ${filePath}`);
+      
+      // Read the JSON file
+      const jsonContent = fs.readFileSync(filePath, 'utf-8');
+      
+      // Call the existing extractFromJson method with the file content
+      return this.extractFromJson(jsonContent, options);
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to read JSON file: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }

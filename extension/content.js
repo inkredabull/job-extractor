@@ -15,13 +15,6 @@ function createGutter() {
       <button id="close-gutter">×</button>
     </div>
     <div class="gutter-content">
-      <div class="extract-section">
-        <h4>🚀 Extract</h4>
-        <p>Extract job information from this page using CLI tool:</p>
-        <button id="extract-job" class="extract-btn">Extract</button>
-        <div id="extract-status" class="extract-status" style="display: none;"></div>
-      </div>
-      
       <div class="llm-interface">
         <h4>AI Assistant</h4>
         <p>Ask a question to get AI-powered insights:</p>
@@ -48,13 +41,6 @@ function createGutter() {
           <h5>Questions Found on Page:</h5>
           <ul id="questions-list"></ul>
         </div>
-      </div>
-      
-      <div class="teal-tracking-section">
-        <h4>🔖 Extract & Track</h4>
-        <p>Extract job data and track in Teal job tracker:</p>
-        <button id="track-in-teal" class="track-btn">Extract & Track</button>
-        <div id="teal-status" class="teal-status" style="display: none;"></div>
       </div>
       
       <div class="job-information-section">
@@ -87,8 +73,7 @@ function createGutter() {
         </div>
         
         <div class="button-group">
-          <button id="refresh-job-info" class="refresh-btn small">🔄 Re-extract</button>
-          <button id="track-job-info" class="track-btn">🔖 Track in Teal</button>
+          <button id="track-job-info" class="track-btn">Track</button>
         </div>
       </div>
     </div>
@@ -110,24 +95,15 @@ function createGutter() {
     }
   });
   
-  // Add re-extract job information functionality
-  document.getElementById('refresh-job-info').addEventListener('click', function() {
-    extractJobInformation();
-  });
   
   // Add track job from form fields functionality
   document.getElementById('track-job-info').addEventListener('click', handleTrackFromForm);
   
-  // Add extract job functionality
-  document.getElementById('extract-job').addEventListener('click', handleExtractJob);
-  
-  // Add Teal tracking functionality
-  document.getElementById('track-in-teal').addEventListener('click', handleTealTracking);
   
   // Extract job information automatically when gutter opens (with slight delay for DOM)
   setTimeout(() => {
     extractJobInformation();
-  }, 3000);
+  }, 100);
   
   // Analyze page content for questions
   analyzePageContent();
@@ -670,7 +646,7 @@ async function handleTrackFromForm() {
   const trackBtn = document.getElementById('track-job-info');
   
   // Show loading state
-  trackBtn.textContent = 'Opening Teal...';
+  trackBtn.textContent = 'Processing...';
   trackBtn.disabled = true;
   
   try {
@@ -696,17 +672,31 @@ async function handleTrackFromForm() {
     
     console.log('Job Extractor: Tracking job from form fields:', jobInfo);
     
-    // Send job info directly to background script to open Teal tab
-    const response = await chrome.runtime.sendMessage({
-      action: 'openTealAndFill',
-      jobInfo: jobInfo
+    // Send JSON payload to extract functionality server-side
+    const extractResponse = await chrome.runtime.sendMessage({
+      action: 'extractFromJson',
+      jobData: jobInfo
     });
     
-    if (response.success) {
-      console.log('✅ Successfully opened Teal tab with job information');
+    if (extractResponse.success) {
+      console.log('✅ Successfully saved job data server-side:', extractResponse.jobId);
+      
+      // Now open Teal tab with the processed job information
+      trackBtn.textContent = 'Opening Teal...';
+      const tealResponse = await chrome.runtime.sendMessage({
+        action: 'openTealAndFill',
+        jobInfo: jobInfo
+      });
+      
+      if (tealResponse.success) {
+        console.log('✅ Successfully opened Teal tab with job information');
+      } else {
+        console.error('❌ Failed to open Teal:', tealResponse.error);
+        alert(`Failed to open Teal: ${tealResponse.error}`);
+      }
     } else {
-      console.error('❌ Failed to open Teal:', response.error);
-      alert(`Failed to open Teal: ${response.error}`);
+      console.error('❌ Failed to save job data:', extractResponse.error);
+      alert(`Failed to save job data: ${extractResponse.error}`);
     }
     
   } catch (error) {
@@ -714,7 +704,7 @@ async function handleTrackFromForm() {
     alert(`Error: ${error.message}`);
   } finally {
     // Reset button state
-    trackBtn.textContent = '🔖 Track in Teal';
+    trackBtn.textContent = 'Track';
     trackBtn.disabled = false;
   }
 }

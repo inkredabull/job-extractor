@@ -137,7 +137,7 @@ program
   .command('extract')
   .description('Extract job information from URL, HTML, or JSON and automatically score it')
   .argument('<input>', 'URL of job posting, HTML content, or JSON object to extract/process')
-  .option('-t, --type <type>', 'Input type: url, html, or json', 'url')
+  .option('-t, --type <type>', 'Input type: url, html, json, or jsonfile', 'url')
   .option('-o, --output <file>', 'Output file to save the extracted data (optional)')
   .option('-f, --format <format>', 'Output format: json or pretty', 'pretty')
   .option('-c, --criteria <file>', 'Path to criteria file for scoring', 'criteria.json')
@@ -148,11 +148,14 @@ program
       console.log('🔍 Extracting job information...');
       console.log(`📄 Input Type: ${options.type}`);
       console.log(`📄 Input: ${options.type === 'json' ? 'JSON data' : input.substring(0, 100)}...`);
+      console.log(`📄 DEBUG - Type check: ${typeof options.type}, Value: "${options.type}"`);
+      console.log(`📄 DEBUG - Input length: ${input.length}`);
       console.log('');
 
       const config = getConfig();
       const agent = new JobExtractorAgent(config);
       
+      console.log(`📄 DEBUG - Calling extractFromInput with type: ${options.type}`);
       const result = await agent.extractFromInput(input, options.type, { ignoreCompetition: options.forceExtract });
 
       if (!result.success) {

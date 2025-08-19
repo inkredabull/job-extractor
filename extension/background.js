@@ -74,6 +74,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleOpenTealAndFill(request, sendResponse);
       return true; // Keep message channel open for async response
       
+    case 'extractFromJson':
+      handleExtractFromJson(request, sendResponse);
+      return true; // Keep message channel open for async response
+      
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -451,6 +455,81 @@ async function callLocalCLIServer(url) {
   }
 }
 
+// Handle extract from JSON functionality
+async function handleExtractFromJson(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Handling extract from JSON request');
+    console.log('Job data:', request.jobData);
+    
+    // Send JSON payload to CLI server with type='json' flag
+    const extractResponse = await callLocalCLIServerWithJson(request.jobData);
+    
+    sendResponse({
+      success: true,
+      jobId: extractResponse.jobId,
+      filePath: extractResponse.filePath,
+      jobData: extractResponse.jobData
+    });
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Extract from JSON failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call local CLI server with JSON data
+async function callLocalCLIServerWithJson(jobData) {
+  try {
+    console.log('Job Extractor Background: Calling CLI server for JSON extraction');
+    
+    const response = await fetch('http://localhost:3001/extract', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        type: 'json',
+        data: jobData
+      }),
+      signal: AbortSignal.timeout(30000) // 30 second timeout for JSON processing
+    });
+    
+    console.log('Job Extractor Background: CLI server response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`CLI server responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Job Extractor Background: CLI server response data:', data);
+    
+    if (!data.success) {
+      throw new Error(data.error || 'CLI JSON extraction failed');
+    }
+    
+    return {
+      jobId: data.jobId,
+      filePath: data.filePath,
+      jobData: data.jobData
+    };
+    
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to call CLI server with JSON:', error);
+    
+    // Provide a helpful error message
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      throw new Error('JSON processing timed out');
+    } else if (error.message.includes('fetch')) {
+      throw new Error('Could not connect to CLI server. Make sure to run: npm run cli-server');
+    } else {
+      throw error;
+    }
+  }
+}
 
 // Handle opening Teal tab and filling form
 async function handleOpenTealAndFill(request, sendResponse) {
