@@ -11,27 +11,16 @@ export class JobExtractorAgent extends BaseAgent {
   }
 
   async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
-    console.log(`🔧 JobExtractorAgent.extractFromInput called with type: "${type}"`);
-    console.log(`🔧 Type comparison - type === 'json': ${type === 'json'}`);
-    console.log(`🔧 Type comparison - type === 'jsonfile': ${type === 'jsonfile'}`);
-    console.log(`🔧 Type comparison - type === 'url': ${type === 'url'}`);
-    console.log(`🔧 Type comparison - type === 'html': ${type === 'html'}`);
-    
     switch (type) {
       case 'url':
-        console.log(`🔧 Calling extractFromUrl`);
         return this.extractFromUrl(input, options);
       case 'html':
-        console.log(`🔧 Calling extractFromHtml`);
         return this.extractFromHtml(input, options);
       case 'json':
-        console.log(`🔧 Calling extractFromJson`);
         return this.extractFromJson(input, options);
       case 'jsonfile':
-        console.log(`🔧 Calling extractFromJsonFile`);
         return this.extractFromJsonFile(input, options);
       default:
-        console.log(`🔧 Invalid type detected: "${type}"`);
         return {
           success: false,
           error: `Invalid input type: ${type}. Must be 'url', 'html', 'json', or 'jsonfile'`
@@ -163,8 +152,6 @@ export class JobExtractorAgent extends BaseAgent {
 
   async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
     try {
-      console.log(`🔧 Reading JSON file: ${filePath}`);
-      
       // Read the JSON file
       const jsonContent = fs.readFileSync(filePath, 'utf-8');
       
@@ -181,12 +168,25 @@ export class JobExtractorAgent extends BaseAgent {
 
   private normalizeJobData(inputData: any): JobListing {
     // Map various JSON structures to our expected schema
+    
+    // Handle salary from multiple sources
+    let salaryData = inputData.salary || inputData.compensation || inputData.pay;
+    
+    // If no salary object but we have minSalary/maxSalary from form, create salary object
+    if (!salaryData && (inputData.minSalary || inputData.maxSalary)) {
+      salaryData = {
+        min: inputData.minSalary || '',
+        max: inputData.maxSalary || '',
+        currency: 'USD'
+      };
+    }
+    
     return {
       title: inputData.title || inputData.job_title || inputData.position || inputData.role || '',
       company: inputData.company || inputData.company_name || inputData.employer || '',
       location: inputData.location || inputData.job_location || inputData.work_location || '',
       description: inputData.description || inputData.job_description || inputData.details || '',
-      salary: this.normalizeSalary(inputData.salary || inputData.compensation || inputData.pay),
+      salary: this.normalizeSalary(salaryData),
       applicantCount: inputData.applicantCount || inputData.applicant_count,
       competitionLevel: inputData.competitionLevel || inputData.competition_level
     };

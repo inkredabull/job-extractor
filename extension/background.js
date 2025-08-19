@@ -154,7 +154,7 @@ async function testUnifiedServerConnection() {
       headers: {
         'Content-Type': 'application/json',
       },
-      signal: AbortSignal.timeout(5000) // 5 second timeout
+      signal: AbortSignal.timeout(10000) // 10 second timeout
     });
     
     console.log('Job Extractor Background: Health check response status:', response.status);
@@ -186,7 +186,7 @@ async function callLocalUnifiedServer(question, jobDescription = '') {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(15000) // 15 second timeout
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
     
     console.log('Job Extractor Background: Unified server response status:', response.status);

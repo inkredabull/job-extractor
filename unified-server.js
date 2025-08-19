@@ -52,7 +52,7 @@ class CVResponseEngine {
         ? `Context: This question relates to a specific job opportunity: "${jobDescription.substring(0, 500)}..."`
         : '';
       
-      const prompt = `You are an expert career consultant helping someone answer questions about their professional background. Based on the CV information below, please provide a comprehensive and compelling response to the question.
+      const prompt = `You are answering this interview question in first person using your CV below. Provide a compelling response that showcases your relevant experience.
 
 ${contextPrompt}
 
@@ -61,19 +61,19 @@ ${cvContent}
 
 Question: ${question}
 
-Please provide a detailed response that:
+Please provide a response that:
 1. Draws specific examples from the CV
-2. Highlights relevant achievements and quantifiable results
+2. Highlights relevant achievements and quantifiable results  
 3. Shows clear connections between past experience and the question
 4. Uses a professional, confident tone
 5. Is tailored to showcase the candidate's strengths
 ${jobDescription ? '6. Relates the experience to the specific job opportunity mentioned' : ''}
 
-Response:`;
+Keep under 200 words and answer in first person:`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1500,
+        max_tokens: 300,
         temperature: 0.3,
         messages: [
           {
@@ -207,41 +207,36 @@ STRENGTHS
   }
 
   generateExperienceResponse(cvData, jobContext = '') {
-    const experienceAreas = this.extractExperienceAreas(cvData.accomplishments);
-    const contextSuffix = jobContext ? `\n\nThis background aligns well${jobContext}` : '';
-    
-    return `Based on the CV, here are key work experiences:\n\n${this.formatBulletList(cvData.accomplishments)}\n\nStrong experience in ${experienceAreas.join(', ')} with measurable business impact.${contextSuffix}`;
+    const topAccomplishments = cvData.accomplishments.slice(0, 3);
+    return `My experience includes ${topAccomplishments.join(', ').toLowerCase()}. These accomplishments demonstrate my ability to deliver measurable business impact across different organizations and technical challenges.`;
   }
 
   generateSkillsResponse(cvData, jobContext = '') {
-    const contextSuffix = jobContext ? `\n\nThese skills are particularly relevant${jobContext}` : '';
-    
-    return `Core strengths include:\n\n${this.formatBulletList(cvData.strengths)}\n\nExcels at combining technical leadership with strong communication and process optimization.${contextSuffix}`;
+    const topStrengths = cvData.strengths.slice(0, 4);
+    return `My core strengths include ${topStrengths.join(', ').toLowerCase()}. I excel at combining technical leadership with strong communication and process optimization to drive results.`;
   }
 
   generateLeadershipResponse(cvData, jobContext = '') {
     const leadershipKeywords = ['launched', 'drove', 'delivered', 'led', 'managed'];
-    const communicationKeywords = ['leadership', 'communication', 'collaboration'];
-    
     const leadershipAccomplishments = this.filterByKeywords(cvData.accomplishments, leadershipKeywords);
-    const leadershipStrengths = this.filterByKeywords(cvData.strengths, communicationKeywords);
-    const contextSuffix = jobContext ? `\n\nThis leadership experience directly applies${jobContext}` : '';
+    const topLeadership = leadershipAccomplishments.length > 0 ? leadershipAccomplishments.slice(0, 2) : cvData.accomplishments.slice(0, 2);
     
-    return `Demonstrates strong leadership through:\n\n**Accomplishments:**\n${this.formatBulletList(leadershipAccomplishments)}\n\n**Leadership Style:**\n${this.formatBulletList(leadershipStrengths)}${contextSuffix}`;
+    return `My leadership experience demonstrates strong results through ${topLeadership.join(' and ').toLowerCase()}. I believe in hands-on technical leadership while empowering teams to own their implementations and grow their skills.`;
   }
 
   generateTechnicalResponse(cvData, jobContext = '') {
     const techKeywords = ['ai', 'data', 'platform', 'technical', 'system', 'application'];
     const techAccomplishments = this.filterByKeywords(cvData.accomplishments, techKeywords);
-    const contextSuffix = jobContext ? `\n\nThis technical expertise is well-suited${jobContext}` : '';
+    const topTech = techAccomplishments.length > 0 ? techAccomplishments.slice(0, 3) : cvData.accomplishments.slice(0, 3);
     
-    return `Technical background and achievements:\n\n${this.formatBulletList(techAccomplishments.length > 0 ? techAccomplishments : cvData.accomplishments)}\n\nCombines technical depth with business impact and measurable results.${contextSuffix}`;
+    return `My technical background includes ${topTech.join(', ').toLowerCase()}. I combine deep technical expertise with business impact, focusing on scalable solutions that deliver measurable results.`;
   }
 
   generateDefaultResponse(cvData, question, jobContext = '') {
-    const contextSuffix = jobContext ? `\n\nThis expertise is particularly relevant${jobContext}` : '';
+    const topAccomplishments = cvData.accomplishments.slice(0, 2);
+    const topStrengths = cvData.strengths.slice(0, 3);
     
-    return `Based on the CV:\n\n**Key Accomplishments:**\n${this.formatBulletList(cvData.accomplishments)}\n\n**Core Strengths:**\n${this.formatBulletList(cvData.strengths)}\n\nThis provides expertise relevant to: "${question}"${contextSuffix}`;
+    return `My background includes ${topAccomplishments.join(' and ').toLowerCase()}. My core strengths are ${topStrengths.join(', ').toLowerCase()}. This experience positions me well to tackle complex challenges and deliver measurable business impact.`;
   }
 
   formatBulletList(items) {

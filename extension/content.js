@@ -62,6 +62,15 @@ function createGutter() {
           <input type="text" id="job-location" class="job-input" placeholder="Job location will be extracted automatically...">
         </div>
         
+        <div class="form-field salary-range">
+          <label>Salary Range:</label>
+          <div class="salary-inputs">
+            <input type="text" id="min-salary" class="job-input salary-input" placeholder="Min (e.g., 120000)">
+            <span class="salary-separator">to</span>
+            <input type="text" id="max-salary" class="job-input salary-input" placeholder="Max (e.g., 160000)">
+          </div>
+        </div>
+        
         <div class="form-field">
           <label for="job-url">Job URL:</label>
           <input type="text" id="job-url" class="job-input" placeholder="Current page URL">
@@ -595,7 +604,9 @@ async function handleTealTracking() {
       company: document.getElementById('company-name')?.value || 'Unknown Company',
       location: document.getElementById('job-location')?.value || 'Unknown Location',
       url: document.getElementById('job-url')?.value || window.location.href,
-      description: document.getElementById('job-description')?.value || 'No description available'
+      description: document.getElementById('job-description')?.value || 'No description available',
+      minSalary: document.getElementById('min-salary')?.value || '',
+      maxSalary: document.getElementById('max-salary')?.value || ''
     };
     
     // Send extracted job info to background script to handle the new tab and automation
@@ -664,7 +675,9 @@ async function handleTrackFromForm() {
       company: document.getElementById('company-name')?.value?.trim() || '',
       location: document.getElementById('job-location')?.value?.trim() || '',
       url: document.getElementById('job-url')?.value?.trim() || window.location.href,
-      description: document.getElementById('job-description')?.value?.trim() || ''
+      description: document.getElementById('job-description')?.value?.trim() || '',
+      minSalary: document.getElementById('min-salary')?.value?.trim() || '',
+      maxSalary: document.getElementById('max-salary')?.value?.trim() || ''
     };
     
     // Validate that we have at least title and company

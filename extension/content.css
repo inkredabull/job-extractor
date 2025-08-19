@@ -271,6 +271,25 @@ html.job-extractor-gutter-open {
   font-style: italic;
 }
 
+/* Salary range styling */
+.salary-range .salary-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.salary-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.salary-separator {
+  color: #666;
+  font-weight: 500;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
 /* Checkbox styling */
 .radio-label {
   display: flex;
