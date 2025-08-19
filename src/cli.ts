@@ -9,6 +9,7 @@ import { InterviewPrepAgent } from './agents/interview-prep-agent';
 import { OutreachAgent } from './agents/outreach-agent';
 import { MetricsAgent } from './agents/metrics-agent';
 import { ApplicationAgent } from './agents/application-agent';
+import { WhoGotHiredAgent } from './agents/whogothired-agent';
 import { StatementType } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -1154,5 +1155,118 @@ program
     }
   });
 
+// WhoGotHired Agent Commands
+program
+  .command('whogothired')
+  .description('Check Gmail rejections and track who got hired on LinkedIn')
+  .action(async () => {
+    try {
+      console.log('🔍 Running WhoGotHired Agent...');
+      
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.run();
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('whogothired:status')
+  .description('Show WhoGotHired tracking status and statistics')
+  .action(async () => {
+    try {
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.status();
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('whogothired:check')
+  .description('Force check LinkedIn for a specific company and job title')
+  .argument('<company>', 'Company name to check')
+  .argument('<jobTitle>', 'Job title to check')
+  .action(async (company: string, jobTitle: string) => {
+    try {
+      console.log(`🔍 Force checking: ${company} - ${jobTitle}`);
+      
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.forceCheck(company, jobTitle);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('whogothired:list')
+  .description('List all pending LinkedIn checks')
+  .action(async () => {
+    try {
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.listPendingChecks();
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('whogothired:report')
+  .description('Report who got hired for a specific rejection')
+  .argument('<rejectionId>', 'Rejection ID from the tracker')
+  .argument('<name>', 'Name of the person who got hired')
+  .argument('<title>', 'Job title of the hired person')
+  .option('--linkedin <url>', 'LinkedIn URL of the hired person')
+  .option('--start-date <date>', 'Start date of the hired person (YYYY-MM-DD)')
+  .action(async (rejectionId: string, name: string, title: string, options: { linkedin?: string, startDate?: string }) => {
+    try {
+      console.log(`🎯 Reporting hire: ${name} for rejection ${rejectionId}`);
+      
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.reportHire(rejectionId, name, title, options.linkedin, options.startDate);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
+program
+  .command('whogothired:giveup')
+  .description('Give up searching for who got hired for a specific rejection')
+  .argument('<rejectionId>', 'Rejection ID from the tracker')
+  .option('--reason <reason>', 'Reason for giving up (optional)')
+  .action(async (rejectionId: string, options: { reason?: string }) => {
+    try {
+      console.log(`⏹️ Giving up search for rejection ${rejectionId}`);
+      
+      const config = getConfig();
+      const agent = new WhoGotHiredAgent(config);
+      
+      await agent.giveUpSearch(rejectionId, options.reason);
+      
+    } catch (error) {
+      console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
 
 program.parse();
