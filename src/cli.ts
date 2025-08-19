@@ -135,23 +135,25 @@ program
 
 program
   .command('extract')
-  .description('Extract job information from a URL and automatically score it')
-  .argument('<url>', 'URL of the job posting to extract')
+  .description('Extract job information from URL, HTML, or JSON and automatically score it')
+  .argument('<input>', 'URL of job posting, HTML content, or JSON object to extract/process')
+  .option('-t, --type <type>', 'Input type: url, html, or json', 'url')
   .option('-o, --output <file>', 'Output file to save the extracted data (optional)')
   .option('-f, --format <format>', 'Output format: json or pretty', 'pretty')
   .option('-c, --criteria <file>', 'Path to criteria file for scoring', 'criteria.json')
   .option('--no-score', 'Skip automatic scoring after extraction')
   .option('--force-extract', 'Extract job even if competition is too high')
-  .action(async (url: string, options) => {
+  .action(async (input: string, options) => {
     try {
       console.log('🔍 Extracting job information...');
-      console.log(`📄 URL: ${url}`);
+      console.log(`📄 Input Type: ${options.type}`);
+      console.log(`📄 Input: ${options.type === 'json' ? 'JSON data' : input.substring(0, 100)}...`);
       console.log('');
 
       const config = getConfig();
       const agent = new JobExtractorAgent(config);
       
-      const result = await agent.extract(url, { ignoreCompetition: options.forceExtract });
+      const result = await agent.extractFromInput(input, options.type, { ignoreCompetition: options.forceExtract });
 
       if (!result.success) {
         console.error('❌ Error:', result.error);
@@ -163,8 +165,23 @@ program
         process.exit(1);
       }
 
-      // Generate unique job ID from URL
-      const jobId = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
+      // Generate unique job ID based on input type
+      let jobId: string;
+      if (options.type === 'url') {
+        jobId = crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
+      } else if (options.type === 'json') {
+        // For JSON, try to use title + company for ID, fallback to timestamp
+        try {
+          const jsonData = JSON.parse(input);
+          const idString = `${jsonData.title || 'unknown'}-${jsonData.company || 'unknown'}`;
+          jobId = crypto.createHash('md5').update(idString).digest('hex').substring(0, 8);
+        } catch {
+          jobId = crypto.createHash('md5').update(Date.now().toString()).digest('hex').substring(0, 8);
+        }
+      } else {
+        // For HTML, use a hash of the content
+        jobId = crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
+      }
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Create job-specific subdirectory

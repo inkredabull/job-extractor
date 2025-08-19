@@ -10,11 +10,37 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extract(url: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromInput(input: string, type: 'url' | 'html' | 'json', options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+    switch (type) {
+      case 'url':
+        return this.extractFromUrl(input, options);
+      case 'html':
+        return this.extractFromHtml(input, options);
+      case 'json':
+        return this.extractFromJson(input, options);
+      default:
+        return {
+          success: false,
+          error: `Invalid input type: ${type}. Must be 'url', 'html', or 'json'`
+        };
+    }
+  }
+
+  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
     try {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
-      
+      return this.extractFromHtml(html, options, url);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+    try {
       // Check applicant count first - early exit if too competitive (unless overridden)
       const applicantInfo = this.extractApplicantCount(html);
       if (applicantInfo.shouldExit && !options?.ignoreCompetition) {
@@ -44,7 +70,7 @@ export class JobExtractorAgent extends BaseAgent {
       const jobData = await this.extractJobDataFromHtml(html, applicantInfo);
       
       // Generate job ID and save locally
-      const jobId = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
+      const jobId = crypto.createHash('md5').update(sourceUrl || html).digest('hex').substring(0, 8);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Create job-specific subdirectory
@@ -57,7 +83,7 @@ export class JobExtractorAgent extends BaseAgent {
       const logFilePath = path.join(jobDir, logFileName);
 
       // Save JSON to log file
-      const jobDataWithSource = { ...jobData, source: "extracted" };
+      const jobDataWithSource = { ...jobData, source: sourceUrl ? "extracted" : "html_parsed" };
       const jsonOutput = JSON.stringify(jobDataWithSource, null, 2);
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
@@ -72,6 +98,105 @@ export class JobExtractorAgent extends BaseAgent {
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
+  }
+
+  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+    try {
+      // Parse the JSON input
+      let jobData: any;
+      try {
+        jobData = JSON.parse(jsonInput);
+      } catch (parseError) {
+        return {
+          success: false,
+          error: 'Invalid JSON input: ' + (parseError instanceof Error ? parseError.message : 'Unknown parsing error')
+        };
+      }
+
+      // Map to expected job schema
+      const normalizedJobData = this.normalizeJobData(jobData);
+
+      // Generate job ID from title and company
+      const idString = `${normalizedJobData.title || 'unknown'}-${normalizedJobData.company || 'unknown'}`;
+      const jobId = crypto.createHash('md5').update(idString).digest('hex').substring(0, 8);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
+      // Create job-specific subdirectory
+      const jobDir = path.join('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+      
+      const logFileName = `job-${timestamp}.json`;
+      const logFilePath = path.join(jobDir, logFileName);
+
+      // Save JSON to log file
+      const jobDataWithSource = { ...normalizedJobData, source: "json_input" };
+      const jsonOutput = JSON.stringify(jobDataWithSource, null, 2);
+      fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
+      console.log(`✅ Job information logged to ${logFilePath}`);
+
+      return {
+        success: true,
+        data: jobDataWithSource,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  private normalizeJobData(inputData: any): JobListing {
+    // Map various JSON structures to our expected schema
+    return {
+      title: inputData.title || inputData.job_title || inputData.position || inputData.role || '',
+      company: inputData.company || inputData.company_name || inputData.employer || '',
+      location: inputData.location || inputData.job_location || inputData.work_location || '',
+      description: inputData.description || inputData.job_description || inputData.details || '',
+      salary: this.normalizeSalary(inputData.salary || inputData.compensation || inputData.pay),
+      applicantCount: inputData.applicantCount || inputData.applicant_count,
+      competitionLevel: inputData.competitionLevel || inputData.competition_level
+    };
+  }
+
+  private normalizeSalary(salaryInput: any): { min: string; max: string; currency: string } | undefined {
+    if (!salaryInput) return undefined;
+    
+    if (typeof salaryInput === 'object') {
+      return {
+        min: salaryInput.min || salaryInput.minimum || '',
+        max: salaryInput.max || salaryInput.maximum || '',
+        currency: salaryInput.currency || 'USD'
+      };
+    }
+    
+    if (typeof salaryInput === 'string') {
+      // Try to parse salary ranges from string
+      const rangeMatch = salaryInput.match(/(\$?[\d,]+)\s*-\s*(\$?[\d,]+)/);
+      if (rangeMatch) {
+        return {
+          min: rangeMatch[1],
+          max: rangeMatch[2],
+          currency: 'USD'
+        };
+      }
+      
+      // Single salary value
+      return {
+        min: salaryInput,
+        max: salaryInput,
+        currency: 'USD'
+      };
+    }
+    
+    return undefined;
+  }
+
+  // Keep backward compatibility
+  async extract(url: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+    return this.extractFromUrl(url, options);
   }
 
   private createExtractionPrompt(html: string): string {
