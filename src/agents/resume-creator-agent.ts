@@ -748,6 +748,33 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     }
   }
 
+  private addHeaderToMarkdown(markdownContent: string): string {
+    const header = `---
+header-includes: |
+  \\usepackage{fancyhdr}
+  \\usepackage{geometry}
+  \\geometry{bottom=1in, footskip=0.5in}
+  \\pagestyle{fancy}
+  \\fancyhf{}
+  \\fancyfoot[C]{\\footnotesize \\textit{Brought to you by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
+  \\renewcommand{\\headrulewidth}{0pt}
+---
+`;
+
+    // If markdown already has a YAML header, replace it, otherwise prepend our header
+    if (markdownContent.startsWith('---')) {
+      const endOfFrontMatterIndex = markdownContent.indexOf('---', 3);
+      if (endOfFrontMatterIndex !== -1) {
+        // Replace existing front matter
+        const contentWithoutFrontMatter = markdownContent.substring(endOfFrontMatterIndex + 3).trim();
+        return header + contentWithoutFrontMatter;
+      }
+    }
+    
+    // Prepend header to content
+    return header + markdownContent;
+  }
+
   private async generateTailoredContent(job: JobListing, cvContent: string, jobId?: string): Promise<{
     markdownContent: string;
     changes: string[];
@@ -825,7 +852,11 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       if (!jsonMatch) {
         throw new Error('No JSON found in tailoring response');
       }
-      return JSON.parse(jsonMatch[0]);
+      const result = JSON.parse(jsonMatch[0]);
+      return {
+        markdownContent: this.addHeaderToMarkdown(result.markdownContent),
+        changes: result.changes
+      };
     } catch (error) {
       throw new Error(`Failed to generate tailored content: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
     }
