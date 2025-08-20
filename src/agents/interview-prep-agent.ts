@@ -757,11 +757,11 @@ Respond in this JSON format:
   }
 
   private getJobIdFromJob(job: JobListing): string {
-    // Try to derive jobId from the job data
-    // This is a simple approach - in practice, you might want to store jobId with the job data
-    const crypto = require('crypto');
-    const jobString = `${job.title}-${job.company}`;
-    return crypto.createHash('md5').update(jobString).digest('hex').substring(0, 8);
+    // Generate unique job ID using timestamp + random for guaranteed uniqueness
+    const timestamp = Date.now().toString(16);
+    const random = Math.random().toString(16).substring(2, 6);
+    const combined = timestamp + random;
+    return combined.substring(combined.length - 8);
   }
 
   private injectThemesIntoPrompt(promptTemplate: string, themes: JobTheme[]): string {

@@ -71,8 +71,8 @@ export class JobExtractorAgent extends BaseAgent {
       // Extract job data from HTML/structured data
       const jobData = await this.extractJobDataFromHtml(html, applicantInfo);
       
-      // Generate job ID and save locally
-      const jobId = crypto.createHash('md5').update(sourceUrl || html).digest('hex').substring(0, 8);
+      // Generate unique job ID using timestamp + random for guaranteed uniqueness
+      const jobId = this.generateJobId();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Create job-specific subdirectory
@@ -118,9 +118,8 @@ export class JobExtractorAgent extends BaseAgent {
       // Map to expected job schema
       const normalizedJobData = this.normalizeJobData(jobData);
 
-      // Generate job ID from title and company
-      const idString = `${normalizedJobData.title || 'unknown'}-${normalizedJobData.company || 'unknown'}`;
-      const jobId = crypto.createHash('md5').update(idString).digest('hex').substring(0, 8);
+      // Generate unique job ID using timestamp + random for guaranteed uniqueness
+      const jobId = this.generateJobId();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Create job-specific subdirectory
@@ -181,14 +180,18 @@ export class JobExtractorAgent extends BaseAgent {
       };
     }
     
+    const company = inputData.company || inputData.company_name || inputData.employer || '';
+    
     return {
       title: inputData.title || inputData.job_title || inputData.position || inputData.role || '',
-      company: inputData.company || inputData.company_name || inputData.employer || '',
+      company: company,
       location: inputData.location || inputData.job_location || inputData.work_location || '',
       description: inputData.description || inputData.job_description || inputData.details || '',
       salary: this.normalizeSalary(salaryData),
       applicantCount: inputData.applicantCount || inputData.applicant_count,
-      competitionLevel: inputData.competitionLevel || inputData.competition_level
+      competitionLevel: inputData.competitionLevel || inputData.competition_level,
+      linkedInCompany: inputData.linkedInCompany || inputData.linked_in || inputData.linkedin_company || 
+                       (company ? this.convertToLinkedInSlug(company) : undefined)
     };
   }
 
@@ -239,6 +242,7 @@ Extract job information from the following HTML content and return it as a JSON 
   "company": "company name",
   "location": "job location",
   "description": "full job description text",
+  "linkedInCompany": "company linkedin slug (auto-generated from company name)",
   "salary": {
     "min": "minimum salary if available",
     "max": "maximum salary if available", 
@@ -250,6 +254,7 @@ Rules:
 - Return ONLY valid JSON, no other text or markdown
 - If salary information is not available, omit the salary field entirely
 - If only one salary value is provided, use it as both min and max
+- For linkedInCompany: convert company name to lowercase, replace spaces with hyphens, remove special characters (e.g., "Microsoft Corp" → "microsoft-corp")
 - Extract the complete job description including responsibilities, requirements, and benefits
 - Use the exact company name as it appears on the page
 - For location, use the format "City, State" or "City, Country"
@@ -366,11 +371,14 @@ JSON:`;
           .trim();
       }
       
+      const company = jsonLd.hiringOrganization?.name || '';
+      
       const jobData: JobListing = {
         title: jsonLd.title || jsonLd.identifier?.name || '',
-        company: jsonLd.hiringOrganization?.name || '',
+        company: company,
         location: location,
         description: description,
+        linkedInCompany: company ? this.convertToLinkedInSlug(company) : undefined,
       };
 
       // Add applicant information if available
@@ -607,6 +615,11 @@ JSON:`;
           max: '',
           currency: 'USD'
         };
+      }
+
+      // Add LinkedIn company slug if not present
+      if (!parsed.linkedInCompany && parsed.company) {
+        parsed.linkedInCompany = this.convertToLinkedInSlug(parsed.company);
       }
 
       return parsed as JobListing;
@@ -973,8 +986,20 @@ Response format: ["term1", "term2", "term3", ...]`;
   }
 
   private generateJobId(): string {
-    // Generate 8-character hex ID similar to existing pattern
-    return Math.random().toString(16).substring(2, 10);
+    // Generate unique 8-character hex ID using timestamp + random
+    const timestamp = Date.now().toString(16);
+    const random = Math.random().toString(16).substring(2, 6);
+    const combined = timestamp + random;
+    return combined.substring(combined.length - 8);
+  }
+
+  private convertToLinkedInSlug(company: string): string {
+    return company
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
   }
 
   private async synthesizeJobDescription(blurbPath: string, companyUrl: string): Promise<string> {

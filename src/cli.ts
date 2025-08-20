@@ -166,23 +166,11 @@ program
         process.exit(1);
       }
 
-      // Generate unique job ID based on input type
-      let jobId: string;
-      if (options.type === 'url') {
-        jobId = crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
-      } else if (options.type === 'json') {
-        // For JSON, try to use title + company for ID, fallback to timestamp
-        try {
-          const jsonData = JSON.parse(input);
-          const idString = `${jsonData.title || 'unknown'}-${jsonData.company || 'unknown'}`;
-          jobId = crypto.createHash('md5').update(idString).digest('hex').substring(0, 8);
-        } catch {
-          jobId = crypto.createHash('md5').update(Date.now().toString()).digest('hex').substring(0, 8);
-        }
-      } else {
-        // For HTML, use a hash of the content
-        jobId = crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
-      }
+      // Generate unique job ID using timestamp + random for guaranteed uniqueness
+      const timestampHex = Date.now().toString(16);
+      const random = Math.random().toString(16).substring(2, 6);
+      const combined = timestampHex + random;
+      const jobId = combined.substring(combined.length - 8);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
       // Create job-specific subdirectory

@@ -15,7 +15,7 @@ export class OutreachAgent {
       const company = jobData.company;
       
       // Check for custom LinkedIn company slug, fall back to company name
-      const linkedInSlug = (jobData as any).linked_in;
+      const linkedInSlug = (jobData as any).linkedInCompany || (jobData as any).linked_in || (jobData as any).linkedin_company;
       const companyIdentifier = linkedInSlug || company;
       
       if (linkedInSlug) {
@@ -192,15 +192,17 @@ Consider mentioning:
 If the automatically generated LinkedIn URL doesn't work (404 error), you can:
 1. Find the correct LinkedIn company page manually
 2. Extract the company slug from the URL (e.g., "microsoft" from linkedin.com/company/microsoft/)
-3. Add a "linked_in" field to your job JSON file with the correct slug:
+3. Add a "linkedInCompany" field to your job JSON file with the correct slug:
    \`\`\`json
    {
      "company": "Microsoft Corporation",
-     "linked_in": "microsoft",
+     "linkedInCompany": "microsoft",
      ...
    }
    \`\`\`
 4. Re-run the outreach search command to use the custom slug
+
+Note: The system also supports legacy field names "linked_in" and "linkedin_company" for backward compatibility.
 `;
   }
 

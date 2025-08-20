@@ -5,6 +5,7 @@ export interface JobListing {
   description: string;
   applicantCount?: number;
   competitionLevel?: 'low' | 'medium' | 'high' | 'extreme';
+  linkedInCompany?: string; // LinkedIn company slug (e.g., "microsoft", "google")
   salary?: {
     min?: string;
     max?: string;
