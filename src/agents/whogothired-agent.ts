@@ -32,7 +32,7 @@ export class WhoGotHiredAgent extends BaseAgent {
   private trackerFile: string;
   private tracker: WhoGotHiredTracker;
   private gmail: any;
-  private oauth2Client: OAuth2Client;
+  private oauth2Client!: OAuth2Client;
 
   constructor(config: AgentConfig) {
     super(config);
@@ -270,7 +270,7 @@ export class WhoGotHiredAgent extends BaseAgent {
 
     } catch (error) {
       console.error('❌ Error fetching Gmail rejections:', error);
-      if (error.message?.includes('invalid_grant')) {
+      if (error instanceof Error && error.message?.includes('invalid_grant')) {
         console.error('🔑 OAuth token expired. Please re-run: node scripts/setup-gmail-auth.js');
       }
       return [];
