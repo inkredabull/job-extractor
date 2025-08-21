@@ -196,7 +196,7 @@ export class JobExtractorAgent extends BaseAgent {
       company: company,
       location: inputData.location || inputData.job_location || inputData.work_location || '',
       description: inputData.description || inputData.job_description || inputData.details || '',
-      salary: this.normalizeSalary(salaryData),
+      salary: this.normalizeSalary(salaryData), // Always returns a salary structure
       applicantCount: inputData.applicantCount || inputData.applicant_count,
       competitionLevel: inputData.competitionLevel || inputData.competition_level,
       linkedInCompany: inputData.linkedInCompany || inputData.linked_in || inputData.linkedin_company || 
@@ -204,8 +204,10 @@ export class JobExtractorAgent extends BaseAgent {
     };
   }
 
-  private normalizeSalary(salaryInput: any): { min: string; max: string; currency: string } | undefined {
-    if (!salaryInput) return undefined;
+  private normalizeSalary(salaryInput: any): { min: string; max: string; currency: string } {
+    if (!salaryInput) {
+      return { min: '', max: '', currency: 'USD' };
+    }
     
     if (typeof salaryInput === 'object') {
       return {
@@ -234,7 +236,8 @@ export class JobExtractorAgent extends BaseAgent {
       };
     }
     
-    return undefined;
+    // Fallback for any unhandled cases
+    return { min: '', max: '', currency: 'USD' };
   }
 
   // Keep backward compatibility
@@ -387,6 +390,7 @@ JSON:`;
         company: company,
         location: location,
         description: description,
+        salary: { min: '', max: '', currency: 'USD' }, // Will be updated below if found
         linkedInCompany: company ? this.convertToLinkedInSlug(company) : undefined,
       };
 
@@ -433,14 +437,7 @@ JSON:`;
         }
       }
       
-      // If no salary found, include empty salary structure
-      if (!salaryFound) {
-        jobData.salary = {
-          min: '',
-          max: '',
-          currency: 'USD'
-        };
-      }
+      // Note: salary structure already initialized above
 
       // Validate required fields
       if (!jobData.title || !jobData.company || !jobData.location || !jobData.description) {

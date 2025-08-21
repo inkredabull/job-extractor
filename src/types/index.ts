@@ -6,9 +6,9 @@ export interface JobListing {
   applicantCount?: number;
   competitionLevel?: 'low' | 'medium' | 'high' | 'extreme';
   linkedInCompany?: string; // LinkedIn company slug (e.g., "microsoft", "google")
-  salary?: {
-    min?: string;
-    max?: string;
+  salary: {
+    min: string;
+    max: string;
     currency: string;
   };
 }
