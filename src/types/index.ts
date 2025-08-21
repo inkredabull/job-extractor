@@ -24,6 +24,7 @@ export interface ExtractorResult {
   success: boolean;
   data?: JobListing;
   error?: string;
+  jobId?: string;
   competitionReason?: {
     applicantCount: number;
     threshold: number;

@@ -1,6 +1,7 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
+import { MacOSReminderService } from '../utils/macos-reminder';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -90,9 +91,13 @@ export class JobExtractorAgent extends BaseAgent {
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
+      // Create reminder for tracked job
+      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl);
+
       return {
         success: true,
         data: jobDataWithSource,
+        jobId: jobId
       };
     } catch (error) {
       return {
@@ -137,9 +142,13 @@ export class JobExtractorAgent extends BaseAgent {
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
+      // Create reminder for tracked job
+      await this.createJobReminder(jobDataWithSource, jobId);
+
       return {
         success: true,
         data: jobDataWithSource,
+        jobId: jobId
       };
     } catch (error) {
       return {
@@ -1102,5 +1111,17 @@ Return only the synthesized job description text, no additional formatting or co
     return this.parseJobData(response, applicantInfo);
   }
 
+  /**
+   * Create a reminder for the tracked job using macOS Reminders
+   */
+  private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string): Promise<void> {
+    try {
+      const reminderService = new MacOSReminderService();
+      await reminderService.createJobReminder(jobData, jobId, sourceUrl);
+    } catch (error) {
+      // Don't fail the entire extraction if reminder creation fails
+      console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
 
 }

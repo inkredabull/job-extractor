@@ -117,3 +117,6 @@ jspm_packages/
 !requirements.txt
 !examples/**/*.py
 data/
+
+# Personal configuration files
+macos-reminder-config.yaml

@@ -1,0 +1,42 @@
+# macOS Reminder Configuration
+# Configuration for creating reminders when jobs are tracked via Chrome extension
+
+reminder_config:
+  # The list name in Reminders app where job tracking reminders will be created
+  list_name: "Job Applications"
+  
+  # Default priority for job tracking reminders (0-9, where 9 is highest)
+  default_priority: 5
+  
+  # Tags to apply to job tracking reminders (space-separated)
+  tags: "job-search career applications"
+  
+  # Reminder due date configuration
+  due_date:
+    # Set reminder due today (true) or specify days from now (number)
+    today: true
+    # If today is false, specify number of days from now
+    days_offset: 0
+    # No specific time (leave empty) or set specific time (HH:MM format)
+    time: ""
+  
+  # Reminder title template (variables: {title}, {company}, {location})
+  title_template: "Follow up: {title} at {company}"
+  
+  # Reminder notes template (variables: {title}, {company}, {location}, {url}, {jobId})
+  notes_template: |
+    Job Application Follow-up
+    
+    Position: {title}
+    Company: {company}
+    Location: {location}
+    URL: {url}
+    Job ID: {jobId}
+    
+    Extracted via job-extractor Chrome extension
+    
+    Next steps:
+    - Check application status
+    - Send follow-up email if needed
+    - Research company updates
+    - Prepare for potential interview

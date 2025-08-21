@@ -120,6 +120,7 @@ Job Extractor is an AI-powered career toolkit that delivers **10x improvement in
 - **What**: One-click job extraction and tracking from job sites
 - **Value**: Seamless workflow integration, reduces context switching
 - **CV-Aware Assistant**: Provides personalized responses to interview questions on web pages
+- **macOS Reminder Integration**: Automatically creates follow-up reminders in macOS Reminders app for tracked jobs
 
 #### 10. **Multi-Modal Processing**
 - **What**: Handles various input formats (URLs, HTML, JSON, structured data)
