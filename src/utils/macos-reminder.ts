@@ -168,7 +168,17 @@ tell application "Reminders"
 
       // Add due date if provided
       if (reminderData.dueDate) {
-        appleScript += `, due date:date "${reminderData.dueDate}"`;
+        // Convert YYYY-MM-DD to AppleScript date format (MM/DD/YYYY)
+        const dateParts = reminderData.dueDate.split('-');
+        if (dateParts.length === 3) {
+          const appleScriptDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+          console.log(`📅 Converting date: ${reminderData.dueDate} -> ${appleScriptDate}`);
+          appleScript += `, due date:date "${appleScriptDate}"`;
+        } else {
+          // Fallback to original format if parsing fails
+          console.log(`⚠️  Date parsing failed, using original: ${reminderData.dueDate}`);
+          appleScript += `, due date:date "${reminderData.dueDate}"`;
+        }
       }
 
       // Note: Skip priority for now - AppleScript priority handling is complex
