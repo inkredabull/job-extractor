@@ -1,0 +1,29 @@
+# Auto Workflow Configuration
+# Configuration for automatic post-extraction workflow when jobs are tracked via Chrome extension
+
+workflow_config:
+  # Enable/disable automatic workflow after job extraction
+  enabled: true
+  
+  # Minimum job score percentage to trigger resume generation (0-100)
+  score_threshold: 70
+  
+  # Resume generation mode: "leader" (management focus) or "builder" (technical focus)
+  resume_mode: "leader"
+  
+  # Maximum number of roles to include in resume
+  max_roles: 4
+  
+  # Enable automatic job description generation if missing
+  generate_job_description: false
+  
+  # Paths for required files (relative to project root)
+  files:
+    criteria_file: "criteria.json"
+    cv_file: "cv.txt"
+    
+  # Workflow steps to perform
+  steps:
+    score: true      # Always score the job
+    resume: true     # Generate resume if score >= threshold
+    critique: true   # Automatically critique resume (handled by ResumeCreatorAgent)

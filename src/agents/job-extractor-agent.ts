@@ -2,9 +2,12 @@ import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
 import { MacOSReminderService } from '../utils/macos-reminder';
+import { JobScorerAgent } from './job-scorer-agent';
+import { ResumeCreatorAgent } from './resume-creator-agent';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import * as yaml from 'js-yaml';
 
 export class JobExtractorAgent extends BaseAgent {
   constructor(config: AgentConfig) {
@@ -94,6 +97,9 @@ export class JobExtractorAgent extends BaseAgent {
       // Create reminder for tracked job
       await this.createJobReminder(jobDataWithSource, jobId, sourceUrl);
 
+      // Run post-extraction workflow (score, resume, critique)
+      await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
+
       return {
         success: true,
         data: jobDataWithSource,
@@ -144,6 +150,9 @@ export class JobExtractorAgent extends BaseAgent {
 
       // Create reminder for tracked job
       await this.createJobReminder(jobDataWithSource, jobId);
+
+      // Run post-extraction workflow (score, resume, critique)
+      await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
 
       return {
         success: true,
@@ -1119,6 +1128,250 @@ Return only the synthesized job description text, no additional formatting or co
       // Don't fail the entire extraction if reminder creation fails
       console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
     }
+  }
+
+  /**
+   * Run post-extraction workflow: score job, generate resume if score is good, run critique
+   */
+  private async runPostExtractionWorkflow(jobId: string, jobData: JobListing): Promise<void> {
+    try {
+      // Load workflow configuration
+      const workflowConfig = this.loadWorkflowConfig();
+      
+      if (!workflowConfig.enabled) {
+        console.log('⚠️  Auto workflow disabled in configuration');
+        return;
+      }
+
+      console.log(`\n🚀 Starting post-extraction workflow for ${jobId}...`);
+      
+      // Step 1: Score the job
+      if (workflowConfig.steps.score) {
+        console.log('📊 Step 1: Scoring job...');
+        const score = await this.scoreJob(jobId, workflowConfig.files.criteria_file);
+        
+        if (!score) {
+          console.log('❌ Job scoring failed, skipping resume generation');
+          return;
+        }
+
+        console.log(`✅ Job scored: ${score.overallScore}%`);
+
+        // Step 2: Generate resume if score is above threshold
+        if (workflowConfig.steps.resume && score.overallScore >= workflowConfig.score_threshold) {
+          console.log(`📄 Step 2: Generating resume (score ${score.overallScore}% >= ${workflowConfig.score_threshold}%)...`);
+          
+          const resumeResult = await this.generateResume(jobId, workflowConfig);
+          
+          if (resumeResult) {
+            console.log('✅ Resume generated successfully');
+            
+            // Step 3: Critique is automatically handled by ResumeCreatorAgent
+            if (workflowConfig.steps.critique) {
+              console.log('🔍 Step 3: Critique automatically performed by ResumeCreatorAgent');
+            }
+          } else {
+            console.log('❌ Resume generation failed');
+          }
+        } else if (workflowConfig.steps.resume) {
+          console.log(`📄 Skipping resume generation (score ${score.overallScore}% < ${workflowConfig.score_threshold}%)`);
+        } else {
+          console.log('📄 Resume generation disabled in configuration');
+        }
+      } else {
+        console.log('📊 Job scoring disabled in configuration');
+      }
+
+      console.log(`✅ Post-extraction workflow completed for ${jobId}`);
+      
+    } catch (error) {
+      // Don't fail the entire extraction if workflow fails
+      console.warn('⚠️  Post-extraction workflow failed:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  /**
+   * Load workflow configuration
+   */
+  private loadWorkflowConfig(): any {
+    const configPath = 'auto-workflow-config.yaml';
+    const examplePath = 'auto-workflow-config.yaml.example';
+    
+    try {
+      let configFile = configPath;
+      if (!fs.existsSync(configPath)) {
+        if (fs.existsSync(examplePath)) {
+          console.log(`⚠️  Config file not found at ${configPath}, using example file`);
+          configFile = examplePath;
+        } else {
+          // Return default config
+          return {
+            enabled: true,
+            score_threshold: 70,
+            resume_mode: 'leader',
+            max_roles: 4,
+            generate_job_description: false,
+            files: {
+              criteria_file: 'criteria.json',
+              cv_file: 'cv.txt'
+            },
+            steps: {
+              score: true,
+              resume: true,
+              critique: true
+            }
+          };
+        }
+      }
+
+      const configContent = fs.readFileSync(configFile, 'utf8');
+      const configData = yaml.load(configContent) as { workflow_config: any };
+      return configData.workflow_config;
+    } catch (error) {
+      console.warn('⚠️  Failed to load workflow config, using defaults');
+      return {
+        enabled: true,
+        score_threshold: 70,
+        resume_mode: 'leader',
+        max_roles: 4,
+        generate_job_description: false,
+        files: {
+          criteria_file: 'criteria.json',
+          cv_file: 'cv.txt'
+        },
+        steps: {
+          score: true,
+          resume: true,
+          critique: true
+        }
+      };
+    }
+  }
+
+  /**
+   * Score a job using JobScorerAgent
+   */
+  private async scoreJob(jobId: string, criteriaFile?: string): Promise<any> {
+    try {
+      // Use provided criteria file or find default
+      const criteriaPath = criteriaFile || this.findCriteriaFile();
+      
+      const scorer = new JobScorerAgent(
+        {
+          openaiApiKey: this.config.openaiApiKey,
+          model: this.config.model,
+          temperature: this.config.temperature,
+          maxTokens: this.config.maxTokens
+        },
+        criteriaPath
+      );
+      
+      const score = await scorer.scoreJob(jobId);
+      return score;
+    } catch (error) {
+      console.error('❌ Job scoring error:', error instanceof Error ? error.message : 'Unknown error');
+      return null;
+    }
+  }
+
+  /**
+   * Generate resume using ResumeCreatorAgent
+   */
+  private async generateResume(jobId: string, workflowConfig: any): Promise<boolean> {
+    try {
+      // Find CV file using config or fallback
+      const cvFile = await this.findCvFileWithConfig(workflowConfig.files.cv_file);
+      
+      if (!cvFile) {
+        console.log('❌ No CV file found, skipping resume generation');
+        return false;
+      }
+
+      console.log(`📋 Using CV file: ${cvFile}`);
+      
+      // Use Anthropic API key if available, fallback to OpenAI
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY || this.config.openaiApiKey;
+      
+      const resumeCreator = new ResumeCreatorAgent(
+        anthropicApiKey,
+        this.config.model,
+        this.config.maxTokens,
+        workflowConfig.max_roles || 4,
+        workflowConfig.resume_mode || 'leader'
+      );
+      
+      const result = await resumeCreator.createResume(
+        jobId,
+        cvFile,
+        undefined, // outputPath
+        false, // regenerate
+        workflowConfig.generate_job_description || false
+      );
+      
+      return result.success;
+    } catch (error) {
+      console.error('❌ Resume generation error:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
+    }
+  }
+
+  /**
+   * Find criteria file for job scoring
+   */
+  private findCriteriaFile(): string {
+    const possiblePaths = [
+      'criteria.json',
+      './criteria.json',
+      'config/criteria.json'
+    ];
+    
+    for (const criteriaPath of possiblePaths) {
+      if (fs.existsSync(criteriaPath)) {
+        console.log(`📋 Found criteria file: ${criteriaPath}`);
+        return criteriaPath;
+      }
+    }
+    
+    console.log('⚠️  No criteria file found, using default criteria.json');
+    return 'criteria.json';
+  }
+
+  /**
+   * Find CV file for resume generation
+   */
+  private async findCvFile(): Promise<string | null> {
+    const possiblePaths = [
+      'cv.txt',
+      './cv.txt',
+      'CV.txt',
+      './CV.txt',
+      'sample-cv.txt',
+      './sample-cv.txt'
+    ];
+    
+    for (const cvPath of possiblePaths) {
+      if (fs.existsSync(cvPath)) {
+        console.log(`📄 Found CV file: ${cvPath}`);
+        return cvPath;
+      }
+    }
+    
+    console.log('⚠️  No CV file found');
+    return null;
+  }
+
+  /**
+   * Find CV file with configuration preference
+   */
+  private async findCvFileWithConfig(preferredPath: string): Promise<string | null> {
+    // First try the configured path
+    if (preferredPath && fs.existsSync(preferredPath)) {
+      console.log(`📄 Found CV file (from config): ${preferredPath}`);
+      return preferredPath;
+    }
+    
+    // Fallback to standard search
+    return this.findCvFile();
   }
 
 }
