@@ -181,7 +181,11 @@ tell application "Reminders"
         }
       }
 
-      // Note: Skip priority for now - AppleScript priority handling is complex
+      // Add priority if specified (AppleScript uses numeric values 1-9, where 9 is highest)
+      if (reminderData.priority !== undefined && reminderData.priority >= 1 && reminderData.priority <= 9) {
+        console.log(`📊 Setting priority: ${reminderData.priority}`);
+        appleScript += `, priority:${reminderData.priority}`;
+      }
 
       appleScript += `}
 end tell`;
