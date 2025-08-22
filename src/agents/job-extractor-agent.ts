@@ -219,28 +219,76 @@ export class JobExtractorAgent extends BaseAgent {
     }
     
     if (typeof salaryInput === 'object') {
+      // Handle object input with min/max fields
+      let min = salaryInput.min || salaryInput.minimum || '';
+      let max = salaryInput.max || salaryInput.maximum || '';
+      
+      // Normalize string values if they exist
+      if (min && typeof min === 'string') {
+        const minAmount = this.normalizeSalaryAmount(min.replace(/\$/g, ''));
+        min = `$${minAmount.toLocaleString()}`;
+      }
+      if (max && typeof max === 'string') {
+        const maxAmount = this.normalizeSalaryAmount(max.replace(/\$/g, ''));
+        max = `$${maxAmount.toLocaleString()}`;
+      }
+      
       return {
-        min: salaryInput.min || salaryInput.minimum || '',
-        max: salaryInput.max || salaryInput.maximum || '',
+        min: min,
+        max: max,
         currency: salaryInput.currency || 'USD'
       };
     }
     
     if (typeof salaryInput === 'string') {
-      // Try to parse salary ranges from string
-      const rangeMatch = salaryInput.match(/(\$?[\d,]+)\s*-\s*(\$?[\d,]+)/);
+      // Use the enhanced salary extraction from text
+      const parsed = this.extractSalaryFromText(salaryInput);
+      if (parsed) {
+        return parsed;
+      }
+      
+      // Fallback: try basic parsing for simple formats not caught by extractSalaryFromText
+      const cleanInput = salaryInput.trim();
+      
+      // Try to parse simple ranges like "$100,000-$150,000" or "100000-150000"
+      const rangeMatch = cleanInput.match(/\$?([\d,]+)k?\s*[-–—]\s*\$?([\d,]+)k?/i);
       if (rangeMatch) {
+        const min = this.normalizeSalaryAmount(rangeMatch[1]);
+        const max = this.normalizeSalaryAmount(rangeMatch[2]);
+        
         return {
-          min: rangeMatch[1],
-          max: rangeMatch[2],
+          min: `$${min.toLocaleString()}`,
+          max: `$${max.toLocaleString()}`,
           currency: 'USD'
         };
       }
       
-      // Single salary value
+      // Single salary value - try to normalize it
+      const singleMatch = cleanInput.match(/\$?([\d,]+)k?/i);
+      if (singleMatch) {
+        const amount = this.normalizeSalaryAmount(singleMatch[1]);
+        const salary = `$${amount.toLocaleString()}`;
+        return {
+          min: salary,
+          max: salary,
+          currency: 'USD'
+        };
+      }
+      
+      // If we can't parse it, return as-is
       return {
-        min: salaryInput,
-        max: salaryInput,
+        min: cleanInput,
+        max: cleanInput,
+        currency: 'USD'
+      };
+    }
+    
+    // Handle number input
+    if (typeof salaryInput === 'number') {
+      const salary = `$${salaryInput.toLocaleString()}`;
+      return {
+        min: salary,
+        max: salary,
         currency: 'USD'
       };
     }
@@ -265,16 +313,25 @@ Extract job information from the following HTML content and return it as a JSON 
   "description": "full job description text",
   "linkedInCompany": "company linkedin slug (auto-generated from company name)",
   "salary": {
-    "min": "minimum salary if available",
-    "max": "maximum salary if available", 
+    "min": "minimum salary as formatted string (e.g., '$150,000')",
+    "max": "maximum salary as formatted string (e.g., '$200,000')", 
     "currency": "currency code (e.g., USD, EUR)"
   }
 }
 
 Rules:
 - Return ONLY valid JSON, no other text or markdown
+- For salary extraction, look for various formats including:
+  * "Salary Range: $150,000 - $200,000"
+  * "$150k-$200k"
+  * "Between $150,000 and $200,000"
+  * "Up to $200,000"
+  * "Starting from $150,000"
+  * "150K-200K annually"
 - If salary information is not available, omit the salary field entirely
 - If only one salary value is provided, use it as both min and max
+- Format salary values with dollar sign and commas (e.g., "$150,000", "$200,000")
+- Convert 'k' or 'K' suffix to full amounts (e.g., "150k" becomes "$150,000")
 - For linkedInCompany: convert company name to lowercase, replace spaces with hyphens, remove special characters (e.g., "Microsoft Corp" → "microsoft-corp")
 - Extract the complete job description including responsibilities, requirements, and benefits
 - Use the exact company name as it appears on the page
@@ -512,26 +569,78 @@ JSON:`;
   private extractSalaryFromText(description: string): { min: string; max: string; currency: string } | null {
     if (!description) return null;
 
-    // Pattern to match salary ranges like "$248,700 - $342,000" or "Hiring Range: $248,700 - $342,000"
+    // Enhanced patterns to match various salary formats
     const salaryRangePatterns = [
-      /(?:Hiring Range|Salary Range|Range|Compensation):\s*\$?([\d,]+)(?:\s*-\s*|\s+to\s+)\$?([\d,]+)/i,
-      /\$?([\d,]+)(?:\s*-\s*|\s+to\s+)\$?([\d,]+)(?:\s+(?:USD|per year|annually))?/i,
-      /(?:between|from)\s+\$?([\d,]+)(?:\s*-\s*|\s+to\s+|\s+and\s+)\$?([\d,]+)/i
+      // Explicit range labels with various separators
+      /(?:Hiring Range|Salary Range|Base Salary Range|Total Compensation|Range|Compensation|Pay Range):\s*\$?([\d,]+)k?\s*(?:-|\u2013|\u2014|to|and)\s*\$?([\d,]+)k?/i,
+      
+      // Dollar amounts with K/k suffix (e.g., "$150k - $200k", "150K-200K")
+      /\$?([\d,]+)k\s*(?:-|\u2013|\u2014|to|and)\s*\$?([\d,]+)k/i,
+      
+      // Standard dollar ranges (e.g., "$150,000 - $200,000")
+      /\$?([\d,]+)(?:\s*-\s*|\s*\u2013\s*|\s*\u2014\s*|\s+to\s+|\s+and\s+)\$?([\d,]+)(?:\s+(?:USD|per year|annually|yearly|\/year))?/i,
+      
+      // Between/from patterns
+      /(?:between|from)\s+\$?([\d,]+)k?\s*(?:-|\u2013|\u2014|to|and)\s*\$?([\d,]+)k?/i,
+      
+      // Up to patterns (treat as max only, use 80% as min estimate)
+      /(?:up to|maximum of|max)\s+\$?([\d,]+)k?/i,
+      
+      // Starting from patterns (treat as min only, add 30% as max estimate)
+      /(?:starting|from|minimum|min)\s+\$?([\d,]+)k?/i
     ];
 
-    // Pattern to match single salary values
+    // Single salary patterns
     const singleSalaryPatterns = [
-      /(?:Salary|Compensation|Pay):\s*\$?([\d,]+)/i,
-      /\$?([\d,]+)(?:\s+(?:USD|per year|annually))/i
+      // Explicit single salary labels
+      /(?:Salary|Base Salary|Compensation|Pay|Annual Salary):\s*\$?([\d,]+)k?/i,
+      
+      // Dollar amounts with context indicators
+      /\$?([\d,]+)k?\s+(?:USD|per year|annually|yearly|\/year|annual)/i,
+      
+      // Standalone dollar amounts (be more restrictive to avoid false positives)
+      /(?:^|\s)\$?([\d,]+)k?(?:\s|$)(?=.*(?:salary|pay|compensation|annual))/i
     ];
 
     // Try salary range patterns first
     for (const pattern of salaryRangePatterns) {
       const match = description.match(pattern);
       if (match && match[1] && match[2]) {
+        let min = this.normalizeSalaryAmount(match[1]);
+        let max = this.normalizeSalaryAmount(match[2]);
+        
+        // Ensure min <= max (swap if necessary)
+        if (min > max) {
+          [min, max] = [max, min];
+        }
+        
         return {
-          min: `$${match[1].replace(/,/g, '')}`,
-          max: `$${match[2].replace(/,/g, '')}`,
+          min: `$${min.toLocaleString()}`,
+          max: `$${max.toLocaleString()}`,
+          currency: 'USD'
+        };
+      }
+      
+      // Handle "up to" patterns (only one capture group)
+      if (match && match[1] && !match[2] && /up to|maximum|max/i.test(pattern.source)) {
+        const maxAmount = this.normalizeSalaryAmount(match[1]);
+        const minAmount = Math.round(maxAmount * 0.8); // Estimate min as 80% of max
+        
+        return {
+          min: `$${minAmount.toLocaleString()}`,
+          max: `$${maxAmount.toLocaleString()}`,
+          currency: 'USD'
+        };
+      }
+      
+      // Handle "starting from" patterns (only one capture group)
+      if (match && match[1] && !match[2] && /starting|from|minimum|min/i.test(pattern.source)) {
+        const minAmount = this.normalizeSalaryAmount(match[1]);
+        const maxAmount = Math.round(minAmount * 1.3); // Estimate max as 130% of min
+        
+        return {
+          min: `$${minAmount.toLocaleString()}`,
+          max: `$${maxAmount.toLocaleString()}`,
           currency: 'USD'
         };
       }
@@ -541,7 +650,8 @@ JSON:`;
     for (const pattern of singleSalaryPatterns) {
       const match = description.match(pattern);
       if (match && match[1]) {
-        const salary = `$${match[1].replace(/,/g, '')}`;
+        const amount = this.normalizeSalaryAmount(match[1]);
+        const salary = `$${amount.toLocaleString()}`;
         return {
           min: salary,
           max: salary,
@@ -551,6 +661,20 @@ JSON:`;
     }
 
     return null;
+  }
+
+  private normalizeSalaryAmount(salaryStr: string): number {
+    // Remove commas and whitespace
+    const cleaned = salaryStr.replace(/[,\s]/g, '');
+    
+    // Check if it ends with 'k' or 'K' (thousands)
+    if (/k$/i.test(cleaned)) {
+      const num = parseFloat(cleaned.replace(/k$/i, ''));
+      return Math.round(num * 1000);
+    }
+    
+    // Regular number
+    return parseInt(cleaned, 10);
   }
 
   private parseJobData(response: string, applicantInfo?: { count: number; competitionLevel: 'low' | 'medium' | 'high' | 'extreme' }): JobListing {
