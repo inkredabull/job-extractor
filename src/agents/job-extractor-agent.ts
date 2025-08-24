@@ -1,7 +1,7 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
-import { MacOSReminderService } from '../utils/macos-reminder';
+import { MacOSReminderService } from '@inkredabull/macos-reminder';
 import { JobScorerAgent } from './job-scorer-agent';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import * as fs from 'fs';
@@ -200,12 +200,25 @@ export class JobExtractorAgent extends BaseAgent {
     
     const company = inputData.company || inputData.company_name || inputData.employer || '';
     
+    const description = inputData.description || inputData.job_description || inputData.details || '';
+    let normalizedSalary = this.normalizeSalary(salaryData); // Always returns a salary structure
+    
+    // If salary is empty but we have a description, try to extract salary from description text
+    if ((!normalizedSalary.min || normalizedSalary.min === '') && 
+        (!normalizedSalary.max || normalizedSalary.max === '') && 
+        description) {
+      const salaryFromDescription = this.extractSalaryFromText(description);
+      if (salaryFromDescription) {
+        normalizedSalary = salaryFromDescription;
+      }
+    }
+    
     return {
       title: inputData.title || inputData.job_title || inputData.position || inputData.role || '',
       company: company,
       location: inputData.location || inputData.job_location || inputData.work_location || '',
-      description: inputData.description || inputData.job_description || inputData.details || '',
-      salary: this.normalizeSalary(salaryData), // Always returns a salary structure
+      description: description,
+      salary: normalizedSalary,
       applicantCount: inputData.applicantCount || inputData.applicant_count,
       competitionLevel: inputData.competitionLevel || inputData.competition_level,
       linkedInCompany: inputData.linkedInCompany || inputData.linked_in || inputData.linkedin_company || 
@@ -755,6 +768,16 @@ JSON:`;
           currency: 'USD'
         };
       }
+      
+      // If salary is empty or missing, try to extract from description as fallback
+      if (parsed.salary && (!parsed.salary.min || parsed.salary.min === '') && (!parsed.salary.max || parsed.salary.max === '')) {
+        if (parsed.description) {
+          const salaryFromDescription = this.extractSalaryFromText(parsed.description);
+          if (salaryFromDescription) {
+            parsed.salary = salaryFromDescription;
+          }
+        }
+      }
 
       // Add LinkedIn company slug if not present
       if (!parsed.linkedInCompany && parsed.company) {
@@ -1247,7 +1270,36 @@ Return only the synthesized job description text, no additional formatting or co
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string): Promise<void> {
     try {
       const reminderService = new MacOSReminderService();
-      await reminderService.createJobReminder(jobData, jobId, sourceUrl);
+      
+      // Prepare template variables for the reminder
+      const templateVariables = {
+        title: jobData.title || 'Unknown Position',
+        company: jobData.company || 'Unknown Company',
+        location: jobData.location || 'Unknown Location',
+        url: sourceUrl || 'No URL provided',
+        jobId: jobId,
+        notes: `Job Application Follow-up
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Location: ${jobData.location || 'Unknown Location'}
+URL: ${sourceUrl || 'No URL provided'}
+Job ID: ${jobId}
+
+Extracted via job-extractor
+
+Next steps:
+- Check application status
+- Send follow-up email if needed
+- Research company updates
+- Prepare for potential interview`
+      };
+      
+      const result = await reminderService.createReminderFromTemplate(templateVariables);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Unknown reminder creation error');
+      }
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
       console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');

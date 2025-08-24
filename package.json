@@ -33,6 +33,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
     "@browserbasehq/stagehand": "^2.4.1",
+    "@inkredabull/macos-reminder": "file:../macos-reminder",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/js-yaml": "^4.0.9",
     "axios": "^1.6.2",

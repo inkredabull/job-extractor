@@ -23,20 +23,5 @@ reminder_config:
   # Reminder title template (variables: {title}, {company}, {location})
   title_template: "{title} at {company}"
   
-  # Reminder notes template (variables: {title}, {company}, {location}, {url}, {jobId})
-  notes_template: |
-    Job Application Follow-up
-    
-    Position: {title}
-    Company: {company}
-    Location: {location}
-    URL: {url}
-    Job ID: {jobId}
-    
-    Extracted via job-extractor Chrome extension
-    
-    Next steps:
-    - Check application status
-    - Send follow-up email if needed
-    - Research company updates
-    - Prepare for potential interview
+  # Reminder notes template (variables: {title}, {company}, {location}, {url}, {jobId}, {notes})
+  notes_template: "{notes}"
