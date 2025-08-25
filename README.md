@@ -661,7 +661,7 @@ Automatically fill job application forms using your resume and interview prepara
 
 ```bash
 # Fill application form using resume and interview data
-job-extractor apply "https://company.com/apply" "4c32e01e"
+job-extractor apply "4c32e01e" "https://company.com/apply"
 
 # The agent will:
 # 1. Open a visible browser window using Stagehand automation
@@ -684,7 +684,7 @@ job-extractor extract "https://company.com/job-posting"
 # 1. Generate a tailored resume if one doesn't exist
 # 2. Use existing interview prep statements if available
 # 3. Fill the application form
-job-extractor apply "https://company.com/apply" "4c32e01e"
+job-extractor apply "4c32e01e" "https://company.com/apply"
 ```
 
 **Optional but recommended:** Generate interview prep statements for better results:
@@ -695,7 +695,7 @@ job-extractor prep cover-letter "4c32e01e"
 job-extractor prep about-me "4c32e01e"
 
 # Then fill the application form
-job-extractor apply "https://company.com/apply" "4c32e01e"
+job-extractor apply "4c32e01e" "https://company.com/apply"
 ```
 
 **How it works:**
@@ -879,7 +879,7 @@ npm run dev -- resume "a1b2c3d4" --mode builder --regen
 job-extractor critique "a1b2c3d4"
 
 # Fill application form using resume and interview data
-job-extractor apply "https://company.com/apply" "a1b2c3d4"
+job-extractor apply "a1b2c3d4" "https://company.com/apply"
 ```
 
 ## Output Schemas

@@ -1091,11 +1091,11 @@ program
 program
   .command('apply')
   .description('Fill out job application form using resume and interview prep data')
-  .argument('<applicationUrl>', 'URL of the job application form')
   .argument('<jobId>', 'Job ID to use for resume and interview prep data')
+  .argument('<applicationUrl>', 'URL of the job application form')
   .option('--dry-run', 'Open the form to inspect requirements without generating statements')
   .option('--skip', 'Skip automatic interview prep statement generation if missing')
-  .action(async (applicationUrl: string, jobId: string, options: { dryRun?: boolean; skip?: boolean }) => {
+  .action(async (jobId: string, applicationUrl: string, options: { dryRun?: boolean; skip?: boolean }) => {
     try {
       console.log('🎯 Starting job application process...');
       console.log(`📋 Application URL: ${applicationUrl}`);
