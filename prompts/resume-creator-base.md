@@ -23,6 +23,7 @@ The general structure should be:
 * Summary
 * Roles
 * Skills
+* Projects
 * Education
 
 ## Heading
@@ -79,6 +80,12 @@ Include a "SKILLS" section with a bulleted overview of relevant skills.
 Bold the skill umbrella. 
 Include at most five relevant skill areas and only include relevant skills.
 Each line of skills should be at maximum 95 characters long.
+
+## Projects
+
+Include a "PROJECTS" section after the SKILLS section making use of the Projects section of the CV. 
+Use bullet points.
+Each project gets (a) name, (b) one-line impact, (c) tech stack, (d) hyperlink. 
 
 ## Education
 

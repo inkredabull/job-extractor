@@ -4,41 +4,37 @@ You are a professional interview coach creating talking points for a "Tell me ab
 
 ## Requirements
 
-- **Format**: Rich Text Format (RTF) with two-level nested bullet list
-- **Length**: Maximum 900 characters total (including two-sentence overview)
+- **Format**: Rich Text Format (RTF) with multi-level nested bullet list
+- **Length**: Maximum 1200 characters total
 - **Tone**: Informal but professional
-- **Structure**: Start with two-sentence overview, then high-level bullets with detailed examples
-- **Content**: 2-4 priority themes from job description with relevant examples
+- **Structure**: Professional summary bullets, focus story, then themes with examples
+- **Content**: 3-5 brief professional summary points, 1 detailed focus story, 2-4 priority themes from job description with relevant examples
 
 ## Instructions
 
-1. **Start with two-sentence overview**: Begin with a brief two-sentence summary of the candidate's work history as it specifically relates to this role and company
-2. Use the priority themes provided (these have been automatically extracted from the job description)
-3. For each theme, incorporate 1-2 relevant examples from work history (≈85 characters each)
-4. Include desire for small team environment (5-7 people) and ability to have impact
-5. Include excitement about the specific company (if company info provided)
+1. **Start with 3-5 brief professional summary bullets**: Each bullet should be ≤75 characters and capture key career highlights
+2. **Include one detailed focus story**: Select the most compelling achievement and expand it using STAR method (Situation, Task, Actions, Results)
+3. Use the priority themes provided (these have been automatically extracted from the job description)
+4. For each theme, incorporate 1-2 relevant examples from work history (≈85 characters each)
+5. Include specific excitement about the company and role fit
 6. Structure as talking points suitable for interview response
 
 ## Content Guidelines
 
-- **Overview summary**: Make the two-sentence opening directly relevant to this specific role and company
+- **Professional summary bullets**: Make each bullet ≤75 characters, covering key role progressions and impact areas
+- **Focus story**: Choose the most impressive/relevant achievement and provide detailed STAR breakdown
 - Focus on themes most relevant to the job posting
 - Use brief, impactful examples from the candidate's background
 - Balance technical achievements with leadership/team experience
 - Show progression and growth in career
 - Demonstrate alignment with role requirements
 - Keep examples concise but specific
-- Ensure the overview sets up the detailed themes that follow
 
-## Personal Preferences to Include
+## Company Fit Section
 
-- Preference for small team environment (5-7 people)
-- Desire to have meaningful impact
-- Interest in hands-on technical leadership
-
-## Company Excitement
-
-If company information is provided, include: "I'm excited about {{companyInfo}} because..."
+- Specific reasons why this company and role are appealing
+- Alignment between personal preferences and company/role characteristics
+- Connection between career goals and what this opportunity offers
 
 ## Input Variables
 
@@ -56,7 +52,22 @@ Please respond in RTF format using the following nested structure with subheadin
 
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
 \par \li720 \bullet \b PROFESSIONAL SUMMARY:\b0
-\par \li1080 \bullet [Two-sentence overview summary about work history as it relates to this specific role]
+\par \li1080 \bullet [Brief career highlight ≤75 chars]
+\par \li1080 \bullet [Brief career highlight ≤75 chars]
+\par \li1080 \bullet [Brief career highlight ≤75 chars]
+\par \li1080 \bullet [Brief career highlight ≤75 chars (optional)]
+\par \li1080 \bullet [Brief career highlight ≤75 chars (optional)]
+\par \li0
+
+\par \li720 \bullet \b FOCUS STORY:\b0
+\par \li1080 \bullet \b Situation:\b0
+\par \li1440 \bullet [Context and background of the challenge]
+\par \li1080 \bullet \b Task:\b0
+\par \li1440 \bullet [Specific responsibility or goal]
+\par \li1080 \bullet \b Actions:\b0
+\par \li1440 \bullet [Key actions taken - 2-3 specific steps]
+\par \li1080 \bullet \b Results:\b0
+\par \li1440 \bullet [Measurable outcomes and impact]
 \par \li0
 
 \par \li720 \bullet \b KEY THEMES:\b0
@@ -69,30 +80,41 @@ Please respond in RTF format using the following nested structure with subheadin
 \par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
 \par \li0
 
-\par \li720 \bullet \b PREFERENCES & FIT:\b0
-\par \li1080 \bullet [Preference for small team environment and impact]
-\par \li1080 \bullet [Company excitement if provided]
+\par \li720 \bullet \b WHY {{job.company}}?\b0
+\par \li1080 \bullet [Specific reason for company interest]
+\par \li1080 \bullet [Role/company alignment with career goals]
 \par \li0
 }
 
 Example RTF structure:
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
 \par \li720 \bullet \b PROFESSIONAL SUMMARY:\b0
-\par \li1080 \bullet I'm a technical leader with 8+ years scaling engineering teams and delivering innovative user experiences across B2C platforms. My background combines hands-on technical expertise with proven ability to build and lead high-performing engineering organizations, making me well-suited for this Director of Engineering role at [Company].
+\par \li1080 \bullet Technical leader with 8+ years scaling engineering teams (32 people)
+\par \li1080 \bullet Built B2C platforms serving 5K+ DAUs with proven impact
+\par \li1080 \bullet Hands-on expertise + executive leadership across multiple domains
+\par \li1080 \bullet GenAI implementation reducing development cycles by 35%
+\par \li0
+
+\par \li720 \bullet \b WHY [Company]?\b0
+\par \li1080 \bullet Excited about innovative AI platform and growth stage opportunity
+\par \li1080 \bullet Perfect fit for hands-on leadership in small team environment
+\par \li0
+
+\par \li720 \bullet \b FOCUS STORY:\b0
+\par \li1080 \bullet \b Situation:\b0
+\par \li1440 \bullet Decorist had 32-person eng team but declining user engagement
+\par \li1080 \bullet \b Task:\b0
+\par \li1440 \bullet Scale platform from 3.5K to 5K DAUs while improving team efficiency
+\par \li1080 \bullet \b Actions:\b0
+\par \li1440 \bullet Restructured team into optimal 7:1 pods and implemented agile processes
+\par \li1080 \bullet \b Results:\b0
+\par \li1440 \bullet Achieved 43% DAU growth and 25% faster feature delivery
 \par \li0
 
 \par \li720 \bullet \b KEY THEMES:\b0
 \par \li1080 \bullet \b Technical Leadership\b0
-\par \li1440 \bullet Led 32-person engineering team at Decorist, scaling from 3.5K to 5K DAUs
 \par \li1440 \bullet Implemented GenAI solutions at Myna reducing dev cycles 35%
 \par \li1080 \bullet \b Team Building\b0
 \par \li1440 \bullet Restructured 19:1 ratio to optimal 7:1 pods at CourseKey
-\par \li1080 \bullet \b Innovation & Impact\b0
-\par \li1440 \bullet Passionate about small team environments where I can drive meaningful technical innovation
-\par \li0
-
-\par \li720 \bullet \b PREFERENCES & FIT:\b0
-\par \li1080 \bullet Thrive in small team environments (5-7 people) where I can have meaningful impact
-\par \li1080 \bullet I'm excited about [Company] because [specific reason related to company info]
 \par \li0
 }

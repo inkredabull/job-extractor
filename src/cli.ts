@@ -683,8 +683,8 @@ program
 
 program
   .command('prep')
-  .description('Generate interview preparation materials (cover letter, endorsement, about me, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, about-me, general, themes, stories, profile, project, or list-projects')
+  .description('Generate interview preparation materials (cover letter, endorsement, interview, general)')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, interview, about-me, focus, general, themes, stories, profile, project, or list-projects')
   .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
   .argument('[projectNumber]', 'Project number to extract (for project type only)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
@@ -881,11 +881,77 @@ program
         return;
       }
 
+      // Handle interview command (merges about-me and focus)
+      if (type === 'interview') {
+        if (!jobId) {
+          console.error('❌ Job ID is required for interview generation');
+          process.exit(1);
+        }
+        
+        const cvFile = await findCvFile();
+        
+        if (!options.content) {
+          console.log('🎙️ Generating comprehensive interview preparation...');
+          console.log(`📊 Job ID: ${jobId}`);
+          console.log(`📋 CV File: ${cvFile}`);
+        }
+
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+        
+        const materialOptions = {
+          emphasis: options.emphasis,
+          companyInfo: options.companyInfo,
+          customInstructions: options.instructions
+        };
+
+        const result = await interviewPrepAgent.generateInterviewPrep(
+          jobId,
+          cvFile,
+          materialOptions,
+          !!options.regen,
+          !!options.content
+        );
+
+        if (result.success) {
+          if (options.content) {
+            console.log(result.aboutMeContent || '');
+          } else {
+            console.log('✅ Interview Preparation Complete');
+            console.log('=' .repeat(50));
+            
+            // Copy content to clipboard
+            if (result.aboutMeContent) {
+              await copyToClipboard(result.aboutMeContent);
+              console.log('📋 Comprehensive interview content copied to clipboard in Rich Text Format');
+              console.log('    • Professional Summary (3-5 bullet points)');
+              console.log('    • Focus Story (STAR method)');
+              console.log('    • Key Themes with examples');
+              console.log(`    • Why ${jobId.substring(0,8)}... company fit`);
+            }
+            
+            if (result.companyRubricGenerated) {
+              console.log('📊 Company evaluation rubric generated: company-rubric.txt');
+            }
+            
+            console.log('💡 Ready to paste into documents, emails, or notes');
+          }
+        } else {
+          console.error(`❌ Interview preparation failed: ${result.error}`);
+          process.exit(1);
+        }
+        return;
+      }
+
       // Validate material type for other types
       const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general', 'focus'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
-        console.error(`Valid types: ${validTypes.join(', ')}, themes, stories, profile, project, list-projects`);
+        console.error(`Valid types: ${validTypes.join(', ')}, interview, themes, stories, profile, project, list-projects`);
         process.exit(1);
       }
 

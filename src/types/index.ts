@@ -187,6 +187,14 @@ export interface StatementResult {
   characterCount?: number;
 }
 
+export interface InterviewPrepResult {
+  success: boolean;
+  aboutMeContent?: string;
+  focusStoryContent?: string;
+  companyRubricGenerated?: boolean;
+  error?: string;
+}
+
 export interface JobTheme {
   name: string;
   definition: string;

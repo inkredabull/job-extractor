@@ -1,5 +1,5 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, InterviewPrepResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
 import { WebScraper } from '../utils/web-scraper';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -111,6 +111,118 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
         error: error instanceof Error ? error.message : 'Unknown error occurred',
         type
       };
+    }
+  }
+
+  async generateInterviewPrep(
+    jobId: string,
+    cvFilePath: string,
+    options: StatementOptions = {},
+    regenerate: boolean = false,
+    contentOnly: boolean = false
+  ): Promise<InterviewPrepResult> {
+    try {
+      // Store jobId for use in sub-methods
+      this.currentJobId = jobId;
+
+      // Generate comprehensive interview content (now includes focus story within about-me structure)
+      const interviewResult = await this.generateMaterial(
+        'about-me' as StatementType,
+        jobId,
+        cvFilePath,
+        options,
+        regenerate,
+        contentOnly
+      );
+
+      // Generate company rubric
+      const companyRubricGenerated = await this.generateCompanyRubric(jobId);
+
+      // Note: Content copying to clipboard will be handled by the CLI layer
+
+      return {
+        success: interviewResult.success,
+        aboutMeContent: interviewResult.success ? interviewResult.content : undefined,
+        focusStoryContent: undefined, // Now integrated into aboutMeContent
+        companyRubricGenerated,
+        error: interviewResult.error
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  private async generateCompanyRubric(jobId: string): Promise<boolean> {
+    try {
+      const jobData = this.loadJobData(jobId);
+      const jobDir = path.resolve('logs', jobId);
+      
+      // Check if company-rubric.txt already exists (unless regenerating)
+      const rubricPath = path.join(jobDir, 'company-rubric.txt');
+      if (fs.existsSync(rubricPath)) {
+        console.log('📊 Company rubric already exists, skipping generation');
+        return true;
+      }
+
+      // Load or extract themes
+      const themes = await this.getOrExtractThemes(jobData);
+      
+      // Load company values if they exist
+      const companyValuesPath = path.join(jobDir, 'company-values.txt');
+      let companyValues = '';
+      if (fs.existsSync(companyValuesPath)) {
+        companyValues = fs.readFileSync(companyValuesPath, 'utf-8');
+      }
+
+      const prompt = `You are an expert in talent evaluation and recruitment. Based on the following job information, create a company evaluation rubric that identifies 5-7 key elements this company likely uses to evaluate candidates for this position.
+
+## Job Information:
+**Company:** ${jobData.company}
+**Title:** ${jobData.title}
+**Description:** ${jobData.description}
+
+## Priority Themes Identified:
+${themes.map(theme => `• **${theme.name}**: ${theme.definition} (Priority: ${theme.importance})`).join('\n')}
+
+${companyValues ? `## Company Values:
+${companyValues}` : ''}
+
+## Instructions:
+Create a practical evaluation rubric with 5-7 key elements that represent what this company is likely looking for in candidates. Each element should:
+
+1. Be specific to this role and company context
+2. Include both technical and soft skills/attributes
+3. Be measurable or observable in interviews
+4. Align with the job themes and company values
+5. Progress from foundational to differentiating criteria
+
+Format as:
+# Company Evaluation Rubric: ${jobData.company} - ${jobData.title}
+
+## Evaluation Criteria:
+
+### 1. [Criterion Name]
+**What they're looking for:** [Specific description]
+**Why it matters:** [Context from job/company]
+**Interview signals:** [How this would be evaluated]
+
+[Continue for each criterion...]
+
+## Overall Assessment Framework:
+[Brief summary of how these criteria work together]`;
+
+      const response = await this.makeClaudeRequest(prompt);
+      
+      // Save the rubric to file
+      fs.writeFileSync(rubricPath, response.trim(), 'utf-8');
+      
+      return true;
+    } catch (error) {
+      console.warn(`⚠️  Failed to generate company rubric: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     }
   }
 
@@ -256,11 +368,16 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
   }
 
   private generateCacheKey(type: StatementType, cvFilePath: string, options: StatementOptions): string {
-    // Generate a simple hash based on statement type, CV file content, and options
+    // Generate a simple hash based on statement type, CV file content, options, and template version
     const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
     const stats = fs.statSync(cvFilePath);
     const optionsStr = JSON.stringify(options);
-    const combinedData = type + cvContent + stats.mtime.toISOString() + optionsStr;
+    
+    // Include template version to invalidate cache when templates change
+    // Updated: 2025-01-26 - New interview format with professional summary bullets, focus story, and "WHY company" section
+    const templateVersion = 'v2-interview-format-2025-01-26';
+    
+    const combinedData = type + cvContent + stats.mtime.toISOString() + optionsStr + templateVersion;
     
     // Simple hash function
     let hash = 0;
