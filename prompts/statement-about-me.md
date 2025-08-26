@@ -32,9 +32,9 @@ You are a professional interview coach creating talking points for a "Tell me ab
 
 ## Company Fit Section
 
-- Specific reasons why this company and role are appealing
-- Alignment between personal preferences and company/role characteristics
-- Connection between career goals and what this opportunity offers
+- Specific reasons why this company and role are appealing (first bullet)
+- What you're looking for next in your career and how it directly aligns with the specific needs, requirements, and challenges outlined in this job description (second bullet)
+- Show clear connection between your career goals and what this role/company offers
 
 ## Input Variables
 
@@ -59,6 +59,11 @@ Please respond in RTF format using the following nested structure with subheadin
 \par \li1080 \bullet [Brief career highlight ≤75 chars (optional)]
 \par \li0
 
+\par \li720 \bullet \b WHY {{job.company}}?\b0
+\par \li1080 \bullet [Specific reason for company interest and excitement]
+\par \li1080 \bullet [What I'm looking for next aligns directly with job requirements and needs]
+\par \li0
+
 \par \li720 \bullet \b FOCUS STORY:\b0
 \par \li1080 \bullet \b Situation:\b0
 \par \li1440 \bullet [Context and background of the challenge]
@@ -79,11 +84,6 @@ Please respond in RTF format using the following nested structure with subheadin
 \par \li1080 \bullet \b [Main theme (high-level)]\b0
 \par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
 \par \li0
-
-\par \li720 \bullet \b WHY {{job.company}}?\b0
-\par \li1080 \bullet [Specific reason for company interest]
-\par \li1080 \bullet [Role/company alignment with career goals]
-\par \li0
 }
 
 Example RTF structure:
@@ -97,7 +97,7 @@ Example RTF structure:
 
 \par \li720 \bullet \b WHY [Company]?\b0
 \par \li1080 \bullet Excited about innovative AI platform and growth stage opportunity
-\par \li1080 \bullet Perfect fit for hands-on leadership in small team environment
+\par \li1080 \bullet Looking for hands-on technical leadership role that matches this Director of Engineering position's need for scaling teams and driving product innovation
 \par \li0
 
 \par \li720 \bullet \b FOCUS STORY:\b0

@@ -375,7 +375,8 @@ Format as:
     
     // Include template version to invalidate cache when templates change
     // Updated: 2025-01-26 - New interview format with professional summary bullets, focus story, and "WHY company" section
-    const templateVersion = 'v2-interview-format-2025-01-26';
+    // Updated: 2025-01-26b - Enhanced WHY company section to include career goals alignment with job requirements
+    const templateVersion = 'v2b-interview-format-2025-01-26';
     
     const combinedData = type + cvContent + stats.mtime.toISOString() + optionsStr + templateVersion;
     
