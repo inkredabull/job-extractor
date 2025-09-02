@@ -113,7 +113,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Parse the JSON input
       let jobData: any;
@@ -149,7 +149,7 @@ export class JobExtractorAgent extends BaseAgent {
       console.log(`✅ Job information logged to ${logFilePath}`);
 
       // Create reminder for tracked job
-      await this.createJobReminder(jobDataWithSource, jobId);
+      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl);
 
       // Run post-extraction workflow (score, resume, critique)
       await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
@@ -172,8 +172,17 @@ export class JobExtractorAgent extends BaseAgent {
       // Read the JSON file
       const jsonContent = fs.readFileSync(filePath, 'utf-8');
       
-      // Call the existing extractFromJson method with the file content
-      return this.extractFromJson(jsonContent, options);
+      // Extract URL from JSON data to pass to extractFromJson
+      let sourceUrl: string | undefined;
+      try {
+        const parsedData = JSON.parse(jsonContent);
+        sourceUrl = parsedData.url || parsedData.jobUrl || parsedData.sourceUrl;
+      } catch (parseError) {
+        // If JSON parsing fails, let extractFromJson handle the error
+      }
+      
+      // Call the existing extractFromJson method with the file content and extracted URL
+      return this.extractFromJson(jsonContent, options, sourceUrl);
       
     } catch (error) {
       return {

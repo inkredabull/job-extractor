@@ -753,7 +753,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 header-includes: |
   \\usepackage{fancyhdr}
   \\usepackage{geometry}
-  \\geometry{bottom=1in, footskip=0.5in}
+  \\geometry{bottom=0.5in, footskip=0.33in}
   \\pagestyle{fancy}
   \\fancyhf{}
   \\fancyfoot[C]{\\footnotesize \\textit{Brought to you by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
