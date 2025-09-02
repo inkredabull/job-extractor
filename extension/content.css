@@ -520,8 +520,10 @@ html.job-extractor-gutter-open {
 
 #current-url-display {
   color: #666;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  max-width: 100%;
 }
 
 /* Page Analysis Section */
