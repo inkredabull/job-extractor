@@ -1465,27 +1465,18 @@ function extractMutualConnectionNames() {
     var selector = '.t-16 a.' + identifier + '>span>span:not(.visually-hidden)';
     var nameElements = document.querySelectorAll(selector);
     
-    console.log(`Found ${nameElements.length} mutual connections:`);
-    console.log('Full,PersonName,PersonURL');
-    
     nameElements.forEach((element) => {
       var mutualConnectionName = element.innerText.trim();
       if (mutualConnectionName) {
         // Output format: mutual connection full name, target profile first name, target profile URL
         var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
         result += csvRow + '\n';
-        console.log(csvRow);
       }
     });
     
     if (nameElements.length > 0) {
-      console.log('\nComplete CSV output:');
+      console.log('Complete CSV output:');
       console.log(result);
-      
-      // Just log to console for now
-      console.log('✓ CSV data extraction complete');
-    } else {
-      console.log('No mutual connection names extracted');
     }
     
   } catch (error) {
