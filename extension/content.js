@@ -1025,4 +1025,557 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// LinkedIn connection extraction functionality
+function detectLinkedInCompanyPeople() {
+  const url = window.location.href;
+  return url.includes('linkedin.com/company/') && url.includes('/people/');
+}
+
+function runLinkedInConnectionExtraction() {
+  console.log("LinkedIn Connection Extractor - Starting profile clicks...");
+
+  // Try multiple selectors to find LinkedIn profile cards
+  var clickableElements = [];
+  
+  // Multiple selector patterns to try
+  var selectorPatterns = [
+    // Standard company people page
+    ".org-people-profile-card a[href*='/in/']",
+    ".org-people-profile-card__profile-info a[href*='/in/']",
+    // Alternative patterns
+    "[data-control-name='people_profile_card'] a[href*='/in/']",
+    ".people-card a[href*='/in/']",
+    ".entity-result a[href*='/in/']",
+    // More generic LinkedIn profile links
+    "a[href*='linkedin.com/in/']",
+    "a[href*='/in/'][href*='linkedin']"
+  ];
+  
+  // Track unique URLs to avoid duplicates
+  var seenUrls = new Set();
+  
+  // Try each selector pattern
+  for (let pattern of selectorPatterns) {
+    var foundElements = document.querySelectorAll(pattern);
+    console.log(`Trying selector "${pattern}": found ${foundElements.length} elements`);
+    
+    if (foundElements.length > 0) {
+      for (let i = 0; i < foundElements.length; i++) {
+        var profileLink = foundElements[i];
+        var profileUrl = profileLink.href;
+        
+        // Skip if we've already seen this URL
+        if (seenUrls.has(profileUrl)) {
+          continue;
+        }
+        seenUrls.add(profileUrl);
+        
+        var card = profileLink.closest('.org-people-profile-card, .entity-result, .people-card, [data-control-name="people_profile_card"]');
+        
+        var nameElement = card ? card.querySelector('.t-black, .entity-result__title-text, .t-16, .t-bold') : null;
+        var headlineElement = card ? card.querySelector('.t-14, .entity-result__primary-subtitle, .t-12') : null;
+        
+        var name = nameElement ? nameElement.innerText.trim() : `Profile ${clickableElements.length + 1}`;
+        var headline = headlineElement ? headlineElement.innerText.trim() : "";
+        
+        console.log(`Found unique connection: ${name} - ${headline}`);
+        clickableElements.push({
+            element: profileLink,
+            name: name,
+            headline: headline
+        });
+      }
+      break; // Stop trying other patterns if we found some elements
+    }
+  }
+
+  console.log(`Found ${clickableElements.length} connection profiles. Starting clicks...`);
+
+  // Function to click profiles with random delays
+  function clickProfilesWithDelay(elements, index = 0) {
+      if (index >= elements.length) {
+          console.log("Finished clicking all connection profiles!");
+          linkedInExtractionRunning = false; // Reset flag when done
+          return;
+      }
+      
+      // Random delay between 1500-3000ms
+      var delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
+      
+      function clickNextProfile() {
+          var connection = elements[index];
+          console.log(`Opening profile ${index + 1}/${elements.length} in new tab: ${connection.name}`);
+          
+          // Open in new tab instead of clicking
+          window.open(connection.element.href, '_blank');
+          
+          clickProfilesWithDelay(elements, index + 1);
+      }
+      
+      setTimeout(clickNextProfile, delay);
+  }
+
+  // Open only the first profile for now
+  if (clickableElements.length > 0) {
+      var firstConnection = clickableElements[0];
+      console.log(`Opening first profile in new tab: ${firstConnection.name}`);
+      
+      // Open the profile and set up mutual connections detection
+      var profileWindow = window.open(firstConnection.element.href, '_blank');
+      
+      // Monitor the new window for mutual connections
+      if (profileWindow) {
+        setTimeout(() => {
+          try {
+            // Inject mutual connections detector into the profile page
+            profileWindow.postMessage({
+              action: 'detectMutualConnections',
+              profileName: firstConnection.name
+            }, '*');
+          } catch (error) {
+            console.log('Could not communicate with profile window:', error);
+          }
+        }, 3000); // Wait 3 seconds for profile page to load
+      }
+      
+      linkedInExtractionRunning = false; // Reset flag when done
+  } else {
+      console.log("No clickable connection profiles found with any selector pattern.");
+      console.log("Available elements on page:");
+      // Debug: log what elements are actually on the page
+      var allLinks = document.querySelectorAll('a[href*="linkedin.com"], a[href*="/in/"]');
+      console.log(`Found ${allLinks.length} LinkedIn-related links total`);
+      linkedInExtractionRunning = false; // Reset flag if no elements found
+  }
+}
+
+// Track if extraction is already running to avoid duplicates
+let linkedInExtractionRunning = false;
+
+// Auto-detect LinkedIn company people pages and run extraction
+function checkForLinkedInExtraction() {
+  if (detectLinkedInCompanyPeople() && !linkedInExtractionRunning) {
+    linkedInExtractionRunning = true;
+    console.log('LinkedIn company people page detected - waiting 5 seconds before extraction...');
+    function startExtraction() {
+      runLinkedInConnectionExtraction();
+    }
+    setTimeout(startExtraction, 5000);
+  }
+}
+
+// Run check when page loads - handle multiple scenarios
+if (document.readyState === 'loading') {
+  // DOM is still loading
+  document.addEventListener('DOMContentLoaded', checkForLinkedInExtraction);
+} else {
+  // DOM is already loaded
+  checkForLinkedInExtraction();
+}
+
+// Also listen for window load event as fallback
+window.addEventListener('load', checkForLinkedInExtraction);
+
+// Also run check when URL changes (for SPA navigation)
+let currentUrl = window.location.href;
+function checkUrlChange() {
+  if (window.location.href !== currentUrl) {
+    currentUrl = window.location.href;
+    function delayedCheck() {
+      checkForLinkedInExtraction();
+    }
+    setTimeout(delayedCheck, 1000); // Wait for page content to load
+  }
+}
+setInterval(checkUrlChange, 1000);
+
+// Run initial check immediately in case we missed the load events
+checkForLinkedInExtraction();
+
+// LinkedIn Profile Mutual Connections Handler
+function detectLinkedInProfile() {
+  const url = window.location.href;
+  return url.includes('linkedin.com/in/');
+}
+
+function findAndClickMutualConnections() {
+  console.log('Looking for mutual connections link...');
+  
+  // Don't run on search results pages
+  if (window.location.href.includes('/search/results/')) {
+    console.log('Skipping mutual connections search - already on search results page');
+    return;
+  }
+  
+  // Get the current profile person's name from the page
+  var profileName = getProfilePersonName();
+  console.log(`Profile person name: "${profileName}"`);
+  
+  // If we're getting "Unknown Profile", let's debug what's available on the page
+  if (profileName === 'Unknown Profile') {
+    console.log('Profile name detection failed, debugging available elements:');
+    
+    // Check all h1 elements
+    var allH1s = document.querySelectorAll('h1');
+    console.log(`Found ${allH1s.length} h1 elements:`);
+    allH1s.forEach((h1, index) => {
+      console.log(`  H1 ${index}: "${h1.innerText.trim()}" (classes: ${h1.className})`);
+    });
+    
+    // Check page title
+    console.log(`Document title: "${document.title}"`);
+    
+    // Check for text-heading-xlarge specifically
+    var headingElements = document.querySelectorAll('.text-heading-xlarge');
+    console.log(`Found ${headingElements.length} .text-heading-xlarge elements:`);
+    headingElements.forEach((el, index) => {
+      console.log(`  Heading ${index}: "${el.innerText.trim()}"`);
+    });
+    
+    // Check ALL elements with text that might contain names
+    var allTextElements = document.querySelectorAll('h1, h2, .pv-text-details__left-panel *, .top-card *, [data-test-id*="name"] *, [data-anonymize="person-name"]');
+    console.log(`Found ${allTextElements.length} potential name elements:`);
+    allTextElements.forEach((el, index) => {
+      var text = el.innerText ? el.innerText.trim() : '';
+      if (text.length > 0 && text.length < 100) {
+        console.log(`  Element ${index}: "${text}" (tag: ${el.tagName}, classes: ${el.className})`);
+      }
+    });
+  }
+  
+  // Look specifically for the main mutual connections link, not individual connection links
+  var mutualConnectionLink = null;
+  
+  // Find elements that contain mutual connections text - be more specific
+  var textElements = document.querySelectorAll('span.t-normal, span.hoverable-link-text');
+  for (let textElement of textElements) {
+    var text = textElement.innerText || textElement.textContent || '';
+    // Look for text that says "X other mutual connections" or "and X other mutual connections"
+    if (text.includes('mutual connection') && text.includes('other')) {
+      // Found text like "Dawn Ho, Robert Monarch, and 5 other mutual connections"
+      var linkElement = textElement.closest('a');
+      if (linkElement && linkElement.href && linkElement.href.includes('facetConnectionOf')) {
+        // Double check this isn't clicking on a name within the text
+        var linkText = linkElement.innerText || linkElement.textContent || '';
+        if (linkText.includes('other mutual connection')) {
+          mutualConnectionLink = linkElement;
+          console.log(`Found mutual connections link with full text: "${linkText.trim()}"`);
+          console.log(`Link href: ${linkElement.href}`);
+          break;
+        }
+      }
+    }
+  }
+  
+  // More specific fallback: look for the exact pattern
+  if (!mutualConnectionLink) {
+    var allLinks = document.querySelectorAll('a[href*="facetConnectionOf"]');
+    console.log(`Found ${allLinks.length} links with facetConnectionOf`);
+    
+    for (let link of allLinks) {
+      var linkText = link.innerText || link.textContent || '';
+      console.log(`Checking link: "${linkText.trim()}" -> ${link.href}`);
+      
+      // Make sure it contains the full mutual connections text and not just a name
+      if (linkText.includes('mutual connection') && linkText.includes('other') && !link.href.includes('/in/')) {
+        mutualConnectionLink = link;
+        console.log(`Selected mutual connections link: "${linkText.trim()}"`);
+        break;
+      }
+    }
+  }
+  
+  // Final fallback: find the link that has the most complete mutual connections text
+  if (!mutualConnectionLink) {
+    console.log('Using final fallback to find mutual connections link...');
+    var allLinks = document.querySelectorAll('a[href*="facetConnectionOf"]');
+    var bestLink = null;
+    var maxNames = 0;
+    
+    for (let link of allLinks) {
+      if (!link.href.includes('/in/')) {
+        var linkText = link.innerText || link.textContent || '';
+        // Count how many names are in the text (commas + 1)
+        var nameCount = (linkText.match(/,/g) || []).length + 1;
+        if (nameCount > maxNames && linkText.includes('mutual')) {
+          maxNames = nameCount;
+          bestLink = link;
+          console.log(`Better link found with ${nameCount} names: "${linkText.trim()}"`);
+        }
+      }
+    }
+    
+    mutualConnectionLink = bestLink;
+    if (mutualConnectionLink) {
+      console.log(`Final selected link: "${mutualConnectionLink.innerText.trim()}"`);
+    }
+  }
+  
+  if (mutualConnectionLink) {
+    console.log('Found mutual connections link, clicking...');
+    console.log(`Link URL: ${mutualConnectionLink.href}`);
+    
+    // Store the profile person's name and URL in localStorage for persistence across page navigation
+    var currentUrl = window.location.href;
+    console.log(`Storing in localStorage - URL: "${currentUrl}", Name: "${profileName}"`);
+    
+    // Ensure we store the actual name, not "Unknown Profile"
+    var nameToStore = profileName;
+    if (profileName === 'Unknown Profile') {
+      // Try to extract name from URL as fallback during storage
+      var urlMatch = currentUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      if (urlMatch) {
+        var urlSlug = urlMatch[1];
+        nameToStore = urlSlug
+          .replace(/-/g, ' ')
+          .replace(/\d+/g, '')
+          .trim()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        console.log(`Using URL-extracted name for storage: "${nameToStore}"`);
+      }
+    }
+    
+    localStorage.setItem('linkedin_target_profile_url', currentUrl);
+    localStorage.setItem('linkedin_target_profile_name', nameToStore);
+    localStorage.setItem('linkedin_extraction_timestamp', Date.now().toString());
+    
+    // Verify storage worked
+    console.log(`Verification - stored name: "${localStorage.getItem('linkedin_target_profile_name')}"`);
+    console.log(`Verification - stored URL: "${localStorage.getItem('linkedin_target_profile_url')}"`);
+    
+    mutualConnectionLink.click();
+    
+    // Don't set up extraction timer here - it will be handled by the URL change detection
+  } else {
+    console.log('No mutual connections link found on this profile');
+  }
+}
+
+// Helper function to get the profile person's name from the profile page
+function getProfilePersonName() {
+  try {
+    // Try multiple selectors for the profile name
+    var nameSelectors = [
+      'h1.inline.t-24.v-align-middle.break-words',  // New LinkedIn profile name selector
+      'h1[class*="inline"][class*="t-24"][class*="v-align-middle"][class*="break-words"]', // Fallback for dynamic classes
+      '.text-heading-xlarge',
+      '.pv-text-details__left-panel h1',
+      '.top-card-layout__title',
+      'h1[data-anonymize="person-name"]',
+      '.top-card__title',
+      '.ph5 .text-heading-xlarge',
+      '.pv-text-details__left-panel .text-heading-xlarge'
+    ];
+    
+    for (let selector of nameSelectors) {
+      var nameElement = document.querySelector(selector);
+      if (nameElement && nameElement.innerText.trim()) {
+        var name = nameElement.innerText.trim();
+        console.log(`Found potential name with selector "${selector}": "${name}"`);
+        // Less restrictive filtering - just avoid obvious non-names
+        if (!name.toLowerCase().includes('search') && 
+            !name.toLowerCase().includes('results') && 
+            name.length > 2 && 
+            !name.match(/^\(\d+\)/)) {
+          return name;
+        }
+      }
+    }
+    
+    // Fallback: try to get from page title, but clean it up
+    var pageTitle = document.title;
+    console.log(`Page title: "${pageTitle}"`);
+    var titleMatch = pageTitle.match(/^([^|(-]+)/);
+    if (titleMatch) {
+      var name = titleMatch[1].trim();
+      console.log(`Extracted from title: "${name}"`);
+      // Less restrictive filtering
+      if (!name.toLowerCase().includes('search') && 
+          !name.toLowerCase().includes('results') && 
+          name.length > 2) {
+        return name;
+      }
+    }
+    
+    // Final fallback: extract name from URL
+    var currentUrl = window.location.href;
+    var urlMatch = currentUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+    if (urlMatch) {
+      var urlSlug = urlMatch[1];
+      // Convert URL slug to readable name
+      var nameFromUrl = urlSlug
+        .replace(/-/g, ' ')           // Replace hyphens with spaces
+        .replace(/\d+/g, '')         // Remove numbers
+        .trim()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
+        .join(' ');
+      
+      console.log(`Extracted from URL: "${nameFromUrl}"`);
+      if (nameFromUrl.length > 2) {
+        return nameFromUrl;
+      }
+    }
+    
+    return 'Unknown Profile';
+  } catch (error) {
+    console.log('Could not determine profile person name:', error);
+    return 'Unknown Profile';
+  }
+}
+
+function extractMutualConnectionNames() {
+  console.log('Extracting mutual connection names...');
+  
+  try {
+    // Get the target profile URL from localStorage 
+    var targetProfileUrl = localStorage.getItem('linkedin_target_profile_url') || '';
+    console.log(`Target profile URL: "${targetProfileUrl}"`);
+    
+    // Extract first name directly from the URL
+    var targetFirstName = 'Unknown';
+    if (targetProfileUrl) {
+      var urlMatch = targetProfileUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      if (urlMatch) {
+        var urlSlug = urlMatch[1];
+        // Convert URL slug to first name: "samuel-bigio-42918b128" -> "Samuel"
+        var firstName = urlSlug
+          .split('-')[0]                    // Get first part before hyphens
+          .replace(/\d+/g, '')             // Remove any numbers
+          .trim();
+        
+        if (firstName.length > 0) {
+          targetFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+        }
+      }
+    }
+    
+    console.log(`Extracted first name from URL: "${targetFirstName}"`);
+    
+    // Extract mutual connections
+    var identifier = document.querySelectorAll('div.mb1 a')[0]?.className.trim();
+    if (!identifier) {
+      console.log('Could not find identifier for mutual connections');
+      return;
+    }
+    
+    var result = 'Full,PersonName,PersonURL\n'; // CSV headers
+    var selector = '.t-16 a.' + identifier + '>span>span:not(.visually-hidden)';
+    var nameElements = document.querySelectorAll(selector);
+    
+    console.log(`Found ${nameElements.length} mutual connections:`);
+    console.log('Full,PersonName,PersonURL');
+    
+    nameElements.forEach((element) => {
+      var mutualConnectionName = element.innerText.trim();
+      if (mutualConnectionName) {
+        // Output format: mutual connection full name, target profile first name, target profile URL
+        var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
+        result += csvRow + '\n';
+        console.log(csvRow);
+      }
+    });
+    
+    if (nameElements.length > 0) {
+      console.log('\nComplete CSV output:');
+      console.log(result);
+      
+      // Just log to console for now
+      console.log('✓ CSV data extraction complete');
+    } else {
+      console.log('No mutual connection names extracted');
+    }
+    
+  } catch (error) {
+    console.error('Error extracting mutual connection names:', error);
+  }
+}
+
+// Helper function to get the connection person's name
+function getConnectionPersonName() {
+  try {
+    // Try to get from URL parameters first
+    var urlParams = new URLSearchParams(window.location.search);
+    var connectionId = urlParams.get('facetConnectionOf');
+    
+    // Try to get from the page breadcrumb or title
+    var breadcrumbElement = document.querySelector('.search-results-container h1, .search-results__title');
+    if (breadcrumbElement) {
+      var titleText = breadcrumbElement.innerText;
+      // Extract name from text like "People connected to John Doe"
+      var nameMatch = titleText.match(/connected to (.+?)(?:\s|$)/i);
+      if (nameMatch) {
+        return nameMatch[1].trim();
+      }
+    }
+    
+    // Fallback: try to get from previous page context (if available)
+    if (window.previousConnectionName) {
+      return window.previousConnectionName;
+    }
+    
+    return 'Unknown Connection';
+  } catch (error) {
+    console.log('Could not determine connection person name:', error);
+    return 'Unknown Connection';
+  }
+}
+
+// Track if we've already processed a search page to avoid duplicates
+let searchPageProcessed = false;
+
+// Auto-detect LinkedIn profile pages and find mutual connections
+function checkForLinkedInProfile() {
+  // Only run on individual profile pages, NOT on company people pages or search results pages
+  var url = window.location.href;
+  var isProfilePage = url.includes('linkedin.com/in/');
+  var isCompanyPage = detectLinkedInCompanyPeople();
+  var isSearchPage = url.includes('/search/results/');
+  
+  console.log(`checkForLinkedInProfile: isProfilePage=${isProfilePage}, isCompanyPage=${isCompanyPage}, isSearchPage=${isSearchPage}`);
+  
+  if (isProfilePage && !isCompanyPage && !isSearchPage) {
+    console.log('LinkedIn profile page detected - waiting 5 seconds before looking for mutual connections...');
+    searchPageProcessed = false; // Reset for new profile
+    setTimeout(() => {
+      findAndClickMutualConnections();
+    }, 5000);
+  } else if (isSearchPage && url.includes('facetConnectionOf') && !searchPageProcessed) {
+    // This is a mutual connections search page - just extract the data ONCE
+    console.log('LinkedIn mutual connections search page detected - waiting 4 seconds before extracting...');
+    searchPageProcessed = true;
+    setTimeout(() => {
+      extractMutualConnectionNames();
+    }, 4000);
+  }
+}
+
+// Listen for messages from company people page
+window.addEventListener('message', function(event) {
+  if (event.data.action === 'detectMutualConnections') {
+    console.log(`Received request to detect mutual connections for: ${event.data.profileName}`);
+    checkForLinkedInProfile();
+  }
+});
+
+// Also run profile check when page loads  
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkForLinkedInProfile);
+} else {
+  checkForLinkedInProfile();
+}
+
+window.addEventListener('load', checkForLinkedInProfile);
+
+// Monitor URL changes for profile pages too
+let profileCurrentUrl = window.location.href;
+setInterval(() => {
+  if (window.location.href !== profileCurrentUrl) {
+    profileCurrentUrl = window.location.href;
+    setTimeout(checkForLinkedInProfile, 1000);
+  }
+}, 1000);
+
 console.log('Job Extractor Assistant: Content script loaded');

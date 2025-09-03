@@ -11,7 +11,8 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://localhost:3001/*",
-    "https://app.tealhq.com/*"
+    "https://app.tealhq.com/*",
+    "https://www.linkedin.com//*"
   ],
   "action": {
     "default_title": "Job Extractor Assistant"
