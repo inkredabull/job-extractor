@@ -1315,8 +1315,28 @@ function findAndClickMutualConnections() {
     console.log('Found mutual connections link, clicking...');
     console.log(`Link URL: ${mutualConnectionLink.href}`);
     
-    // Store the profile person's name and URL in localStorage for persistence across page navigation
+    // Check if we've already prompted for this profile
     var currentUrl = window.location.href;
+    if (promptedProfiles.has(currentUrl)) {
+      console.log('Already prompted for this profile, skipping confirmation');
+      return;
+    }
+    
+    // Ask user for confirmation before proceeding
+    var confirmMessage = `Found mutual connections for this profile.\n\nClick OK to extract mutual connections data, or Cancel to skip.`;
+    var userConfirmed = confirm(confirmMessage);
+    
+    // Mark this profile as prompted regardless of user choice
+    promptedProfiles.add(currentUrl);
+    
+    if (!userConfirmed) {
+      console.log('User cancelled mutual connections extraction');
+      return;
+    }
+    
+    console.log('User confirmed - proceeding with mutual connections extraction');
+    
+    // Store the profile person's name and URL in localStorage for persistence across page navigation
     console.log(`Storing in localStorage - URL: "${currentUrl}", Name: "${profileName}"`);
     
     // Ensure we store the actual name, not "Unknown Profile"
@@ -1516,6 +1536,9 @@ function getConnectionPersonName() {
 
 // Track if we've already processed a search page to avoid duplicates
 let searchPageProcessed = false;
+
+// Track profiles that have already been prompted to avoid duplicate confirmations
+let promptedProfiles = new Set();
 
 // Auto-detect LinkedIn profile pages and find mutual connections
 function checkForLinkedInProfile() {
