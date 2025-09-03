@@ -177,6 +177,7 @@ export interface StatementOptions {
   emphasis?: string;
   companyInfo?: string;
   customInstructions?: string;
+  person?: 'first' | 'third';
 }
 
 export interface StatementResult {

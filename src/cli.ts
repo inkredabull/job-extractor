@@ -690,6 +690,7 @@ program
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
   .option('-i, --instructions <text>', 'Custom instructions for the material')
+  .option('-p, --person <person>', 'Writing perspective: first (I/me) or third (he/Anthony)', 'first')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
   .action(async (type: string, jobId: string, projectNumber: string, options) => {
@@ -978,10 +979,18 @@ program
         config.maxTokens
       );
       
+      // Validate person option
+      if (options.person && !['first', 'third'].includes(options.person)) {
+        console.error(`❌ Invalid person option: ${options.person}`);
+        console.error('Valid options: first, third');
+        process.exit(1);
+      }
+
       const materialOptions = {
         emphasis: options.emphasis,
         companyInfo: options.companyInfo,
-        customInstructions: options.instructions
+        customInstructions: options.instructions,
+        person: options.person as 'first' | 'third'
       };
 
       const result = await interviewPrepAgent.generateMaterial(

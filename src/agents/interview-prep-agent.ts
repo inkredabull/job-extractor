@@ -59,7 +59,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
       
       // If content-only mode and not regenerating, just find the most recent statement file
       if (contentOnly && !regenerate) {
-        const mostRecentContent = this.loadMostRecentMaterial(jobId, type);
+        const mostRecentContent = this.loadMostRecentMaterial(jobId, type, options);
         if (mostRecentContent) {
           return {
             success: true,
@@ -391,7 +391,7 @@ Format as:
     return Math.abs(hash).toString(16).substring(0, 8);
   }
 
-  private loadMostRecentMaterial(jobId: string, type: StatementType): string | null {
+  private loadMostRecentMaterial(jobId: string, type: StatementType, options: StatementOptions = {}): string | null {
     try {
       const jobDir = path.resolve('logs', jobId);
       
@@ -401,10 +401,11 @@ Format as:
       
       const files = fs.readdirSync(jobDir);
       
-      // Find all interview prep files for this type and get the most recent one
+      // Find all interview prep files for this type and person, get the most recent one
+      const person = options.person || 'first';
       const materialFiles = files
         .filter(file => 
-          file.startsWith(`interview-prep-${type}-`) && 
+          file.startsWith(`interview-prep-${type}-${person}-`) && 
           file.endsWith('.json')
         )
         .sort()
@@ -449,9 +450,10 @@ Format as:
       const files = fs.readdirSync(jobDir);
       
       // Look for cached interview prep files and get the most recent one
+      const person = options.person || 'first';
       const cacheFiles = files
         .filter(file => 
-          file.startsWith(`interview-prep-${type}-${cacheKey}-`) && 
+          file.startsWith(`interview-prep-${type}-${person}-${cacheKey}-`) && 
           file.endsWith('.json')
         )
         .sort()
@@ -508,7 +510,8 @@ Format as:
         cacheKey
       };
 
-      const cachePath = path.join(jobDir, `interview-prep-${type}-${cacheKey}-${timestamp}.json`);
+      const person = options.person || 'first';
+      const cachePath = path.join(jobDir, `interview-prep-${type}-${person}-${cacheKey}-${timestamp}.json`);
       fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
       console.log(`📝 Interview material cached to: ${cachePath}`);
     } catch (error) {
