@@ -15,6 +15,7 @@ import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as fss from 'fs';
 import { execSync } from 'child_process';
 
 // Helper function to find CV file automatically
@@ -191,6 +192,42 @@ program
       // Automatically score the job unless --no-score is specified
       if (options.score !== false) {
         console.log('');
+        
+        // Check if job already has a score >= 65
+        try {
+          const jobDir = path.resolve('logs', jobId);
+          if (fss.existsSync(jobDir)) {
+            const files = fss.readdirSync(jobDir);
+            const scoreFiles = files.filter(f => f.startsWith('score-') && f.endsWith('.json'));
+            
+            if (scoreFiles.length > 0) {
+              // Get the most recent score file
+              const mostRecentScoreFile = scoreFiles.sort().reverse()[0];
+              const scorePath = path.join(jobDir, mostRecentScoreFile);
+              const scoreData = JSON.parse(fss.readFileSync(scorePath, 'utf-8'));
+              
+              if (scoreData.score >= 65) {
+                console.log('📊 EXISTING SCORE DETECTED - SKIPPING AUTO-SCORING');
+                console.log('=' .repeat(60));
+                console.log(`🎯 Job already scored: ${scoreData.score}% (>= 65% threshold)`);
+                console.log(`⏰ Score date: ${new Date(scoreData.timestamp).toLocaleString()}`);
+                console.log('');
+                console.log('💡 HIGH SCORE DETECTED - MANUAL REVIEW RECOMMENDED');
+                console.log('   This job has a strong match score and should be manually reviewed');
+                console.log('   for strategic application planning and customization.');
+                console.log('');
+                console.log('🔄 To re-score this job, use: npm run dev score ' + jobId);
+                console.log('=' .repeat(60));
+                console.log('');
+                console.log(jobId);
+                return;
+              }
+            }
+          }
+        } catch (scoreCheckError) {
+          console.log('⚠️  Could not check existing score, proceeding with scoring...');
+        }
+        
         console.log('🎯 Automatically scoring job...');
         
         try {
@@ -217,7 +254,7 @@ program
         } catch (scoreError) {
           console.log('⚠️  Scoring failed (extraction was successful):');
           console.log(`   ${scoreError instanceof Error ? scoreError.message : 'Unknown scoring error'}`);
-          console.log('   You can manually score later with: job-extractor score ' + jobId);
+          console.log('   You can manually score later with: npm run dev score ' + jobId);
           console.log('');
           console.log(jobId);
         }
