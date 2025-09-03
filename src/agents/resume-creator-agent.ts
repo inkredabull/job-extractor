@@ -756,7 +756,7 @@ header-includes: |
   \\geometry{bottom=0.5in, footskip=0.33in}
   \\pagestyle{fancy}
   \\fancyhf{}
-  \\fancyfoot[C]{\\footnotesize \\textit{Brought to you by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
+  \\fancyfoot[C]{\\footnotesize \\textit{Powered by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
   \\renewcommand{\\headrulewidth}{0pt}
 ---
 `;
