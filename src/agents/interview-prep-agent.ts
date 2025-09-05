@@ -327,7 +327,8 @@ Format as:
       .replace(/{{emphasis}}/g, options.emphasis || '')
       .replace(/{{companyInfo}}/g, options.companyInfo || '')
       .replace(/{{customInstructions}}/g, options.customInstructions || '')
-      .replace(/{{companyValues}}/g, companyValuesSection);
+      .replace(/{{companyValues}}/g, companyValuesSection)
+      .replace(/{{person}}/g, options.person || 'first');
 
     // Add specific instructions based on type
     const typeInstructions = this.getTypeSpecificInstructions(type, options);

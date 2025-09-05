@@ -94,12 +94,14 @@ export class OutreachAgent {
       
       console.log(`✅ LinkedIn page opened in Chrome`);
       console.log('🤖 Chrome extension will inject and run the extraction script');
+      console.log('🔄 Job Extractor Assistant automatically enabled for LinkedIn automation');
       console.log('📊 Connection extraction and profile opening will begin automatically...');
       console.log('\n💡 The script will:');
       console.log('   • Extract all visible connections from the page');
       console.log('   • Open each connection profile in a new tab');
       console.log('   • Use random delays (750-1500ms) between tabs');
       console.log('   • Log progress to the browser console');
+      console.log('\n⚡ Toggle off anytime with: toggleJobExtractor(false)');
       
     } catch (error) {
       console.log(`⚠️  Could not automatically open Chrome: ${error instanceof Error ? error.message : 'Unknown error'}`);
