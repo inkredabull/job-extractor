@@ -324,7 +324,7 @@ app.post('/cv-question', async (req, res) => {
 app.post('/extract', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Extract request`);
   try {
-    const { url, type, data } = req.body;
+    const { url, type, data, reminderPriority } = req.body;
     
     // Handle different extraction types
     if (type === 'json') {
@@ -337,6 +337,7 @@ app.post('/extract', async (req, res) => {
       }
       
       console.log(`  -> Processing JSON data:`, data);
+      console.log(`  -> Reminder priority:`, reminderPriority || 'default');
       
       // Change to the main project directory
       const projectDir = path.resolve(__dirname);
@@ -351,7 +352,15 @@ app.post('/extract', async (req, res) => {
         console.log(`  -> Executing extract with JSON file: ${tempJsonFile}`);
         
         const output = await new Promise((resolve, reject) => {
-          const child = spawn('npx', ['ts-node', 'src/cli.ts', 'extract', '--type', 'jsonfile', tempJsonFile], {
+          const args = ['ts-node', 'src/cli.ts', 'extract', '--type', 'jsonfile'];
+          if (reminderPriority) {
+            args.push('--reminder-priority', reminderPriority.toString());
+          }
+          // Skip post-workflow (scoring, resume generation) for Chrome extension requests
+          args.push('--skip-post-workflow');
+          args.push(tempJsonFile);
+          
+          const child = spawn('npx', args, {
             cwd: projectDir,
             stdio: ['pipe', 'pipe', 'pipe']
           });

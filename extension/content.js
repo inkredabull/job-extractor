@@ -185,12 +185,23 @@ function createGutter() {
           <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically..."></textarea>
         </div>
         
+        <!-- TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
         <div class="form-field">
           <label class="radio-label">
             <input type="checkbox" id="track-in-teal-checkbox" class="teal-checkbox" checked>
             <span class="checkmark"></span>
             Track in Teal?
           </label>
+        </div>
+        -->
+        
+        <div class="form-field">
+          <label for="reminder-priority">Priority:</label>
+          <select id="reminder-priority" class="priority-select">
+            <option value="1">Low</option>
+            <option value="5" selected>Medium</option>
+            <option value="9">High</option>
+          </select>
         </div>
         
         <div class="button-group">
@@ -396,66 +407,147 @@ function extractCompanyName() {
 
 // Extract job location from the current page
 function extractJobLocation() {
+  console.log('Job Extractor: Extracting job location from page');
+  
+  // Priority 1: Try specific location selectors first
   const locationSelectors = [
     '[data-testid*="location"]',
+    '[data-testid*="jobLocation"]',
     '.job-location',
-    '.location',
-    '[class*="location"]',
+    '.position-location', 
     '[data-automation-id*="location"]',
     '.job-info .location',
-    '[class*="job"][class*="location"]'
+    '[class*="job"][class*="location"]',
+    '.location-info'
   ];
   
   for (const selector of locationSelectors) {
     const element = document.querySelector(selector);
     if (element && element.textContent.trim()) {
       const cleaned = cleanText(element.textContent);
-      if (cleaned && cleaned.length > 0) {
+      console.log(`Job Extractor: Found location via selector "${selector}": "${cleaned}"`);
+      // Filter out obvious non-location text
+      if (cleaned && 
+          cleaned.length > 0 && 
+          cleaned.length < 100 &&
+          !cleaned.toLowerCase().includes('salary') &&
+          !cleaned.toLowerCase().includes('priority') &&
+          !cleaned.toLowerCase().includes('track') &&
+          !cleaned.toLowerCase().includes('description') &&
+          !cleaned.toLowerCase().includes('url')) {
         return cleaned;
       }
     }
   }
   
-  // Look for common location text patterns
-  const textContent = document.body.textContent || '';
+  // Priority 2: Look for structured data
+  const jsonLdElements = document.querySelectorAll('script[type="application/ld+json"]');
+  for (const element of jsonLdElements) {
+    try {
+      const data = JSON.parse(element.textContent);
+      if (data['@type'] === 'JobPosting' && data.jobLocation) {
+        if (data.jobLocation.address) {
+          const location = data.jobLocation.address.addressLocality || 
+                          data.jobLocation.address.addressRegion ||
+                          data.jobLocation.address.name;
+          if (location) {
+            console.log(`Job Extractor: Found location in JSON-LD: "${location}"`);
+            return cleanText(location);
+          }
+        }
+        if (typeof data.jobLocation === 'string') {
+          console.log(`Job Extractor: Found location string in JSON-LD: "${data.jobLocation}"`);
+          return cleanText(data.jobLocation);
+        }
+      }
+    } catch (e) {
+      // Continue to next element
+    }
+  }
+  
+  // Priority 3: Look for common location text patterns in main content area only
+  const mainContentSelectors = [
+    'main', 
+    '[role="main"]', 
+    '.job-content', 
+    '.job-description',
+    '.job-details',
+    '.job-header',
+    '.job-info'
+  ];
+  
+  let searchArea = document.body;
+  for (const selector of mainContentSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      searchArea = element;
+      break;
+    }
+  }
+  
+  const textContent = searchArea.textContent || '';
   const locationPatterns = [
-    /(?:Location|Based in|Office|Work from):\s*([^\.]+)/i,
-    /(Remote|Hybrid|On-site)\s*[-,]?\s*([A-Za-z\s,]+)/i,
-    /(San Francisco|New York|London|Berlin|Remote|Hybrid)/i
+    /(?:Location|Based in|Office|Work from|City):\s*([^\n\r\.,;]+)/i,
+    /(?:^|\n|\r)\s*Location:\s*([^\n\r\.,;]+)/i,
+    /(?:Remote|Hybrid|On-site)\s*[-,]?\s*([A-Za-z\s,]{2,40})(?=\s|$|\n)/i
   ];
   
   for (const pattern of locationPatterns) {
     const match = textContent.match(pattern);
-    if (match) {
-      const locationText = cleanText(match[1] || match[0]);
-      if (locationText && locationText.length > 0 && locationText.length < 100) {
+    if (match && match[1]) {
+      const locationText = cleanText(match[1].trim());
+      console.log(`Job Extractor: Found location via pattern: "${locationText}"`);
+      if (locationText && 
+          locationText.length > 1 && 
+          locationText.length < 50 &&
+          !locationText.toLowerCase().includes('salary') &&
+          !locationText.toLowerCase().includes('priority') &&
+          !locationText.toLowerCase().includes('track') &&
+          !locationText.toLowerCase().includes('description') &&
+          !locationText.toLowerCase().includes('url')) {
         return locationText;
       }
     }
   }
   
-  // Check for specific text content that might indicate location
-  const allText = Array.from(document.querySelectorAll('*'))
-    .map(el => el.textContent?.trim())
-    .filter(text => text && text.length < 50 && text.length > 2);
-    
-  const locationKeywords = ['Remote', 'Hybrid', 'San Francisco', 'New York', 'London', 'Berlin', 'Austin', 'Seattle', 'Boston'];
+  // Priority 4: Look for specific location keywords but exclude form elements
+  const locationKeywords = ['Remote', 'Hybrid', 'On-site', 'San Francisco', 'New York', 'London', 'Berlin', 'Austin', 'Seattle', 'Boston', 'Chicago', 'Los Angeles', 'Toronto', 'Vancouver'];
+  
+  // Get all text elements but exclude form elements and our extension
+  const allTextElements = Array.from(document.querySelectorAll('*:not(input):not(textarea):not(select):not(button):not(label):not(#job-extractor-gutter):not(#job-extractor-gutter *)'))
+    .filter(el => {
+      const text = el.textContent?.trim();
+      return text && 
+             text.length < 50 && 
+             text.length > 2 &&
+             el.children.length === 0 && // Only leaf text nodes
+             !el.closest('#job-extractor-gutter'); // Exclude our extension
+    })
+    .map(el => el.textContent.trim());
   
   for (const keyword of locationKeywords) {
-    const found = allText.find(text => 
+    const found = allTextElements.find(text => 
       text.includes(keyword) && 
-      !text.includes('Experience') && 
-      !text.includes('Requirements') &&
-      !text.includes('Skills')
+      !text.toLowerCase().includes('experience') && 
+      !text.toLowerCase().includes('requirements') &&
+      !text.toLowerCase().includes('skills') &&
+      !text.toLowerCase().includes('salary') &&
+      !text.toLowerCase().includes('priority') &&
+      !text.toLowerCase().includes('track') &&
+      !text.toLowerCase().includes('description') &&
+      !text.toLowerCase().includes('url') &&
+      text.length < 40
     );
     if (found) {
       const cleaned = cleanText(found);
-      if (cleaned && cleaned.length > 0 && cleaned.length < 100) {
+      console.log(`Job Extractor: Found location via keyword "${keyword}": "${cleaned}"`);
+      if (cleaned && cleaned.length > 0 && cleaned.length < 40) {
         return cleaned;
       }
     }
   }
   
+  console.log('Job Extractor: No location found');
   return '';
 }
 
@@ -673,6 +765,8 @@ function generateMockResponse(query) {
   return responses.default;
 }
 
+// TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
+/*
 // Handle Teal tracking functionality
 async function handleTealTracking() {
   const trackBtn = document.getElementById('track-in-teal');
@@ -763,6 +857,7 @@ async function handleTealTracking() {
     }, 8000);
   }
 }
+*/
 
 // Handle tracking job using form field values
 async function handleTrackFromForm() {
@@ -795,21 +890,24 @@ async function handleTrackFromForm() {
       return;
     }
     
-    // Check if Teal tracking is enabled
-    const shouldTrackInTeal = document.getElementById('track-in-teal-checkbox')?.checked || false;
+    // Get priority for reminder creation
+    const reminderPriority = parseInt(document.getElementById('reminder-priority')?.value) || 5;
     
     console.log('Job Extractor: Tracking job from form fields:', jobInfo);
-    console.log('Job Extractor: Track in Teal enabled:', shouldTrackInTeal);
+    console.log('Job Extractor: Reminder priority:', reminderPriority);
     
     // Send JSON payload to extract functionality server-side
     const extractResponse = await chrome.runtime.sendMessage({
       action: 'extractFromJson',
-      jobData: jobInfo
+      jobData: jobInfo,
+      reminderPriority: reminderPriority
     });
     
     if (extractResponse.success) {
       console.log('✅ Successfully saved job data server-side:', extractResponse.jobId);
       
+      // TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
+      /*
       // Conditionally open Teal tab based on checkbox state
       if (shouldTrackInTeal) {
         trackBtn.textContent = 'Opening Teal...';
@@ -828,6 +926,10 @@ async function handleTrackFromForm() {
         console.log('📝 Job data saved successfully (Teal tracking disabled)');
         alert('Job data saved successfully!');
       }
+      */
+      
+      console.log('📝 Job data and reminder saved successfully!');
+      alert('Job data and reminder saved successfully!');
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);

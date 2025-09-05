@@ -460,9 +460,10 @@ async function handleExtractFromJson(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling extract from JSON request');
     console.log('Job data:', request.jobData);
+    console.log('Reminder priority:', request.reminderPriority);
     
-    // Send JSON payload to unified server with type='json' flag
-    const extractResponse = await callLocalUnifiedServerWithJson(request.jobData);
+    // Send JSON payload to unified server with type='json' flag and reminder priority
+    const extractResponse = await callLocalUnifiedServerWithJson(request.jobData, request.reminderPriority);
     
     sendResponse({
       success: true,
@@ -481,7 +482,7 @@ async function handleExtractFromJson(request, sendResponse) {
 }
 
 // Call local unified server with JSON data
-async function callLocalUnifiedServerWithJson(jobData) {
+async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
   try {
     console.log('Job Extractor Background: Calling unified server for JSON extraction');
     
@@ -493,7 +494,8 @@ async function callLocalUnifiedServerWithJson(jobData) {
       },
       body: JSON.stringify({ 
         type: 'json',
-        data: jobData
+        data: jobData,
+        reminderPriority: reminderPriority
       }),
       signal: AbortSignal.timeout(30000) // 30 second timeout for JSON processing
     });

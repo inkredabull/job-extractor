@@ -14,7 +14,7 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     switch (type) {
       case 'url':
         return this.extractFromUrl(input, options);
@@ -32,7 +32,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     try {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
@@ -45,7 +45,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Check applicant count first - early exit if too competitive (unless overridden)
       const applicantInfo = this.extractApplicantCount(html);
@@ -95,10 +95,14 @@ export class JobExtractorAgent extends BaseAgent {
       console.log(`✅ Job information logged to ${logFilePath}`);
 
       // Create reminder for tracked job
-      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl);
+      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
 
-      // Run post-extraction workflow (score, resume, critique)
-      await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
+      // Run post-extraction workflow (score, resume, critique) unless skipped
+      if (!options?.skipPostWorkflow) {
+        await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
+      } else {
+        console.log('⏭️  Skipping post-extraction workflow (scoring, resume generation)');
+      }
 
       return {
         success: true,
@@ -113,7 +117,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Parse the JSON input
       let jobData: any;
@@ -149,10 +153,14 @@ export class JobExtractorAgent extends BaseAgent {
       console.log(`✅ Job information logged to ${logFilePath}`);
 
       // Create reminder for tracked job
-      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl);
+      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
 
-      // Run post-extraction workflow (score, resume, critique)
-      await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
+      // Run post-extraction workflow (score, resume, critique) unless skipped
+      if (!options?.skipPostWorkflow) {
+        await this.runPostExtractionWorkflow(jobId, jobDataWithSource);
+      } else {
+        console.log('⏭️  Skipping post-extraction workflow (scoring, resume generation)');
+      }
 
       return {
         success: true,
@@ -167,7 +175,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean }): Promise<ExtractorResult> {
+  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     try {
       // Read the JSON file
       const jsonContent = fs.readFileSync(filePath, 'utf-8');
@@ -1276,17 +1284,16 @@ Return only the synthesized job description text, no additional formatting or co
   /**
    * Create a reminder for the tracked job using macOS Reminders
    */
-  private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string): Promise<void> {
+  private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
     try {
       const reminderService = new MacOSReminderService();
       
-      // Prepare template variables for the reminder
-      const templateVariables = {
-        title: jobData.title || 'Unknown Position',
-        company: jobData.company || 'Unknown Company',
-        location: jobData.location || 'Unknown Location',
-        url: sourceUrl || 'No URL provided',
-        jobId: jobId,
+      // Load config to get default settings
+      const config = reminderService.getConfig();
+      
+      // Prepare reminder data with priority override support
+      const reminderData = {
+        title: `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`,
         notes: `Job Application Follow-up
 
 Position: ${jobData.title || 'Unknown Position'}
@@ -1301,14 +1308,21 @@ Next steps:
 - Check application status
 - Send follow-up email if needed
 - Research company updates
-- Prepare for potential interview`
+- Prepare for potential interview`,
+        list: config.list_name,
+        priority: reminderPriority || config.default_priority,
+        tags: config.tags ? config.tags.split(',').map(t => t.trim()) : ['#applying'],
+        dueDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+        dueTime: config.due_date?.time || '23:59'
       };
       
-      const result = await reminderService.createReminderFromTemplate(templateVariables);
+      const result = await reminderService.createReminder(reminderData);
       
       if (!result.success) {
         throw new Error(result.error || 'Unknown reminder creation error');
       }
+      
+      console.log(`✅ Created job reminder with priority ${reminderData.priority}: ${reminderData.title}`);
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
       console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
