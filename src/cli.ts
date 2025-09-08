@@ -145,7 +145,7 @@ program
   .option('-c, --criteria <file>', 'Path to criteria file for scoring', 'criteria.json')
   .option('--no-score', 'Skip automatic scoring after extraction')
   .option('--force-extract', 'Extract job even if competition is too high')
-  .option('--reminder-priority <priority>', 'Reminder priority for macOS reminders (1=Low, 5=Medium, 9=High)', '5')
+  .option('--reminder-priority <priority>', 'Reminder priority for macOS reminders (1=High, 5=Medium, 9=Low)', '5')
   .option('--skip-post-workflow', 'Skip post-extraction workflow (scoring, resume generation)')
   .action(async (input: string, options) => {
     try {

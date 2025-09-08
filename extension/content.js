@@ -198,9 +198,9 @@ function createGutter() {
         <div class="form-field">
           <label for="reminder-priority">Priority:</label>
           <select id="reminder-priority" class="priority-select">
-            <option value="1">Low</option>
+            <option value="9">Low</option>
             <option value="5" selected>Medium</option>
-            <option value="9">High</option>
+            <option value="1">High</option>
           </select>
         </div>
         
