@@ -48,10 +48,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     regenerate: boolean = false,
     contentOnly: boolean = false
   ): Promise<StatementResult> {
-    // Handle special 'focus' target
-    if (type === 'focus' as StatementType) {
-      return this.generateFocusStory(jobId, cvFilePath, regenerate);
-    }
+    // Focus functionality has been merged into 'about-me' - no separate focus type needed
     try {
       // Store jobId for use in sub-methods
       this.currentJobId = jobId;
@@ -284,12 +281,22 @@ Format as:
     
     // For about-me type, check if themes exist and include them
     if (type === 'about-me') {
+      // Ask user for theme preference (merged from focus functionality)
+      const userTheme = await this.askUserForTheme();
+      
       const themes = await this.getOrExtractThemes(job);
-      const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job);
+      const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job, userTheme);
       // Get jobId from the generateMaterial caller context
       const actualJobId = this.currentJobId;
       await this.updateThemesWithExamples(job, themesWithExamples, actualJobId);
       promptTemplate = this.injectThemesIntoPrompt(promptTemplate, themesWithExamples);
+      
+      // Inject user theme for focus story selection
+      if (userTheme) {
+        promptTemplate = promptTemplate.replace('{{userTheme}}', userTheme);
+      } else {
+        promptTemplate = promptTemplate.replace('{{userTheme}}', 'high-impact achievements that best demonstrate your capabilities');
+      }
     }
     
     // Build the complete prompt
@@ -745,16 +752,20 @@ Please respond in the following JSON format:
     }
   }
 
-  private async enrichThemesWithExamples(themes: JobTheme[], cvContent: string, job: JobListing): Promise<JobTheme[]> {
+  private async enrichThemesWithExamples(themes: JobTheme[], cvContent: string, job: JobListing, userTheme?: string): Promise<JobTheme[]> {
     console.log('🔍 Analyzing CV examples for each theme...');
     
+    const userThemeGuidance = userTheme ? 
+      `\n**SPECIAL FOCUS**: When selecting the BEST examples and interview stories, prioritize those that demonstrate or relate to "${userTheme}" theme. This should influence your selection of the most compelling focal story for the FOCUS STORY section.\n` : 
+      '';
+
     const prompt = `Analyze the provided CV content and identify 1-2 specific, quantifiable examples for each theme that demonstrate the candidate's relevant experience. For each example, extract:
 
 1. The specific text/achievement from the CV
 2. The source section (which job/project it came from)
 3. The quantified impact/result
 
-Additionally, identify the 2-3 BEST examples overall that demonstrate the highest professional impact and would make compelling interview stories.
+Additionally, identify the 2-3 BEST examples overall that demonstrate the highest professional impact and would make compelling interview stories.${userThemeGuidance}
 
 Themes to match:
 ${themes.map((theme, index) => `${index + 1}. **${theme.name}**: ${theme.definition}`).join('\n')}

@@ -727,7 +727,7 @@ program
 program
   .command('prep')
   .description('Generate interview preparation materials (cover letter, endorsement, interview, general)')
-  .argument('<type>', 'Type of statement: cover-letter, endorsement, interview, about-me, focus, general, themes, stories, profile, project, or list-projects')
+  .argument('<type>', 'Type of statement: cover-letter, endorsement, interview, about-me, general, themes, stories, profile, project, or list-projects')
   .argument('[jobId]', 'Job ID to generate statement for (not required for profile)')
   .argument('[projectNumber]', 'Project number to extract (for project type only)')
   .option('-e, --emphasis <text>', 'Special emphasis or instructions for the material')
@@ -992,7 +992,7 @@ program
       }
 
       // Validate material type for other types
-      const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general', 'focus'];
+      const validTypes: StatementType[] = ['cover-letter', 'endorsement', 'about-me', 'general'];
       if (!validTypes.includes(type as StatementType)) {
         console.error(`❌ Invalid material type: ${type}`);
         console.error(`Valid types: ${validTypes.join(', ')}, interview, themes, stories, profile, project, list-projects`);
@@ -1049,24 +1049,9 @@ program
         if (options.content) {
           // Just output the content without any formatting
           console.log(result.content);
-        } else if (result.type === 'focus') {
-          // Special handling for focus stories - copy RTF to clipboard
-          console.log('✅ Focus Story Generation Complete');
-          console.log('=' .repeat(50));
-          console.log(`📝 Type: FOCUS STORY`);
-          console.log(`📊 Character Count: ${result.characterCount}`);
-          console.log('');
-          
-          // Copy RTF content directly to clipboard (LLM now generates RTF format)
-          if (result.content) {
-            await copyToClipboard(result.content);
-          }
-          
-          console.log('📋 Focus story copied to clipboard in Rich Text Format');
-          console.log('💡 Ready to paste into documents, emails, or notes');
         } else if (result.type === 'about-me') {
           // Special handling for about-me - copy RTF to clipboard
-          console.log('✅ About Me Generation Complete');
+          console.log('✅ About Me Generation Complete (with Focus Story)');
           console.log('=' .repeat(50));
           console.log(`📝 Type: ABOUT ME`);
           console.log(`📊 Character Count: ${result.characterCount}`);
