@@ -8,21 +8,23 @@ You are a professional interview coach creating talking points for a "Tell me ab
 - **Length**: Maximum 1200 characters total
 - **Tone**: Informal but professional
 - **Structure**: Professional summary bullets, focus story, then themes with examples
-- **Content**: 3-5 brief professional summary points, 1 detailed focus story, 2-4 priority themes from job description with relevant examples
+- **Content**: Specific opener + exactly 3 brief professional summary points (non-repeating), 1 detailed focus story, 2-4 priority themes from job description with relevant examples
 
 ## Instructions
 
-1. **Start with 3-5 brief professional summary bullets**: Each bullet should be ≤75 characters and capture key career highlights
-2. **Include one detailed focus story**: Select the most compelling achievement and expand it using STAR method (Situation, Task, Actions, Results)
-3. Use the priority themes provided (these have been automatically extracted from the job description)
-4. For each theme, incorporate 1-2 relevant examples from work history (≈85 characters each)
-5. Include specific excitement about the company and role fit, weaving in company values where they naturally align with your experience
-6. Structure as talking points suitable for interview response
-7. **Company Values Integration**: When company values are provided, authentically connect your examples and experiences to these values - show natural alignment rather than forced mentions
+1. **Start with this exact opener**: "I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%."
+2. **Follow with exactly 3 professional summary bullets**: Each bullet should be ≤75 characters and capture additional career highlights NOT mentioned in the opener (avoid repeating Myna/CourseKey achievements from the opener)
+3. **Include one detailed focus story**: Select the most compelling achievement and expand it using STAR method (Situation, Task, Actions, Results)
+4. Use the priority themes provided (these have been automatically extracted from the job description)
+5. For each theme, incorporate 1-2 relevant examples from work history (≈85 characters each)
+6. Include specific excitement about the company and role fit, weaving in company values where they naturally align with your experience
+7. Structure as talking points suitable for interview response
+8. **Company Values Integration**: When company values are provided, authentically connect your examples and experiences to these values - show natural alignment rather than forced mentions
 
 ## Content Guidelines
 
-- **Professional summary bullets**: Make each bullet ≤75 characters, covering key role progressions and impact areas
+- **Opener**: Use the exact opener text provided in the instructions
+- **Professional summary bullets**: Make exactly 3 bullets ≤75 characters each, covering key role progressions and impact areas NOT mentioned in the opener (avoid repeating Myna CTO or CourseKey VP achievements)
 - **Focus story**: Choose the most impressive/relevant achievement and provide detailed STAR breakdown
 - Focus on themes most relevant to the job posting
 - Use brief, impactful examples from the candidate's background
@@ -53,12 +55,14 @@ You are a professional interview coach creating talking points for a "Tell me ab
 Please respond in RTF format using the following nested structure with subheadings:
 
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+\par \li720 \bullet \b OPENER:\b0
+\par \li1080 \bullet I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%.
+\par \li0
+
 \par \li720 \bullet \b PROFESSIONAL SUMMARY:\b0
-\par \li1080 \bullet [Brief career highlight ≤75 chars]
-\par \li1080 \bullet [Brief career highlight ≤75 chars]
-\par \li1080 \bullet [Brief career highlight ≤75 chars]
-\par \li1080 \bullet [Brief career highlight ≤75 chars (optional)]
-\par \li1080 \bullet [Brief career highlight ≤75 chars (optional)]
+\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
+\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
+\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
 \par \li0
 
 \par \li720 \bullet \b WHY {{job.company}}?\b0
@@ -90,10 +94,13 @@ Please respond in RTF format using the following nested structure with subheadin
 
 Example RTF structure:
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+\par \li720 \bullet \b OPENER:\b0
+\par \li1080 \bullet I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%.
+\par \li0
+
 \par \li720 \bullet \b PROFESSIONAL SUMMARY:\b0
 \par \li1080 \bullet Technical leader with 8+ years scaling engineering teams (32 people)
 \par \li1080 \bullet Built B2C platforms serving 5K+ DAUs with proven impact
-\par \li1080 \bullet Hands-on expertise + executive leadership across multiple domains
 \par \li1080 \bullet GenAI implementation reducing development cycles by 35%
 \par \li0
 
