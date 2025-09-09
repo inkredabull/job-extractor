@@ -35,9 +35,7 @@ You are a professional interview coach creating talking points for a "Tell me ab
 
 ## Company Fit Section
 
-- Specific reasons why this company and role are appealing, incorporating the company's values and mission where authentic (first bullet)
-- What you're looking for next in your career and how it directly aligns with the specific needs, requirements, and challenges outlined in this job description (second bullet)
-- Show clear connection between your career goals and what this role/company offers
+- Combine specific excitement about the company/role with how your career goals align with their needs and challenges. Incorporate company values naturally where authentic, showing clear connection between what you're looking for and what this role/company offers.
 - **Important**: When company values are provided, weave them naturally into your reasoning - don't just list them, but show how your experience and approach align with their values
 
 ## Input Variables
@@ -66,8 +64,7 @@ Please respond in RTF format using the following nested structure with subheadin
 \par \li0
 
 \par \li720 \bullet \b WHY {{job.company}}?\b0
-\par \li1080 \bullet [Specific reason for company interest and excitement]
-\par \li1080 \bullet [What I'm looking for next aligns directly with job requirements and needs]
+\par \li1080 \bullet [Combine company excitement with career goal alignment - show how what you're looking for matches their needs and challenges]
 \par \li0
 
 \par \li720 \bullet \b FOCUS STORY:\b0
@@ -105,8 +102,7 @@ Example RTF structure:
 \par \li0
 
 \par \li720 \bullet \b WHY [Company]?\b0
-\par \li1080 \bullet Excited about innovative AI platform and growth stage opportunity
-\par \li1080 \bullet Looking for hands-on technical leadership role that matches this Director of Engineering position's need for scaling teams and driving product innovation
+\par \li1080 \bullet Excited about innovative AI platform and growth stage opportunity - perfectly matches my search for hands-on technical leadership role scaling teams and driving product innovation
 \par \li0
 
 \par \li720 \bullet \b FOCUS STORY:\b0
