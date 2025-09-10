@@ -67,9 +67,15 @@ Please provide a response that:
 3. Shows clear connections between past experience and the question
 4. Uses a professional, confident tone
 5. Is tailored to showcase the candidate's strengths
-${jobDescription ? '6. Relates the experience to the specific job opportunity mentioned' : ''}
+6. Formats the response with proper paragraph breaks and bullet points for readability
+${jobDescription ? '7. Relates the experience to the specific job opportunity mentioned' : ''}
 
-Keep under 200 words and answer in first person:`;
+Format your response with:
+- Short opening paragraph (2-3 sentences)
+- Bullet points for key achievements/examples
+- Brief closing statement
+
+Keep under 250 words and answer in first person:`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
@@ -268,10 +274,12 @@ STRENGTHS
 // Initialize CV response engine
 const cvEngine = new CVResponseEngine(process.argv.includes('--llm'));
 
-// Enable CORS for Chrome extension
+// Enable CORS for Chrome extension and AMA app
 app.use(cors({
-  origin: ['chrome-extension://*', 'http://localhost:*'],
-  credentials: true
+  origin: ['chrome-extension://*', 'http://localhost:*', 'http://localhost:3001', 'http://localhost:3002'],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -287,11 +295,43 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Helper function to log chats
+function logChat(question, answer, metadata = {}) {
+  try {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      question,
+      answer,
+      metadata,
+      sessionId: metadata.sessionId || 'unknown'
+    };
+    
+    // Create logs directory if it doesn't exist
+    const logsDir = path.join(__dirname, 'logs', 'ama-chats');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+    
+    // Create log filename with date
+    const dateStr = timestamp.split('T')[0]; // YYYY-MM-DD
+    const logFile = path.join(logsDir, `ama-chat-${dateStr}.jsonl`);
+    
+    // Append to JSONL file (one JSON object per line)
+    const logLine = JSON.stringify(logEntry) + '\n';
+    fs.appendFileSync(logFile, logLine, 'utf-8');
+    
+    console.log(`  -> Chat logged to: ${logFile}`);
+  } catch (error) {
+    console.error('  -> Error logging chat:', error.message);
+  }
+}
+
 // CV Question endpoint (from MCP server)
 app.post('/cv-question', async (req, res) => {
   console.log(`[${new Date().toISOString()}] CV question request`);
   try {
-    const { question, jobDescription } = req.body;
+    const { question, jobDescription, sessionId, userAgent, referrer } = req.body;
     console.log('  -> Question:', question);
     console.log('  -> Job description provided:', jobDescription ? 'Yes' : 'No');
     
@@ -302,11 +342,22 @@ app.post('/cv-question', async (req, res) => {
     
     console.log('  -> Processing CV question...');
     const response = await cvEngine.answerCVQuestion(question, jobDescription);
-    console.log('  -> CV response generated:', response.content[0].text.slice(0, 100) + '...');
+    const answerText = response.content[0].text;
+    console.log('  -> CV response generated:', answerText.slice(0, 100) + '...');
+    
+    // Log the chat interaction
+    logChat(question, answerText, {
+      sessionId: sessionId || 'web-session-' + Date.now(),
+      userAgent,
+      referrer,
+      jobDescription: jobDescription ? 'provided' : 'none',
+      responseLength: answerText.length,
+      source: 'ama-web-app'
+    });
     
     const jsonResponse = { 
       success: true, 
-      response: response.content[0].text 
+      response: answerText 
     };
     
     res.json(jsonResponse);
