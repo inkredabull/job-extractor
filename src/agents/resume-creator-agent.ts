@@ -11,14 +11,21 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private claudeApiKey: string;
   private mode: 'builder' | 'leader';
 
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 4, mode: 'builder' | 'leader' = 'leader') {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 6, mode: 'builder' | 'leader' = 'leader') {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
     this.mode = mode;
   }
 
-  async createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate: boolean = true, generate: boolean | string = false): Promise<ResumeResult> {
+  async createResume(
+    jobId: string, 
+    cvFilePath: string, 
+    outputPath?: string, 
+    regenerate: boolean = true, 
+    generate: boolean | string = false,
+    critique: boolean = true
+  ): Promise<ResumeResult> {
     try {
       // Load job data
       let jobData = this.loadJobData(jobId);
@@ -33,7 +40,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Check if this is the first time creating a resume or if we should regenerate
       const isFirstGeneration = this.isFirstGeneration(jobId);
       
-      if (isFirstGeneration) {
+      if (isFirstGeneration && critique) {
         console.log(`🎯 First time generating resume for job ${jobId} - will critique and regenerate automatically`);
         
         // First generation: create initial resume
@@ -667,6 +674,9 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       const basePath = path.resolve('prompts', 'resume-creator-base.md');
       let promptTemplate = fs.readFileSync(basePath, 'utf-8');
       
+      // First, replace the maxRoles placeholder to ensure it's not lost
+      promptTemplate = promptTemplate.replace(/\{\{maxRoles\}\}/g, variables.maxRoles.toString());
+      
       // Load mode-specific fragments
       const fragmentsFileName = this.mode === 'builder' ? 'resume-creator-builder-fragments.md' : 'resume-creator-leader-fragments.md';
       const fragmentsPath = path.resolve('prompts', fragmentsFileName);
@@ -693,8 +703,18 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         promptTemplate = promptTemplate.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
       });
       
-      // Remove markdown headers and formatting to get clean prompt
-      promptTemplate = promptTemplate
+      // Replace remaining template variables with escaped content
+      let prompt = promptTemplate
+        .replace(/{{resumeMode}}/g, this.mode.toUpperCase())
+        .replace(/{{job\.title}}/g, this.escapeForPrompt(variables.job.title))
+        .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
+        .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
+        .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
+        .replace(/{{recommendationsSection}}/g, variables.recommendationsSection)
+        .replace(/{{companyValuesSection}}/g, variables.companyValuesSection);
+      
+      // Then remove markdown headers and formatting to get clean prompt
+      prompt = prompt
         .replace(/^# .+$/gm, '') // Remove markdown headers
         .replace(/^## (.+)$/gm, '$1') // Convert ## headers to plain text
         .replace(/^### (.+)$/gm, '$1') // Convert ### headers to plain text
@@ -706,17 +726,6 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         })
         .replace(/- \[ \]/g, '-') // Remove checkbox formatting
         .trim();
-      
-      // Replace template variables with escaped content
-      const prompt = promptTemplate
-        .replace(/{{resumeMode}}/g, this.mode.toUpperCase())
-        .replace(/{{maxRoles}}/g, variables.maxRoles.toString())
-        .replace(/{{job\.title}}/g, this.escapeForPrompt(variables.job.title))
-        .replace(/{{job\.company}}/g, this.escapeForPrompt(variables.job.company))
-        .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
-        .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
-        .replace(/{{recommendationsSection}}/g, variables.recommendationsSection)
-        .replace(/{{companyValuesSection}}/g, variables.companyValuesSection);
       
       
       return prompt;

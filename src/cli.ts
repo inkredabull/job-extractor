@@ -595,6 +595,7 @@ program
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
+  .option('--no-critique', 'Skip the automatic critique and improvement of the resume', false)
   .action(async (jobId: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
@@ -616,7 +617,7 @@ program
       const mode = (options.mode || 'leader') as 'leader' | 'builder';
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
       
-      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, 4, mode);
+      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, 6, mode);
       
       // Show generate mode if enabled
       if (options.generate) {
@@ -627,7 +628,14 @@ program
       }
       
       const generateParam = options.generate ? (options.companyUrl || true) : false;
-      const result = await creator.createResume(jobId, cvFile, options.output, !!options.regen, generateParam);
+      const result = await creator.createResume(
+        jobId, 
+        cvFile, 
+        options.output, 
+        !!options.regen, 
+        generateParam,
+        options.critique !== false  // Pass the critique flag (defaults to true)
+      );
       
       if (result.success) {
         console.log('✅ Resume Generation Complete');

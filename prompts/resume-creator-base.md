@@ -89,7 +89,7 @@ Include an "EDUCATION" section after the SKILLS section. Use bullet points.
 Do not include a cover letter. 
 Do not make use of the • character.
 Return output as Markdown in the format of a reverse chronological resume.
-Final output should print to no more than one page as a PDF. 
+Final output should print to no more than two pages as a PDF. 
 
 {{enforcementSection}}
 
