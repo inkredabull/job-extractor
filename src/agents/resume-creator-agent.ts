@@ -81,7 +81,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         }
       } else {
         // Not first generation - use existing logic
-        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath);
+        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath, critique);
       }
     } catch (error) {
       return {
@@ -190,7 +190,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     };
   }
 
-  private async generateStandardResume(jobId: string, cvFilePath: string, jobData: JobListing, regenerate: boolean, outputPath?: string): Promise<ResumeResult> {
+  private async generateStandardResume(jobId: string, cvFilePath: string, jobData: JobListing, regenerate: boolean, outputPath?: string, critique: boolean = true): Promise<ResumeResult> {
     let tailoredContent: { markdownContent: string; changes: string[] };
     
     // Check if we should use cached content or regenerate
@@ -223,7 +223,9 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     const pdfPath = await this.generatePDF(tailoredContent, jobData, outputPath, jobId);
     
     // Check if recommendations.txt exists for this job, if not, run critique automatically
-    await this.checkAndRunCritique(jobId);
+    if (critique) {
+      await this.checkAndRunCritique(jobId);
+    }
     
     return {
       success: true,
