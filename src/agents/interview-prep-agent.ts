@@ -302,7 +302,10 @@ Format as:
     // Build the complete prompt
     const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options, companyValues);
     
-    // Log the prompt
+    // Log the prompt to file
+    this.logPromptToFile(prompt, type);
+    
+    // Log status message
     console.log(`📝 Generating ${type.replace('-', ' ')} material...`);
     
     const response = await this.makeClaudeRequest(prompt);
@@ -1913,6 +1916,42 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
       console.log(`📄 Focus story response logged to: ${logPath}`);
     } catch (error) {
       console.warn(`⚠️  Failed to log focus story response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private logPromptToFile(prompt: string, type: StatementType): void {
+    try {
+      if (!this.currentJobId) {
+        // No job ID available, skip logging
+        return;
+      }
+
+      const logsDir = path.resolve('logs');
+      const jobDir = path.resolve(logsDir, this.currentJobId);
+      
+      // Create logs and job directories if they don't exist
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+      }
+      if (!fs.existsSync(jobDir)) {
+        fs.mkdirSync(jobDir, { recursive: true });
+      }
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const promptLogFile = path.join(jobDir, `prompt-${type}-${timestamp}.txt`);
+      
+      const logContent = [
+        `📝 Prompt being sent to Claude for ${type.replace('-', ' ')} material generation:`,
+        '='.repeat(80),
+        prompt,
+        '='.repeat(80),
+        `\nGenerated at: ${new Date().toISOString()}`
+      ].join('\n');
+      
+      fs.writeFileSync(promptLogFile, logContent, 'utf-8');
+      console.log(`📄 Prompt logged to: ${promptLogFile}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to log prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
