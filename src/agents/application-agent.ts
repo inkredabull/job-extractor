@@ -861,7 +861,15 @@ export class ApplicationAgent extends BaseAgent {
       }
       
       // Use ResumeCreatorAgent to generate resume
-      const resumeResult = await this.resumeAgent.createResume(jobId, cvFilePath);
+      const resumeResult = await this.resumeAgent.createResume(
+        jobId, 
+        cvFilePath,
+        undefined, // outputPath
+        false, // regenerate
+        false, // generate
+        false, // critique - disabled for application workflow
+        'programmatic' // source
+      );
       
       if (resumeResult.success && resumeResult.pdfPath) {
         return {

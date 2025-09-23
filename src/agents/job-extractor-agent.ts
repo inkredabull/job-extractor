@@ -1504,7 +1504,9 @@ Next steps:
         cvFile,
         undefined, // outputPath
         false, // regenerate
-        workflowConfig.generate_job_description || false
+        workflowConfig.generate_job_description || false,
+        false, // critique - disabled for programmatic workflow
+        'programmatic' // source
       );
       
       return result.success;

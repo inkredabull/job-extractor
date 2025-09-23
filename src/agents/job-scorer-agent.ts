@@ -412,7 +412,15 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
         anthropicConfig.maxTokens
       );
       
-      const result = await resumeCreator.createResume(jobId, this.autoResumeConfig.cvPath!);
+      const result = await resumeCreator.createResume(
+        jobId, 
+        this.autoResumeConfig.cvPath!,
+        undefined, // outputPath
+        false, // regenerate  
+        false, // generate
+        false, // critique - disabled for auto-scoring
+        'programmatic' // source
+      );
       
       if (result.success) {
         console.log(`✅ Auto-generated resume: ${result.pdfPath}`);

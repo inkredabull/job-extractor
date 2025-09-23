@@ -634,7 +634,8 @@ program
         options.output, 
         !!options.regen, 
         generateParam,
-        options.critique !== false  // Pass the critique flag (defaults to true)
+        options.critique !== false,  // Pass the critique flag (defaults to true)
+        'cli'  // Indicate this is called from CLI
       );
       
       if (result.success) {

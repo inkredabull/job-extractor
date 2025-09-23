@@ -35,5 +35,5 @@ export abstract class ClaudeBaseAgent {
     }
   }
 
-  abstract createResume(jobId: string, cvFilePath: string, outputPath?: string): Promise<ResumeResult>;
+  abstract createResume(jobId: string, cvFilePath: string, outputPath?: string, regenerate?: boolean, generate?: boolean | string, critique?: boolean, source?: 'cli' | 'programmatic'): Promise<ResumeResult>;
 }
