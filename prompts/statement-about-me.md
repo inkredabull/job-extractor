@@ -12,7 +12,7 @@ You are a professional interview coach creating talking points for a "Tell me ab
 
 ## Instructions
 
-1. **Start with this exact opener**: "I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%."
+1. **Start with this exact opener**: "I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%. As Head of Engineering at Decorist, I scaled the team from 7 to 46 and cut cloud costs by 70%."
 2. **Follow with exactly 3 professional summary bullets**: Each bullet should be ≤75 characters and capture additional career highlights NOT mentioned in the opener (avoid repeating Myna/CourseKey achievements from the opener)
 3. **Include one detailed focus story**: Select the most compelling achievement that relates to "{{userTheme}}" and expand it using STAR method (Situation, Task, Actions, Results). Choose the story that best demonstrates this theme while showcasing your capabilities.
 4. Use the priority themes provided (these have been automatically extracted from the job description)
