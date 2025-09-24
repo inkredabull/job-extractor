@@ -288,6 +288,19 @@ function extractJobInformation() {
   const descriptionField = document.getElementById('job-description');
   if (descriptionField) descriptionField.value = extractedJobDescription;
   
+  // Extract salary information
+  const salaryInfo = extractSalaryRange();
+  const minSalaryField = document.getElementById('min-salary');
+  const maxSalaryField = document.getElementById('max-salary');
+  if (minSalaryField && salaryInfo.min) {
+    minSalaryField.value = salaryInfo.min;
+    minSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (maxSalaryField && salaryInfo.max) {
+    maxSalaryField.value = salaryInfo.max;
+    maxSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  
   // Set the current URL
   const urlField = document.getElementById('job-url');
   if (urlField) urlField.value = window.location.href;
@@ -296,6 +309,7 @@ function extractJobInformation() {
     title: jobTitle,
     company: companyName,
     location: location,
+    salary: salaryInfo,
     url: window.location.href,
     hasDescription: extractedJobDescription.length > 0
   });
@@ -308,6 +322,10 @@ function extractJobInformation() {
     companyValue: document.getElementById('company-name')?.value,
     locationField: !!document.getElementById('job-location'),
     locationValue: document.getElementById('job-location')?.value,
+    minSalaryField: !!document.getElementById('min-salary'),
+    minSalaryValue: document.getElementById('min-salary')?.value,
+    maxSalaryField: !!document.getElementById('max-salary'),
+    maxSalaryValue: document.getElementById('max-salary')?.value,
     urlField: !!document.getElementById('job-url'),
     urlValue: document.getElementById('job-url')?.value
   });
@@ -348,6 +366,36 @@ function extractJobTitle() {
 
 // Extract company name from the current page
 function extractCompanyName() {
+  console.log('🔍 Job Extractor: Extracting company name');
+  
+  // Priority 1: Look for company in job description or visible text content
+  const descText = extractedJobDescription || document.body.innerText || '';
+  
+  // Check for specific company patterns in content
+  const companyMatches = [
+    descText.match(/work(?:ing)?\s+(?:at|for)\s+([A-Z][A-Za-z\s&]+?)(?:\s|,|\.|!|\?|$)/i),
+    descText.match(/([A-Z][A-Za-z\s&]+?)\s+is\s+(?:a|an|the)/i),
+    descText.match(/join\s+(?:the\s+)?([A-Z][A-Za-z\s&]+?)\s+team/i),
+    descText.match(/([A-Z][A-Za-z\s&]+?)\s+(?:team|company|organization)/i)
+  ];
+  
+  for (const match of companyMatches) {
+    if (match && match[1]) {
+      const company = cleanText(match[1]);
+      // Filter out common false positives
+      if (company && company.length > 2 && company.length < 50 &&
+          !company.toLowerCase().includes('engineering') &&
+          !company.toLowerCase().includes('product') &&
+          !company.toLowerCase().includes('software') &&
+          !company.toLowerCase().includes('technical') &&
+          !company.toLowerCase().includes('development')) {
+        console.log(`🔍 Found company from content: "${company}"`);
+        return company;
+      }
+    }
+  }
+  
+  // Priority 2: DOM-based selectors
   const companySelectors = [
     '[data-testid*="company"]',
     '.company-name',
@@ -362,46 +410,82 @@ function extractCompanyName() {
   for (const selector of companySelectors) {
     const element = document.querySelector(selector);
     if (element && element.textContent.trim()) {
-      return cleanText(element.textContent);
+      const company = cleanText(element.textContent);
+      console.log(`🔍 Found company from selector "${selector}": "${company}"`);
+      return company;
     }
   }
   
-  // Linear/Ashby specific: Check for company in URL or page structure
+  // Priority 3: Specific site handling
   if (window.location.href.includes('linear.app/careers')) {
     return 'Linear';
   }
   
-  // Check for company logo or branding elements
+  // Handle Rippling ATS - extract company from URL path
+  if (window.location.hostname.includes('rippling.com') && window.location.pathname.includes('join')) {
+    const pathParts = window.location.pathname.split('/');
+    const joinIndex = pathParts.findIndex(part => part.startsWith('join'));
+    if (joinIndex >= 0 && pathParts[joinIndex].length > 4) {
+      const companySlug = pathParts[joinIndex].replace('join', '');
+      // Convert slug to proper company name
+      const companyNames = {
+        'root': 'Root Insurance',
+        'stripe': 'Stripe', 
+        'airbnb': 'Airbnb',
+        'uber': 'Uber',
+        'lyft': 'Lyft'
+        // Add more as needed
+      };
+      if (companyNames[companySlug.toLowerCase()]) {
+        console.log(`🔍 Found company from Rippling URL: "${companyNames[companySlug.toLowerCase()]}"`);
+        return companyNames[companySlug.toLowerCase()];
+      }
+      // Fallback: capitalize the slug
+      const capitalizedCompany = companySlug.charAt(0).toUpperCase() + companySlug.slice(1);
+      console.log(`🔍 Found company from Rippling URL (capitalized): "${capitalizedCompany}"`);
+      return capitalizedCompany;
+    }
+  }
+  
+  // Priority 4: Check for company logo or branding elements
   const logoSelectors = ['[alt*="logo" i]', '[class*="logo"]', 'img[src*="logo"]'];
   for (const selector of logoSelectors) {
     const element = document.querySelector(selector);
     if (element) {
       const alt = element.getAttribute('alt');
       if (alt && alt.toLowerCase().includes('logo')) {
-        return alt.replace(/logo/gi, '').trim();
+        const company = alt.replace(/logo/gi, '').trim();
+        console.log(`🔍 Found company from logo: "${company}"`);
+        return company;
       }
     }
   }
   
-  // Fallback: try to extract from page title or meta tags
+  // Priority 5: Meta tags
   const metaCompany = document.querySelector('meta[property="og:site_name"]');
   if (metaCompany && metaCompany.content) {
+    console.log(`🔍 Found company from meta tag: "${metaCompany.content}"`);
     return metaCompany.content;
   }
   
-  // Try extracting from page title (after "at")
+  // Priority 6: Try extracting from page title (after "at")
   const titleParts = document.title.split(' at ');
   if (titleParts.length > 1) {
-    return titleParts[1].split('|')[0].split('-')[0].trim();
+    const company = titleParts[1].split('|')[0].split('-')[0].trim();
+    console.log(`🔍 Found company from page title: "${company}"`);
+    return company;
   }
   
-  // Try extracting from URL subdomain
+  // Last resort: Try extracting from URL subdomain (but avoid common false positives)
   const hostname = window.location.hostname;
   const parts = hostname.split('.');
-  if (parts.length >= 2 && parts[0] !== 'www') {
-    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  if (parts.length >= 2 && parts[0] !== 'www' && parts[0] !== 'ats' && parts[0] !== 'jobs' && parts[0] !== 'careers') {
+    const company = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    console.log(`🔍 Found company from hostname: "${company}"`);
+    return company;
   }
   
+  console.log('🔍 No company name found');
   return '';
 }
 
@@ -549,6 +633,95 @@ function extractJobLocation() {
   
   console.log('Job Extractor: No location found');
   return '';
+}
+
+// Extract salary range from the current page
+function extractSalaryRange() {
+  console.log('🔍 Job Extractor: Extracting salary range');
+  
+  // Get all text content to search for salary patterns
+  const pageText = document.body.innerText || '';
+  const descText = extractedJobDescription || '';
+  const combinedText = descText + '\n' + pageText;
+  
+  // Comprehensive salary patterns
+  const salaryPatterns = [
+    // Standard formats: $300,000-450,000, $300K-$450K, etc.
+    /\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s*[-–—to]\s*\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    // Range with "to": $300,000 to $450,000
+    /\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s+to\s+\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    // Range with "and": between $300,000 and $450,000
+    /between\s+\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s+and\s+\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    // Salary range: text
+    /salary\s+range:?\s*\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s*[-–—to]\s*\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    // Compensation: text  
+    /compensation:?\s*\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s*[-–—to]\s*\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    // Base salary: text
+    /base\s+salary:?\s*\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s*[-–—to]\s*\$?(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi
+  ];
+  
+  for (const pattern of salaryPatterns) {
+    const matches = combinedText.matchAll(pattern);
+    for (const match of matches) {
+      if (match[1] && match[2]) {
+        const min = parseSalaryValue(match[1]);
+        const max = parseSalaryValue(match[2]);
+        
+        // Validate that the range makes sense
+        if (min > 0 && max > 0 && min < max && min >= 20000 && max <= 2000000) {
+          console.log(`🔍 Found salary range: $${min.toLocaleString()} - $${max.toLocaleString()}`);
+          return {
+            min: min.toString(),
+            max: max.toString()
+          };
+        }
+      }
+    }
+  }
+  
+  // Look for single salary values that might indicate a range midpoint
+  const singleSalaryPatterns = [
+    /salary:?\s*\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    /compensation:?\s*\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)/gi,
+    /\$(\d{1,3}(?:,\d{3})*|\d+[kK]?)\s+(?:per\s+year|annually|salary)/gi
+  ];
+  
+  for (const pattern of singleSalaryPatterns) {
+    const matches = combinedText.matchAll(pattern);
+    for (const match of matches) {
+      if (match[1]) {
+        const salary = parseSalaryValue(match[1]);
+        if (salary >= 50000 && salary <= 1000000) {
+          // Estimate a range around the single value (±20%)
+          const min = Math.round(salary * 0.8);
+          const max = Math.round(salary * 1.2);
+          console.log(`🔍 Found single salary value, estimating range: $${min.toLocaleString()} - $${max.toLocaleString()}`);
+          return {
+            min: min.toString(),
+            max: max.toString()
+          };
+        }
+      }
+    }
+  }
+  
+  console.log('🔍 No salary range found');
+  return { min: '', max: '' };
+}
+
+// Helper function to parse salary values (handles K suffix and commas)
+function parseSalaryValue(value) {
+  if (!value) return 0;
+  
+  // Remove commas and dollar signs
+  let cleaned = value.replace(/[\$,]/g, '');
+  
+  // Handle K suffix
+  if (cleaned.toLowerCase().endsWith('k')) {
+    return parseInt(cleaned.slice(0, -1)) * 1000;
+  }
+  
+  return parseInt(cleaned) || 0;
 }
 
 // Extract job description from the current page
