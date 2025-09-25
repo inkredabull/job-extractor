@@ -408,6 +408,7 @@ app.post('/extract', async (req, res) => {
             args.push('--reminder-priority', reminderPriority.toString());
           }
           // Skip post-workflow (scoring, resume generation) for Chrome extension requests
+          // This allows immediate response to the extension
           args.push('--skip-post-workflow');
           args.push(tempJsonFile);
           
@@ -481,6 +482,22 @@ app.post('/extract', async (req, res) => {
           filePath: `logs/${jobId}/`,
           jobData: jobData || data // Return original data if processed data not available
         });
+        
+        // Async background processing for Medium/High priority jobs
+        // Priority: 1=High, 5=Medium, 9=Low
+        const priority = parseInt(reminderPriority) || 5;
+        if (priority <= 5) { // Medium (5) or High (1) priority
+          console.log(`  -> Triggering async background scoring and resume generation for priority ${priority} job`);
+          setImmediate(async () => {
+            try {
+              await triggerAsyncJobProcessing(jobId, priority, projectDir);
+            } catch (error) {
+              console.log(`  -> Background processing failed for job ${jobId}:`, error.message);
+            }
+          });
+        } else {
+          console.log(`  -> Skipping background processing for Low priority (${priority}) job`);
+        }
         
       } finally {
         // Clean up temporary file
@@ -611,3 +628,94 @@ process.on('SIGINT', () => {
   console.log('Unified Server: Received SIGINT, shutting down gracefully');
   process.exit(0);
 });
+
+// Async background job processing function
+async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
+  console.log(`🔄 Starting async background processing for job ${jobId} (priority: ${priority})`);
+  
+  try {
+    // Step 1: Score the job
+    console.log(`  -> Scoring job ${jobId}...`);
+    const scoreOutput = await new Promise((resolve, reject) => {
+      const scoreArgs = ['ts-node', 'src/cli.ts', 'score', jobId];
+      
+      const scoreChild = spawn('npx', scoreArgs, {
+        cwd: projectDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      scoreChild.stdout.on('data', (data) => {
+        stdout += data;
+      });
+      
+      scoreChild.stderr.on('data', (data) => {
+        stderr += data;
+      });
+      
+      scoreChild.on('close', (code) => {
+        console.log(`  -> Job scoring finished with code ${code}`);
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(`Job scoring failed with code ${code}: ${stderr}`));
+        }
+      });
+      
+      // Set timeout for scoring
+      setTimeout(() => {
+        scoreChild.kill();
+        reject(new Error('Job scoring timed out after 60 seconds'));
+      }, 60000);
+    });
+    
+    console.log(`  -> Job scoring completed for ${jobId}`);
+    
+    // Step 2: Generate resume (only if job was successfully scored)
+    console.log(`  -> Generating resume for job ${jobId}...`);
+    const resumeOutput = await new Promise((resolve, reject) => {
+      const resumeArgs = ['ts-node', 'src/cli.ts', 'resume', jobId];
+      
+      const resumeChild = spawn('npx', resumeArgs, {
+        cwd: projectDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      resumeChild.stdout.on('data', (data) => {
+        stdout += data;
+      });
+      
+      resumeChild.stderr.on('data', (data) => {
+        stderr += data;
+      });
+      
+      resumeChild.on('close', (code) => {
+        console.log(`  -> Resume generation finished with code ${code}`);
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(`Resume generation failed with code ${code}: ${stderr}`));
+        }
+      });
+      
+      // Set timeout for resume generation
+      setTimeout(() => {
+        resumeChild.kill();
+        reject(new Error('Resume generation timed out after 120 seconds'));
+      }, 120000);
+    });
+    
+    console.log(`✅ Async background processing completed successfully for job ${jobId}`);
+    console.log(`  -> Scoring: ✅ Complete`);
+    console.log(`  -> Resume: ✅ Complete`);
+    
+  } catch (error) {
+    console.log(`❌ Async background processing failed for job ${jobId}: ${error.message}`);
+    // Don't throw - we don't want background failures to affect the main flow
+  }
+}
