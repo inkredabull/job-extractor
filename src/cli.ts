@@ -595,7 +595,7 @@ program
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
-  .option('--no-critique', 'Skip the automatic critique and improvement of the resume', false)
+  .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
   .action(async (jobId: string, options) => {
     try {
       console.log('📄 Generating tailored resume...');
@@ -634,7 +634,7 @@ program
         options.output, 
         !!options.regen, 
         generateParam,
-        options.critique !== false,  // Pass the critique flag (defaults to true)
+        !options.noCritique,  // Pass the critique flag (defaults to true unless --no-critique is specified)
         'cli'  // Indicate this is called from CLI
       );
       
