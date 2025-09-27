@@ -161,13 +161,22 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private async generateInitialResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing): Promise<ResumeResult> {
     const job = jobData || this.loadJobData(jobId);
     
-    console.log(`🔄 Generating initial resume for job ${jobId}`);
-    const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-    const scopedCvContent = this.scopeCVContent(cvContent);
-    const tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
+    let tailoredContent: { markdownContent: string; changes: string[] };
     
-    // Cache the tailored content
-    this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+    // Check for existing tailored content first (for --regen with critique)
+    const cachedContent = this.loadMostRecentTailoredContent(jobId);
+    if (cachedContent) {
+      console.log(`📋 Using existing tailored content for critique workflow`);
+      tailoredContent = cachedContent;
+    } else {
+      console.log(`🔄 Generating initial resume content for job ${jobId}`);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const scopedCvContent = this.scopeCVContent(cvContent);
+      tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
+      
+      // Cache the newly generated content
+      this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+    }
     
     // Create PDF
     const pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
