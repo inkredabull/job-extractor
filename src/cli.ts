@@ -628,6 +628,7 @@ program
       }
       
       const generateParam = options.generate ? (options.companyUrl || true) : false;
+      console.log(`🐛 CLI DEBUG: Full options object:`, options);
       console.log(`🐛 CLI DEBUG: options.regen=${options.regen}, !!options.regen=${!!options.regen}, options.noCritique=${options.noCritique}, !options.noCritique=${!options.noCritique}`);
       
       const result = await creator.createResume(
