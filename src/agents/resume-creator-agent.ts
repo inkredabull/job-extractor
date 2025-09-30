@@ -41,14 +41,18 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // Check if this is the first time creating a resume
       const isFirstGeneration = this.isFirstGeneration(jobId);
       
-      if (critique && (isFirstGeneration || regenerate || source === 'cli')) {
+      // If --regen is used, skip critique and just rebuild from existing content
+      if (regenerate) {
+        console.log(`🔄 Regenerating PDF from existing tailored content for job ${jobId}`);
+        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath, false); // critique = false for regen
+      }
+      
+      if (critique && (isFirstGeneration || source === 'cli')) {
         // Run the critique-and-improve workflow when:
         // 1. It's the first generation and critique is enabled, OR
-        // 2. Regenerate is requested and critique is enabled, OR
-        // 3. Called from CLI with critique enabled (default behavior for CLI)
+        // 2. Called from CLI with critique enabled (default behavior for CLI) 
         let workflowReason = 'unknown';
         if (isFirstGeneration) workflowReason = 'first-time generation';
-        else if (regenerate) workflowReason = 'regeneration with critique';
         else if (source === 'cli') workflowReason = 'CLI invocation with critique enabled';
         
         console.log(`🎯 Running critique-and-improve workflow for ${workflowReason}...`);
