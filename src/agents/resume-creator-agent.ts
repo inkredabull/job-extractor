@@ -38,8 +38,12 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         jobData = await this.generateJobDescription(jobData, jobId, companyUrl);
       }
       
+      // Debug logging
+      console.log(`🐛 DEBUG: regenerate=${regenerate}, critique=${critique}, source=${source}`);
+      
       // Check if this is the first time creating a resume
       const isFirstGeneration = this.isFirstGeneration(jobId);
+      console.log(`🐛 DEBUG: isFirstGeneration=${isFirstGeneration}`);
       
       // If --regen is used, skip critique and just rebuild from existing content
       if (regenerate) {
