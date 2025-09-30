@@ -44,7 +44,24 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       // If --regen is used, skip critique and just rebuild from existing content
       if (regenerate) {
         console.log(`🔄 Regenerating PDF from existing tailored content for job ${jobId}`);
-        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath, false); // critique = false for regen
+        
+        // Look for existing tailored content
+        const cachedContent = this.loadMostRecentTailoredContent(jobId);
+        if (cachedContent) {
+          console.log(`📋 Found existing tailored content, converting directly to PDF`);
+          const pdfPath = await this.generatePDF(cachedContent, jobData, outputPath, jobId);
+          return {
+            success: true,
+            pdfPath,
+            tailoringChanges: cachedContent.changes
+          };
+        } else {
+          console.log(`❌ No existing tailored content found for job ${jobId}. Use without --regen to generate new content.`);
+          return {
+            success: false,
+            error: `No existing tailored content found for job ${jobId}. Remove --regen flag to generate new content.`
+          };
+        }
       }
       
       if (critique && (isFirstGeneration || source === 'cli')) {
