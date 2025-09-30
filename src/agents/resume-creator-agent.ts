@@ -38,12 +38,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         jobData = await this.generateJobDescription(jobData, jobId, companyUrl);
       }
       
-      // Debug logging
-      console.log(`🐛 DEBUG: regenerate=${regenerate}, critique=${critique}, source=${source}`);
-      
       // Check if this is the first time creating a resume
       const isFirstGeneration = this.isFirstGeneration(jobId);
-      console.log(`🐛 DEBUG: isFirstGeneration=${isFirstGeneration}`);
       
       // If --regen is used, skip critique and just rebuild from existing content
       if (regenerate) {
@@ -343,14 +339,35 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       const files = fs.readdirSync(jobDir);
       
       // Find all tailored content JSON files and sort by timestamp (most recent first)
-      const tailoredFiles = files
+      const tailoredJsonFiles = files
         .filter(file => file.startsWith('tailored-') && file.endsWith('.json'))
         .sort()
         .reverse(); // Most recent first
       
-      if (tailoredFiles.length === 0) {
-        return null;
+      // If no JSON files found, look for markdown files directly as fallback
+      if (tailoredJsonFiles.length === 0) {
+        const tailoredMdFiles = files
+          .filter(file => file.startsWith('tailored-') && file.endsWith('.md'))
+          .sort()
+          .reverse(); // Most recent first
+        
+        if (tailoredMdFiles.length === 0) {
+          return null;
+        }
+        
+        // Use the most recent .md file directly
+        const mostRecentMdFile = tailoredMdFiles[0];
+        const markdownPath = path.join(jobDir, mostRecentMdFile);
+        const markdownContent = fs.readFileSync(markdownPath, 'utf-8');
+        
+        console.log(`📋 Found tailored markdown file: ${mostRecentMdFile}`);
+        return {
+          markdownContent,
+          changes: [] // No change info available when using .md directly
+        };
       }
+      
+      const tailoredFiles = tailoredJsonFiles;
       
       // Load the most recent tailored content
       const mostRecentFile = tailoredFiles[0];
