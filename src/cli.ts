@@ -592,6 +592,7 @@ program
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Force regeneration of tailored content (skip cache)')
+  .option('--test-flag', 'Test flag to see if any flags work')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
