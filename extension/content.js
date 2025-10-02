@@ -1976,7 +1976,9 @@ setInterval(() => {
 // LinkedIn Feed Post Save Detection
 function detectLinkedInFeed() {
   const url = window.location.href;
-  return url.includes('linkedin.com/feed');
+  const isLinkedInFeed = url.includes('linkedin.com/feed');
+  console.log('LinkedIn Feed: URL check:', { url, isLinkedInFeed });
+  return isLinkedInFeed;
 }
 
 function initLinkedInFeedMonitoring() {
