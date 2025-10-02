@@ -2003,10 +2003,20 @@ function initLinkedInFeedMonitoring() {
 function setupLinkedInNetworkMonitoring() {
   console.log('LinkedIn Feed: Setting up network request monitoring...');
   
+  // Test if fetch exists and is interceptable
+  console.log('LinkedIn Feed: Testing fetch availability:', typeof window.fetch);
+  console.log('LinkedIn Feed: Testing XMLHttpRequest availability:', typeof XMLHttpRequest);
+  
   // Override fetch to intercept LinkedIn API calls
   const originalFetch = window.fetch;
   window.fetch = async function(...args) {
     const [url, options] = args;
+    
+    // Debug: Log ALL fetch calls to see if our override is working
+    console.log('LinkedIn Feed: FETCH INTERCEPTED:', {
+      url: typeof url === 'string' ? url : 'non-string',
+      method: options?.method || 'GET'
+    });
     
     // Debug: Log all LinkedIn API calls to see what we're missing
     if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
@@ -2054,6 +2064,12 @@ function setupLinkedInNetworkMonitoring() {
   XMLHttpRequest.prototype.open = function(method, url, ...args) {
     this._method = method;
     this._url = url;
+    
+    // Debug: Log ALL XHR calls to see if our override is working
+    console.log('LinkedIn Feed: XHR INTERCEPTED:', {
+      method,
+      url: typeof url === 'string' ? url : 'non-string'
+    });
     
     // Debug: Log all LinkedIn XHR calls
     if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
