@@ -2001,134 +2001,41 @@ function initLinkedInFeedMonitoring() {
 }
 
 function setupLinkedInNetworkMonitoring() {
-  console.log('LinkedIn Feed: Setting up network request monitoring...');
+  console.log('LinkedIn Feed: Setting up postMessage listener for injected script...');
   
-  // Test if fetch exists and is interceptable
-  console.log('LinkedIn Feed: Testing fetch availability:', typeof window.fetch);
-  console.log('LinkedIn Feed: Testing XMLHttpRequest availability:', typeof XMLHttpRequest);
-  
-  // Try immediate override
-  overrideNetworkMethods();
-  
-  // Also try after a delay in case LinkedIn loads later
-  setTimeout(overrideNetworkMethods, 1000);
-  setTimeout(overrideNetworkMethods, 3000);
-  
-  // Set up MutationObserver to re-override if LinkedIn resets our overrides
-  const observer = new MutationObserver(() => {
-    if (window.fetch && window.fetch.toString().indexOf('FETCH INTERCEPTED') === -1) {
-      console.log('LinkedIn Feed: Detected fetch override was reset, re-applying...');
-      overrideNetworkMethods();
+  // Listen for messages from the injected script
+  window.addEventListener('message', function(event) {
+    // Only accept messages from the same origin
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+    
+    // Check if this is a LinkedIn post save message
+    if (event.data && event.data.type === 'LINKEDIN_POST_SAVED') {
+      console.log('LinkedIn Feed: 🎯 Received post save message from injected script!', event.data);
+      
+      const { activityUrn, url, timestamp } = event.data;
+      if (activityUrn) {
+        console.log('LinkedIn Feed: Processing saved post with activity URN:', activityUrn);
+        
+        // Small delay to let the UI update, then find and process the post
+        setTimeout(() => {
+          findAndProcessSavedPost(activityUrn);
+        }, 1000);
+      }
     }
   });
   
-  observer.observe(document.head, { childList: true, subtree: true });
+  console.log('LinkedIn Feed: ✅ PostMessage listener set up successfully');
 }
 
-function overrideNetworkMethods() {
-  // Override fetch to intercept LinkedIn API calls
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const [url, options] = args;
-    
-    // Debug: Log ALL fetch calls to see if our override is working
-    console.log('LinkedIn Feed: FETCH INTERCEPTED:', {
-      url: typeof url === 'string' ? url : 'non-string',
-      method: options?.method || 'GET'
-    });
-    
-    // Debug: Log all LinkedIn API calls to see what we're missing
-    if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
-      console.log('LinkedIn Feed: DEBUG - LinkedIn API call detected:', {
-        url: url.substring(url.indexOf('/voyager')), // Show just the relevant part
-        method: options?.method || 'GET',
-        hasBody: !!options?.body
-      });
-    }
-    
-    // Check if this is a LinkedIn save request
-    if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
-      console.log('LinkedIn Feed: 🎯 Save API request detected!', {
-        url,
-        method: options?.method || 'GET',
-        body: options?.body
-      });
-      
-      // Extract activity URN from URL
-      const activityUrn = extractActivityUrnFromSaveUrl(url);
-      if (activityUrn) {
-        console.log('LinkedIn Feed: Extracted activity URN:', activityUrn);
-        
-        // Check if this is actually saving (not unsaving)
-        const isActuallySaving = checkIfSavingRequest(options);
-        if (isActuallySaving) {
-          console.log('LinkedIn Feed: Confirmed this is a SAVE request (not unsave)');
-          
-          // Small delay to let the request complete, then find and process the post
-          setTimeout(() => {
-            findAndProcessSavedPost(activityUrn);
-          }, 1000);
-        } else {
-          console.log('LinkedIn Feed: This is an UNSAVE request, ignoring');
-        }
-      }
-    }
-    
-    // Continue with the original request
-    return originalFetch.apply(this, args);
-  };
-  
-  // Also override XMLHttpRequest for older API calls
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url, ...args) {
-    this._method = method;
-    this._url = url;
-    
-    // Debug: Log ALL XHR calls to see if our override is working
-    console.log('LinkedIn Feed: XHR INTERCEPTED:', {
-      method,
-      url: typeof url === 'string' ? url : 'non-string'
-    });
-    
-    // Debug: Log all LinkedIn XHR calls
-    if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
-      console.log('LinkedIn Feed: DEBUG - LinkedIn XHR call detected:', {
-        method,
-        url: url.substring(url.indexOf('/voyager')), // Show just the relevant part
-      });
-    }
-    
-    if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
-      console.log('LinkedIn Feed: 🎯 Save XHR request detected!', {
-        method,
-        url
-      });
-      
-      // Set up response handler
-      this.addEventListener('load', function() {
-        if (this.status >= 200 && this.status < 300) {
-          const activityUrn = extractActivityUrnFromSaveUrl(url);
-          if (activityUrn) {
-            console.log('LinkedIn Feed: Save XHR completed successfully, processing post...');
-            setTimeout(() => {
-              findAndProcessSavedPost(activityUrn);
-            }, 1000);
-          }
-        }
-      });
-    }
-    
-    return originalXHROpen.call(this, method, url, ...args);
-  };
-  
-  console.log('LinkedIn Feed: Network method overrides applied');
-}
+// Network interception is now handled by the injected script (linkedin-inject.js)
+// This function is kept for compatibility but is no longer used
 
+// Helper functions for extracting activity URN (used by fallback methods)
 function extractActivityUrnFromSaveUrl(url) {
   try {
     // URL format: /voyagerFeedDashSaveStates/urn%3Ali%3Afsd_saveState%3A(SAVE%2Curn%3Ali%3Aactivity%3A7379230453674942464)
-    // We want to extract the activity URN: 7379230453674942464
-    
     const match = url.match(/urn%3Ali%3Aactivity%3A(\d+)/);
     if (match && match[1]) {
       return match[1];
@@ -2140,30 +2047,10 @@ function extractActivityUrnFromSaveUrl(url) {
       return match2[1];
     }
     
-    console.log('LinkedIn Feed: Could not extract activity URN from URL:', url);
     return null;
   } catch (error) {
     console.error('LinkedIn Feed: Error extracting activity URN:', error);
     return null;
-  }
-}
-
-function checkIfSavingRequest(options) {
-  try {
-    if (!options || !options.body) return false;
-    
-    const body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-    console.log('LinkedIn Feed: Request body:', body);
-    
-    // Check if the request body indicates saving (not unsaving)
-    const bodyObj = JSON.parse(body);
-    const isSaving = bodyObj?.patch?.$set?.saved === true;
-    
-    console.log('LinkedIn Feed: Is saving:', isSaving);
-    return isSaving;
-  } catch (error) {
-    console.log('LinkedIn Feed: Could not parse request body, assuming it is a save request');
-    return true; // Default to true if we can't determine
   }
 }
 
