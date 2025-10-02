@@ -43,6 +43,13 @@ window.getJobExtractorStatus = function() {
   return jobExtractorEnabled;
 };
 
+// Expose manual LinkedIn feed monitoring function
+window.initLinkedInFeedMonitoring = globalThis.initLinkedInFeedMonitoring = function() {
+  console.log('Manually initializing LinkedIn feed monitoring...');
+  setupLinkedInNetworkMonitoring();
+  return 'LinkedIn feed monitoring activated!';
+};
+
 // Expose manual mutual connections extraction function
 window.extractCurrentPage = globalThis.extractCurrentPage = function() {
   console.log('Extracting mutual connections from current page...');
@@ -2329,13 +2336,20 @@ function showLinkedInFeedNotification(message) {
 
 // Initialize LinkedIn feed monitoring when on feed page
 function checkForLinkedInFeed() {
+  console.log('LinkedIn Feed: checkForLinkedInFeed() called');
   if (detectLinkedInFeed()) {
+    console.log('LinkedIn Feed: Detected LinkedIn feed page, initializing monitoring...');
     initLinkedInFeedMonitoring();
+  } else {
+    console.log('LinkedIn Feed: Not on LinkedIn feed page, skipping...');
   }
 }
 
 // Run feed check on load and URL changes
-checkForLinkedInFeed();
+setTimeout(() => {
+  console.log('LinkedIn Feed: Running initial feed check after delay...');
+  checkForLinkedInFeed();
+}, 2000); // Give LinkedIn time to load
 
 console.log('Job Extractor Assistant: Content script loaded');
 console.log('💡 Console functions available:');
