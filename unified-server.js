@@ -596,6 +596,98 @@ app.post('/teal-track', async (req, res) => {
   });
 });
 
+// LinkedIn post reminder creation endpoint
+app.post('/linkedin-reminder', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] LinkedIn reminder creation request`);
+  const { title, notes, priority = 5, dueDate = null, listName = 'LinkedIn Saved Posts' } = req.body;
+  
+  if (!title) {
+    return res.status(400).json({
+      success: false,
+      error: 'Title is required for reminder creation'
+    });
+  }
+  
+  console.log(`  -> Creating reminder: ${title.substring(0, 50)}...`);
+  
+  try {
+    // Use the MacOS reminder creation via CLI
+    const output = await new Promise((resolve, reject) => {
+      const args = ['ts-node', 'src/cli.ts', 'reminder'];
+      
+      // Add title (required)
+      args.push('--title', title);
+      
+      // Add notes if provided
+      if (notes) {
+        args.push('--notes', notes);
+      }
+      
+      // Add priority
+      args.push('--priority', priority.toString());
+      
+      // Add list name
+      args.push('--list', listName);
+      
+      // Add due date if provided
+      if (dueDate) {
+        args.push('--due', dueDate);
+      }
+      
+      console.log(`  -> Running command: npx ${args.join(' ')}`);
+      
+      const child = spawn('npx', args, {
+        cwd: projectDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      child.stdout.on('data', (data) => {
+        stdout += data;
+      });
+      
+      child.stderr.on('data', (data) => {
+        stderr += data;
+      });
+      
+      child.on('close', (code) => {
+        console.log(`  -> Command finished with code ${code}`);
+        console.log(`  -> STDOUT: ${stdout}`);
+        console.log(`  -> STDERR: ${stderr}`);
+        
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(`Reminder creation failed with code ${code}: ${stderr}`));
+        }
+      });
+      
+      // Set timeout
+      setTimeout(() => {
+        child.kill();
+        reject(new Error('Reminder creation timed out after 10 seconds'));
+      }, 10000);
+    });
+    
+    console.log(`  -> Reminder created successfully`);
+    
+    res.json({
+      success: true,
+      reminderId: 'created',
+      message: 'LinkedIn post reminder created successfully'
+    });
+    
+  } catch (error) {
+    console.error(`  -> Reminder creation failed: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 Unified Job Extractor Server');
@@ -604,10 +696,11 @@ app.listen(PORT, () => {
   console.log(`🧠 LLM mode: ${cvEngine.useLLM ? 'ENABLED (Claude 3.5)' : 'DISABLED (Pattern matching)'}`);
   console.log('');
   console.log('📋 Available endpoints:');
-  console.log(`  • GET  /health        - Health check`);
-  console.log(`  • POST /cv-question   - CV question answering`);
-  console.log(`  • POST /extract       - Job extraction (URL or JSON)`);
-  console.log(`  • POST /teal-track    - Deprecated (use Chrome extension)`);
+  console.log(`  • GET  /health           - Health check`);
+  console.log(`  • POST /cv-question      - CV question answering`);
+  console.log(`  • POST /extract          - Job extraction (URL or JSON)`);
+  console.log(`  • POST /linkedin-reminder - Create reminder for saved LinkedIn posts`);
+  console.log(`  • POST /teal-track       - Deprecated (use Chrome extension)`);
   console.log('');
   console.log('💡 Usage:');
   console.log(`  • Chrome Extension: Will connect automatically`);

@@ -78,6 +78,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleExtractFromJson(request, sendResponse);
       return true; // Keep message channel open for async response
       
+    case 'createLinkedInPostReminder':
+      handleCreateLinkedInPostReminder(request, sendResponse);
+      return true; // Keep message channel open for async response
+      
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -818,6 +822,96 @@ function fillTealForm(jobInfo) {
   }, 5000); // Wait 5 seconds for page to load
   } catch (globalError) {
     console.error('Teal Form Filler: Critical error in fillTealForm:', globalError);
+  }
+}
+
+// Handle creating reminder for saved LinkedIn posts
+async function handleCreateLinkedInPostReminder(request, sendResponse) {
+  try {
+    console.log('LinkedIn Feed Background: Creating reminder for saved post');
+    console.log('Post info:', request.postInfo);
+    
+    // Test if local unified server is running
+    const unifiedServerRunning = await testUnifiedServerConnection();
+    
+    if (!unifiedServerRunning) {
+      console.error('LinkedIn Feed Background: Unified server not running on localhost:3000');
+      sendResponse({
+        success: false,
+        error: 'Unified server not running. Start with: npm run unified-server'
+      });
+      return;
+    }
+    
+    // Create reminder data matching the MacOS reminder format
+    const reminderData = {
+      title: request.postInfo.title,
+      notes: `LinkedIn Post by ${request.postInfo.author}\n\n${request.postInfo.content}\n\nSaved from: ${request.postInfo.url}`,
+      priority: 5, // Medium priority
+      dueDate: null, // No due date for saved posts
+      listName: 'LinkedIn Saved Posts' // Create a specific list for LinkedIn posts
+    };
+    
+    // Call unified server to create reminder via CLI
+    const reminderResponse = await callUnifiedServerForLinkedInReminder(reminderData);
+    
+    sendResponse({
+      success: true,
+      reminderId: reminderResponse.reminderId,
+      message: 'Reminder created for LinkedIn post'
+    });
+    
+  } catch (error) {
+    console.error('LinkedIn Feed Background: Failed to create reminder:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call unified server to create LinkedIn post reminder
+async function callUnifiedServerForLinkedInReminder(reminderData) {
+  try {
+    console.log('LinkedIn Feed Background: Calling unified server for reminder creation');
+    
+    const response = await fetch('http://localhost:3000/linkedin-reminder', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reminderData),
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+    
+    console.log('LinkedIn Feed Background: Unified server response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`Unified server responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('LinkedIn Feed Background: Unified server response data:', data);
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Unified server reminder creation failed');
+    }
+    
+    return {
+      reminderId: data.reminderId || 'created'
+    };
+    
+  } catch (error) {
+    console.error('LinkedIn Feed Background: Failed to call unified server for reminder:', error);
+    
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      throw new Error('Reminder creation timed out');
+    } else if (error.message.includes('fetch')) {
+      throw new Error('Could not connect to unified server. Make sure to run: npm run unified-server');
+    } else {
+      throw error;
+    }
   }
 }
 

@@ -1370,4 +1370,57 @@ program
     }
   });
 
+program
+  .command('reminder')
+  .description('Create a local macOS reminder')
+  .option('--title <title>', 'Reminder title (required)')
+  .option('--notes <notes>', 'Reminder notes/description')
+  .option('--priority <priority>', 'Priority (1=High, 5=Medium, 9=Low)', '5')
+  .option('--list <list>', 'Reminder list name', 'Reminders')
+  .option('--due <date>', 'Due date (YYYY-MM-DD format)')
+  .action(async (options) => {
+    try {
+      if (!options.title) {
+        console.error('❌ Error: --title is required');
+        process.exit(1);
+      }
+
+      console.log('📝 Creating macOS reminder...');
+      console.log(`📌 Title: ${options.title}`);
+      console.log(`📋 List: ${options.list}`);
+      console.log(`⭐ Priority: ${options.priority}`);
+      
+      if (options.notes) {
+        console.log(`📄 Notes: ${options.notes.substring(0, 100)}${options.notes.length > 100 ? '...' : ''}`);
+      }
+
+      // Import MacOSReminderService dynamically
+      const { MacOSReminderService } = await import('@inkredabull/macos-reminder');
+      
+      const reminderService = new MacOSReminderService();
+      
+      const reminderData = {
+        title: options.title,
+        priority: parseInt(options.priority) || 5,
+        listName: options.list
+      };
+      
+      if (options.notes) {
+        reminderData.notes = options.notes;
+      }
+      
+      if (options.due) {
+        reminderData.dueDate = new Date(options.due);
+      }
+
+      await reminderService.createReminder(reminderData);
+      
+      console.log('✅ Reminder created successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error creating reminder:', error instanceof Error ? error.message : 'Unknown error');
+      process.exit(1);
+    }
+  });
+
 program.parse();

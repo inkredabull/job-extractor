@@ -1564,6 +1564,7 @@ function checkUrlChange() {
     currentUrl = window.location.href;
     function delayedCheck() {
       checkForLinkedInExtraction();
+      checkForLinkedInFeed(); // Also check for feed page
     }
     setTimeout(delayedCheck, 1000); // Wait for page content to load
   }
@@ -1972,10 +1973,253 @@ setInterval(() => {
 }, 1000);
 
 
+// LinkedIn Feed Post Save Detection
+function detectLinkedInFeed() {
+  const url = window.location.href;
+  return url.includes('linkedin.com/feed');
+}
+
+function initLinkedInFeedMonitoring() {
+  if (!detectLinkedInFeed()) {
+    return;
+  }
+  
+  console.log('LinkedIn Feed: Monitoring for post saves...');
+  
+  // Monitor for save button clicks using event delegation
+  document.addEventListener('click', handleLinkedInFeedClick, true);
+  
+  // Also monitor for DOM changes to catch dynamically added content
+  const observer = new MutationObserver(handleLinkedInFeedMutations);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['aria-pressed', 'class']
+  });
+}
+
+function handleLinkedInFeedClick(event) {
+  const target = event.target;
+  
+  // Check if this is a save/bookmark button
+  if (isLinkedInSaveButton(target)) {
+    console.log('LinkedIn Feed: Save button clicked!', target);
+    
+    // Small delay to let LinkedIn process the save
+    setTimeout(() => {
+      const postElement = findPostElement(target);
+      if (postElement) {
+        extractAndCreateReminderFromPost(postElement);
+      }
+    }, 500);
+  }
+}
+
+function handleLinkedInFeedMutations(mutations) {
+  mutations.forEach(mutation => {
+    // Look for save button state changes (when posts get saved)
+    if (mutation.type === 'attributes' && 
+        mutation.attributeName === 'aria-pressed' && 
+        mutation.target.getAttribute('aria-pressed') === 'true') {
+      
+      if (isLinkedInSaveButton(mutation.target)) {
+        console.log('LinkedIn Feed: Post saved via state change!', mutation.target);
+        
+        const postElement = findPostElement(mutation.target);
+        if (postElement) {
+          extractAndCreateReminderFromPost(postElement);
+        }
+      }
+    }
+  });
+}
+
+function isLinkedInSaveButton(element) {
+  if (!element) return false;
+  
+  // Check for save button indicators
+  const buttonSelectors = [
+    '[aria-label*="Save"]',
+    '[aria-label*="save"]',
+    '[data-control-name*="save"]',
+    '.save-button',
+    '.bookmark-button'
+  ];
+  
+  // Check if element matches any save button selector
+  const isSaveButton = buttonSelectors.some(selector => {
+    return element.matches(selector) || element.closest(selector);
+  });
+  
+  if (isSaveButton) return true;
+  
+  // Check for bookmark/save icons
+  const hasBookmarkIcon = element.querySelector('svg[data-test-icon="bookmark"]') ||
+                          element.querySelector('[data-test-icon="save"]') ||
+                          element.innerHTML.includes('bookmark') ||
+                          element.innerHTML.includes('save');
+  
+  return hasBookmarkIcon;
+}
+
+function findPostElement(saveButton) {
+  // LinkedIn posts are typically in containers with these selectors
+  const postSelectors = [
+    '.feed-shared-update-v2',
+    '.occludable-update',
+    '[data-urn*="activity"]',
+    '.feed-shared-update'
+  ];
+  
+  for (const selector of postSelectors) {
+    const postElement = saveButton.closest(selector);
+    if (postElement) {
+      return postElement;
+    }
+  }
+  
+  return null;
+}
+
+async function extractAndCreateReminderFromPost(postElement) {
+  try {
+    console.log('LinkedIn Feed: Extracting post information...');
+    
+    const postInfo = extractLinkedInPostInfo(postElement);
+    
+    if (postInfo.author && postInfo.content) {
+      console.log('LinkedIn Feed: Creating reminder for saved post...', postInfo);
+      
+      // Create reminder via background script
+      const response = await chrome.runtime.sendMessage({
+        action: 'createLinkedInPostReminder',
+        postInfo: postInfo
+      });
+      
+      if (response && response.success) {
+        console.log('LinkedIn Feed: ✅ Reminder created successfully!');
+        showLinkedInFeedNotification('📌 Reminder created for saved post');
+      } else {
+        console.log('LinkedIn Feed: ❌ Failed to create reminder:', response?.error);
+      }
+    } else {
+      console.log('LinkedIn Feed: ⚠️ Could not extract enough post information');
+    }
+  } catch (error) {
+    console.error('LinkedIn Feed: Error creating reminder:', error);
+  }
+}
+
+function extractLinkedInPostInfo(postElement) {
+  const postInfo = {
+    author: '',
+    title: '',
+    content: '',
+    url: window.location.href,
+    timestamp: new Date().toISOString(),
+    postId: ''
+  };
+  
+  try {
+    // Extract author name
+    const authorSelectors = [
+      '.feed-shared-actor__name',
+      '.feed-shared-actor__title',
+      '.update-components-actor__name',
+      '[data-urn*="person"] span[aria-hidden="true"]'
+    ];
+    
+    for (const selector of authorSelectors) {
+      const authorElement = postElement.querySelector(selector);
+      if (authorElement && authorElement.textContent.trim()) {
+        postInfo.author = authorElement.textContent.trim();
+        break;
+      }
+    }
+    
+    // Extract post content
+    const contentSelectors = [
+      '.feed-shared-text',
+      '.feed-shared-inline-show-more-text',
+      '.update-components-text',
+      '.feed-shared-update-v2__description'
+    ];
+    
+    for (const selector of contentSelectors) {
+      const contentElement = postElement.querySelector(selector);
+      if (contentElement && contentElement.textContent.trim()) {
+        postInfo.content = contentElement.textContent.trim().substring(0, 500); // Limit length
+        break;
+      }
+    }
+    
+    // Extract post ID from data attributes
+    const urnElement = postElement.querySelector('[data-urn]') || postElement;
+    if (urnElement.dataset.urn) {
+      postInfo.postId = urnElement.dataset.urn;
+    }
+    
+    // Create a title from author and content preview
+    if (postInfo.author && postInfo.content) {
+      const contentPreview = postInfo.content.substring(0, 50) + (postInfo.content.length > 50 ? '...' : '');
+      postInfo.title = `LinkedIn post by ${postInfo.author}: ${contentPreview}`;
+    } else if (postInfo.author) {
+      postInfo.title = `LinkedIn post by ${postInfo.author}`;
+    }
+    
+    console.log('LinkedIn Feed: Extracted post info:', postInfo);
+    return postInfo;
+    
+  } catch (error) {
+    console.error('LinkedIn Feed: Error extracting post info:', error);
+    return postInfo;
+  }
+}
+
+function showLinkedInFeedNotification(message) {
+  // Create a temporary notification element
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #0a66c2;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-size: 14px;
+    max-width: 300px;
+  `;
+  notification.textContent = message;
+  
+  document.body.appendChild(notification);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+}
+
+// Initialize LinkedIn feed monitoring when on feed page
+function checkForLinkedInFeed() {
+  if (detectLinkedInFeed()) {
+    initLinkedInFeedMonitoring();
+  }
+}
+
+// Run feed check on load and URL changes
+checkForLinkedInFeed();
+
 console.log('Job Extractor Assistant: Content script loaded');
 console.log('💡 Console functions available:');
 console.log('  • toggleJobExtractor(true/false) - Enable/disable automation');
 console.log('  • getJobExtractorStatus() - Check current status');
+console.log('💡 LinkedIn Feed: Post save monitoring active on linkedin.com/feed');
 console.log('');
 console.log('📋 For mutual connections extraction, copy/paste this function:');
 console.log(`
