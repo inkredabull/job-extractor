@@ -1989,121 +1989,201 @@ function initLinkedInFeedMonitoring() {
   
   console.log('LinkedIn Feed: ✅ Monitoring for post saves activated!');
   
-  // Monitor for save button clicks using event delegation
-  document.addEventListener('click', handleLinkedInFeedClick, true);
-  
-  // Also monitor for DOM changes to catch dynamically added content
-  const observer = new MutationObserver(handleLinkedInFeedMutations);
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['aria-pressed', 'class']
-  });
+  // Monitor network requests for LinkedIn save API calls
+  setupLinkedInNetworkMonitoring();
 }
 
-function handleLinkedInFeedClick(event) {
-  const target = event.target;
+function setupLinkedInNetworkMonitoring() {
+  console.log('LinkedIn Feed: Setting up network request monitoring...');
   
-  // Debug: Log all clicks on LinkedIn feed (temporary)
-  if (target.tagName === 'BUTTON' || target.closest('button')) {
-    console.log('LinkedIn Feed: Button clicked:', {
-      tagName: target.tagName,
-      className: target.className,
-      ariaLabel: target.getAttribute('aria-label'),
-      innerHTML: target.innerHTML.substring(0, 100),
-      closest: target.closest('button')?.getAttribute('aria-label')
-    });
-  }
-  
-  // Check if this is a save/bookmark button
-  if (isLinkedInSaveButton(target)) {
-    console.log('LinkedIn Feed: 🎯 Save button detected!', target);
+  // Override fetch to intercept LinkedIn API calls
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const [url, options] = args;
     
-    // Small delay to let LinkedIn process the save
-    setTimeout(() => {
-      const postElement = findPostElement(target);
-      if (postElement) {
-        console.log('LinkedIn Feed: Found post element, extracting info...');
-        extractAndCreateReminderFromPost(postElement);
-      } else {
-        console.log('LinkedIn Feed: ❌ Could not find post element for save button');
-      }
-    }, 500);
-  }
-}
-
-function handleLinkedInFeedMutations(mutations) {
-  mutations.forEach(mutation => {
-    // Look for save button state changes (when posts get saved)
-    if (mutation.type === 'attributes' && 
-        mutation.attributeName === 'aria-pressed' && 
-        mutation.target.getAttribute('aria-pressed') === 'true') {
+    // Check if this is a LinkedIn save request
+    if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
+      console.log('LinkedIn Feed: 🎯 Save API request detected!', {
+        url,
+        method: options?.method,
+        body: options?.body
+      });
       
-      if (isLinkedInSaveButton(mutation.target)) {
-        console.log('LinkedIn Feed: Post saved via state change!', mutation.target);
+      // Extract activity URN from URL
+      const activityUrn = extractActivityUrnFromSaveUrl(url);
+      if (activityUrn) {
+        console.log('LinkedIn Feed: Extracted activity URN:', activityUrn);
         
-        const postElement = findPostElement(mutation.target);
-        if (postElement) {
-          extractAndCreateReminderFromPost(postElement);
+        // Check if this is actually saving (not unsaving)
+        const isActuallySaving = checkIfSavingRequest(options);
+        if (isActuallySaving) {
+          console.log('LinkedIn Feed: Confirmed this is a SAVE request (not unsave)');
+          
+          // Small delay to let the request complete, then find and process the post
+          setTimeout(() => {
+            findAndProcessSavedPost(activityUrn);
+          }, 1000);
+        } else {
+          console.log('LinkedIn Feed: This is an UNSAVE request, ignoring');
         }
       }
     }
-  });
+    
+    // Continue with the original request
+    return originalFetch.apply(this, args);
+  };
+  
+  // Also override XMLHttpRequest for older API calls
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, ...args) {
+    this._method = method;
+    this._url = url;
+    
+    if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
+      console.log('LinkedIn Feed: 🎯 Save XHR request detected!', {
+        method,
+        url
+      });
+      
+      // Set up response handler
+      this.addEventListener('load', function() {
+        if (this.status >= 200 && this.status < 300) {
+          const activityUrn = extractActivityUrnFromSaveUrl(url);
+          if (activityUrn) {
+            console.log('LinkedIn Feed: Save XHR completed successfully, processing post...');
+            setTimeout(() => {
+              findAndProcessSavedPost(activityUrn);
+            }, 1000);
+          }
+        }
+      });
+    }
+    
+    return originalXHROpen.call(this, method, url, ...args);
+  };
 }
 
-function isLinkedInSaveButton(element) {
-  if (!element) return false;
-  
-  // Get the button element (might be nested)
-  const buttonElement = element.tagName === 'BUTTON' ? element : element.closest('button');
-  if (!buttonElement) return false;
-  
-  // Check for save button indicators
-  const ariaLabel = buttonElement.getAttribute('aria-label')?.toLowerCase() || '';
-  const dataControlName = buttonElement.getAttribute('data-control-name')?.toLowerCase() || '';
-  const className = buttonElement.className?.toLowerCase() || '';
-  
-  // Common save button patterns
-  const savePatterns = [
-    'save',
-    'bookmark',
-    'save post',
-    'save article',
-    'save this post'
+function extractActivityUrnFromSaveUrl(url) {
+  try {
+    // URL format: /voyagerFeedDashSaveStates/urn%3Ali%3Afsd_saveState%3A(SAVE%2Curn%3Ali%3Aactivity%3A7379230453674942464)
+    // We want to extract the activity URN: 7379230453674942464
+    
+    const match = url.match(/urn%3Ali%3Aactivity%3A(\d+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Try without URL encoding
+    const match2 = url.match(/urn:li:activity:(\d+)/);
+    if (match2 && match2[1]) {
+      return match2[1];
+    }
+    
+    console.log('LinkedIn Feed: Could not extract activity URN from URL:', url);
+    return null;
+  } catch (error) {
+    console.error('LinkedIn Feed: Error extracting activity URN:', error);
+    return null;
+  }
+}
+
+function checkIfSavingRequest(options) {
+  try {
+    if (!options || !options.body) return false;
+    
+    const body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    console.log('LinkedIn Feed: Request body:', body);
+    
+    // Check if the request body indicates saving (not unsaving)
+    const bodyObj = JSON.parse(body);
+    const isSaving = bodyObj?.patch?.$set?.saved === true;
+    
+    console.log('LinkedIn Feed: Is saving:', isSaving);
+    return isSaving;
+  } catch (error) {
+    console.log('LinkedIn Feed: Could not parse request body, assuming it is a save request');
+    return true; // Default to true if we can't determine
+  }
+}
+
+function findAndProcessSavedPost(activityUrn) {
+  try {
+    console.log('LinkedIn Feed: Looking for post with activity URN:', activityUrn);
+    
+    // Find the post element by looking for elements with the activity URN
+    const postElement = findPostByActivityUrn(activityUrn);
+    
+    if (postElement) {
+      console.log('LinkedIn Feed: Found post element for saved post!');
+      extractAndCreateReminderFromPost(postElement);
+    } else {
+      console.log('LinkedIn Feed: Could not find post element for activity URN:', activityUrn);
+      
+      // Fallback: try to find any recently saved post
+      const recentlySavedPost = findRecentlySavedPost();
+      if (recentlySavedPost) {
+        console.log('LinkedIn Feed: Using fallback - found recently saved post');
+        extractAndCreateReminderFromPost(recentlySavedPost);
+      }
+    }
+  } catch (error) {
+    console.error('LinkedIn Feed: Error processing saved post:', error);
+  }
+}
+
+function findPostByActivityUrn(activityUrn) {
+  // Try different selectors that might contain the activity URN
+  const selectors = [
+    `[data-urn*="activity:${activityUrn}"]`,
+    `[data-urn*="${activityUrn}"]`,
+    `[data-activity-urn*="${activityUrn}"]`,
+    `[data-id*="${activityUrn}"]`
   ];
   
-  // Check aria-label
-  if (savePatterns.some(pattern => ariaLabel.includes(pattern))) {
-    console.log('LinkedIn Feed: Save button detected via aria-label:', ariaLabel);
-    return true;
-  }
-  
-  // Check data-control-name
-  if (savePatterns.some(pattern => dataControlName.includes(pattern))) {
-    console.log('LinkedIn Feed: Save button detected via data-control-name:', dataControlName);
-    return true;
-  }
-  
-  // Check for bookmark/save icons in SVG
-  const svgElement = buttonElement.querySelector('svg');
-  if (svgElement) {
-    const svgContent = svgElement.innerHTML.toLowerCase();
-    if (svgContent.includes('bookmark') || svgContent.includes('save')) {
-      console.log('LinkedIn Feed: Save button detected via SVG content');
-      return true;
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      console.log('LinkedIn Feed: Found post by selector:', selector);
+      return element;
     }
   }
   
-  // Check button inner text
-  const buttonText = buttonElement.textContent?.toLowerCase() || '';
-  if (savePatterns.some(pattern => buttonText.includes(pattern))) {
-    console.log('LinkedIn Feed: Save button detected via button text:', buttonText);
-    return true;
+  // Try to find by looking at all post elements and checking their data attributes
+  const allPosts = document.querySelectorAll('.feed-shared-update-v2, .occludable-update, [data-urn*="activity"]');
+  for (const post of allPosts) {
+    const urnData = post.getAttribute('data-urn') || '';
+    if (urnData.includes(activityUrn)) {
+      console.log('LinkedIn Feed: Found post by data-urn attribute');
+      return post;
+    }
   }
   
-  return false;
+  return null;
 }
+
+function findRecentlySavedPost() {
+  // Look for posts with saved state indicators
+  const savedIndicators = [
+    '[aria-pressed="true"]',
+    '.saved',
+    '[data-control-name*="save"][aria-pressed="true"]'
+  ];
+  
+  for (const selector of savedIndicators) {
+    const savedButton = document.querySelector(selector);
+    if (savedButton) {
+      const postElement = findPostElement(savedButton);
+      if (postElement) {
+        return postElement;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Old DOM-based detection methods - keeping for reference and fallback
+// Now using network request monitoring instead
 
 function findPostElement(saveButton) {
   // LinkedIn posts are typically in containers with these selectors
