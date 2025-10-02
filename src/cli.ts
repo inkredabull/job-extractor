@@ -1399,10 +1399,10 @@ program
       
       const reminderService = new MacOSReminderService();
       
-      const reminderData = {
+      const reminderData: any = {
         title: options.title,
         priority: parseInt(options.priority) || 5,
-        listName: options.list
+        list: options.list
       };
       
       if (options.notes) {
@@ -1410,7 +1410,7 @@ program
       }
       
       if (options.due) {
-        reminderData.dueDate = new Date(options.due);
+        reminderData.dueDate = options.due; // Keep as string format
       }
 
       await reminderService.createReminder(reminderData);

@@ -611,6 +611,9 @@ app.post('/linkedin-reminder', async (req, res) => {
   console.log(`  -> Creating reminder: ${title.substring(0, 50)}...`);
   
   try {
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname);
+    
     // Use the MacOS reminder creation via CLI
     const output = await new Promise((resolve, reject) => {
       const args = ['ts-node', 'src/cli.ts', 'reminder'];
