@@ -1981,10 +1981,11 @@ function detectLinkedInFeed() {
 
 function initLinkedInFeedMonitoring() {
   if (!detectLinkedInFeed()) {
+    console.log('LinkedIn Feed: Not on feed page, skipping monitoring');
     return;
   }
   
-  console.log('LinkedIn Feed: Monitoring for post saves...');
+  console.log('LinkedIn Feed: ✅ Monitoring for post saves activated!');
   
   // Monitor for save button clicks using event delegation
   document.addEventListener('click', handleLinkedInFeedClick, true);
@@ -2002,15 +2003,29 @@ function initLinkedInFeedMonitoring() {
 function handleLinkedInFeedClick(event) {
   const target = event.target;
   
+  // Debug: Log all clicks on LinkedIn feed (temporary)
+  if (target.tagName === 'BUTTON' || target.closest('button')) {
+    console.log('LinkedIn Feed: Button clicked:', {
+      tagName: target.tagName,
+      className: target.className,
+      ariaLabel: target.getAttribute('aria-label'),
+      innerHTML: target.innerHTML.substring(0, 100),
+      closest: target.closest('button')?.getAttribute('aria-label')
+    });
+  }
+  
   // Check if this is a save/bookmark button
   if (isLinkedInSaveButton(target)) {
-    console.log('LinkedIn Feed: Save button clicked!', target);
+    console.log('LinkedIn Feed: 🎯 Save button detected!', target);
     
     // Small delay to let LinkedIn process the save
     setTimeout(() => {
       const postElement = findPostElement(target);
       if (postElement) {
+        console.log('LinkedIn Feed: Found post element, extracting info...');
         extractAndCreateReminderFromPost(postElement);
+      } else {
+        console.log('LinkedIn Feed: ❌ Could not find post element for save button');
       }
     }, 500);
   }
@@ -2038,29 +2053,54 @@ function handleLinkedInFeedMutations(mutations) {
 function isLinkedInSaveButton(element) {
   if (!element) return false;
   
+  // Get the button element (might be nested)
+  const buttonElement = element.tagName === 'BUTTON' ? element : element.closest('button');
+  if (!buttonElement) return false;
+  
   // Check for save button indicators
-  const buttonSelectors = [
-    '[aria-label*="Save"]',
-    '[aria-label*="save"]',
-    '[data-control-name*="save"]',
-    '.save-button',
-    '.bookmark-button'
+  const ariaLabel = buttonElement.getAttribute('aria-label')?.toLowerCase() || '';
+  const dataControlName = buttonElement.getAttribute('data-control-name')?.toLowerCase() || '';
+  const className = buttonElement.className?.toLowerCase() || '';
+  
+  // Common save button patterns
+  const savePatterns = [
+    'save',
+    'bookmark',
+    'save post',
+    'save article',
+    'save this post'
   ];
   
-  // Check if element matches any save button selector
-  const isSaveButton = buttonSelectors.some(selector => {
-    return element.matches(selector) || element.closest(selector);
-  });
+  // Check aria-label
+  if (savePatterns.some(pattern => ariaLabel.includes(pattern))) {
+    console.log('LinkedIn Feed: Save button detected via aria-label:', ariaLabel);
+    return true;
+  }
   
-  if (isSaveButton) return true;
+  // Check data-control-name
+  if (savePatterns.some(pattern => dataControlName.includes(pattern))) {
+    console.log('LinkedIn Feed: Save button detected via data-control-name:', dataControlName);
+    return true;
+  }
   
-  // Check for bookmark/save icons
-  const hasBookmarkIcon = element.querySelector('svg[data-test-icon="bookmark"]') ||
-                          element.querySelector('[data-test-icon="save"]') ||
-                          element.innerHTML.includes('bookmark') ||
-                          element.innerHTML.includes('save');
+  // Check for bookmark/save icons in SVG
+  const svgElement = buttonElement.querySelector('svg');
+  if (svgElement) {
+    const svgContent = svgElement.innerHTML.toLowerCase();
+    if (svgContent.includes('bookmark') || svgContent.includes('save')) {
+      console.log('LinkedIn Feed: Save button detected via SVG content');
+      return true;
+    }
+  }
   
-  return hasBookmarkIcon;
+  // Check button inner text
+  const buttonText = buttonElement.textContent?.toLowerCase() || '';
+  if (savePatterns.some(pattern => buttonText.includes(pattern))) {
+    console.log('LinkedIn Feed: Save button detected via button text:', buttonText);
+    return true;
+  }
+  
+  return false;
 }
 
 function findPostElement(saveButton) {
