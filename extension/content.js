@@ -2007,6 +2007,25 @@ function setupLinkedInNetworkMonitoring() {
   console.log('LinkedIn Feed: Testing fetch availability:', typeof window.fetch);
   console.log('LinkedIn Feed: Testing XMLHttpRequest availability:', typeof XMLHttpRequest);
   
+  // Try immediate override
+  overrideNetworkMethods();
+  
+  // Also try after a delay in case LinkedIn loads later
+  setTimeout(overrideNetworkMethods, 1000);
+  setTimeout(overrideNetworkMethods, 3000);
+  
+  // Set up MutationObserver to re-override if LinkedIn resets our overrides
+  const observer = new MutationObserver(() => {
+    if (window.fetch && window.fetch.toString().indexOf('FETCH INTERCEPTED') === -1) {
+      console.log('LinkedIn Feed: Detected fetch override was reset, re-applying...');
+      overrideNetworkMethods();
+    }
+  });
+  
+  observer.observe(document.head, { childList: true, subtree: true });
+}
+
+function overrideNetworkMethods() {
   // Override fetch to intercept LinkedIn API calls
   const originalFetch = window.fetch;
   window.fetch = async function(...args) {
@@ -2101,6 +2120,8 @@ function setupLinkedInNetworkMonitoring() {
     
     return originalXHROpen.call(this, method, url, ...args);
   };
+  
+  console.log('LinkedIn Feed: Network method overrides applied');
 }
 
 function extractActivityUrnFromSaveUrl(url) {
