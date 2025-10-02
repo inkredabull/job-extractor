@@ -2008,11 +2008,20 @@ function setupLinkedInNetworkMonitoring() {
   window.fetch = async function(...args) {
     const [url, options] = args;
     
+    // Debug: Log all LinkedIn API calls to see what we're missing
+    if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
+      console.log('LinkedIn Feed: DEBUG - LinkedIn API call detected:', {
+        url: url.substring(url.indexOf('/voyager')), // Show just the relevant part
+        method: options?.method || 'GET',
+        hasBody: !!options?.body
+      });
+    }
+    
     // Check if this is a LinkedIn save request
     if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
       console.log('LinkedIn Feed: 🎯 Save API request detected!', {
         url,
-        method: options?.method,
+        method: options?.method || 'GET',
         body: options?.body
       });
       
@@ -2045,6 +2054,14 @@ function setupLinkedInNetworkMonitoring() {
   XMLHttpRequest.prototype.open = function(method, url, ...args) {
     this._method = method;
     this._url = url;
+    
+    // Debug: Log all LinkedIn XHR calls
+    if (typeof url === 'string' && (url.includes('voyager') || url.includes('linkedin.com/voyager'))) {
+      console.log('LinkedIn Feed: DEBUG - LinkedIn XHR call detected:', {
+        method,
+        url: url.substring(url.indexOf('/voyager')), // Show just the relevant part
+      });
+    }
     
     if (typeof url === 'string' && url.includes('voyagerFeedDashSaveStates')) {
       console.log('LinkedIn Feed: 🎯 Save XHR request detected!', {
