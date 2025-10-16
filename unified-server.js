@@ -769,8 +769,58 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
     
     console.log(`  -> Job scoring completed for ${jobId}`);
     
-    // Step 2: Generate resume (only if job was successfully scored)
-    console.log(`  -> Generating resume for job ${jobId}...`);
+    // Step 2: Check if resume generation should be triggered
+    // Parse the score from the output
+    const scoreMatch = scoreOutput.match(/Overall Score:\s*(\d+)%/);
+    const jobScore = scoreMatch ? parseInt(scoreMatch[1]) : null;
+    
+    if (!jobScore) {
+      console.log(`  -> Could not parse job score, skipping resume generation`);
+      console.log(`✅ Async background processing completed (scoring only) for job ${jobId}`);
+      return;
+    }
+    
+    console.log(`  -> Job score: ${jobScore}%`);
+    
+    // Load workflow config to check if resume generation is enabled
+    let shouldGenerateResume = false;
+    let scoreThreshold = 70; // default
+    
+    try {
+      const yaml = require('js-yaml');
+      const configPath = path.join(projectDir, 'auto-workflow-config.yaml');
+      
+      if (fs.existsSync(configPath)) {
+        const workflowConfig = yaml.load(fs.readFileSync(configPath, 'utf8'));
+        
+        if (workflowConfig && workflowConfig.workflow_config) {
+          const config = workflowConfig.workflow_config;
+          scoreThreshold = config.score_threshold || 70;
+          
+          // Check if resume generation is enabled and score meets threshold
+          if (config.steps && config.steps.resume === true) {
+            shouldGenerateResume = jobScore >= scoreThreshold;
+          } else {
+            console.log(`  -> Resume generation disabled in workflow config`);
+          }
+        }
+      } else {
+        console.log(`  -> No workflow config found at ${configPath}, skipping resume generation`);
+      }
+    } catch (configError) {
+      console.log(`  -> Error loading workflow config: ${configError.message}`);
+    }
+    
+    if (!shouldGenerateResume) {
+      if (jobScore < scoreThreshold) {
+        console.log(`  -> Job score ${jobScore}% is below threshold ${scoreThreshold}%, skipping resume generation`);
+      }
+      console.log(`✅ Async background processing completed (scoring only) for job ${jobId}`);
+      return;
+    }
+    
+    // Step 3: Generate resume (only if enabled and score meets threshold)
+    console.log(`  -> Generating resume for job ${jobId} (score ${jobScore}% >= ${scoreThreshold}%)...`);
     const resumeOutput = await new Promise((resolve, reject) => {
       const resumeArgs = ['ts-node', 'src/cli.ts', 'resume', jobId];
       
