@@ -25,5 +25,5 @@ workflow_config:
   # Workflow steps to perform
   steps:
     score: true      # Always score the job
-    resume: true     # Generate resume if score >= threshold
+    resume: false    # Generate resume if score >= threshold (set to false to disable automatic resume generation)
     critique: true   # Automatically critique resume (handled by ResumeCreatorAgent)
