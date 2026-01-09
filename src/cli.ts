@@ -591,7 +591,7 @@ program
   .description('Generate a tailored resume PDF for a specific job')
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
-  .option('--regen', 'Force regeneration of tailored content (skip cache)')
+  .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no new content generation)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
@@ -628,14 +628,17 @@ program
       }
       
       const generateParam = options.generate ? (options.companyUrl || true) : false;
-      
+
+      // When --regen is used, force critique to false since we're just rebuilding PDF
+      const critiqueFlag = options.regen ? false : !options.noCritique;
+
       const result = await creator.createResume(
-        jobId, 
-        cvFile, 
-        options.output, 
-        !!options.regen, 
+        jobId,
+        cvFile,
+        options.output,
+        !!options.regen,
         generateParam,
-        !options.noCritique,  // Pass the critique flag (defaults to true unless --no-critique is specified)
+        critiqueFlag,
         'cli'  // Indicate this is called from CLI
       );
       
