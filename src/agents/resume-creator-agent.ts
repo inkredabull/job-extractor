@@ -11,7 +11,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private claudeApiKey: string;
   private mode: 'builder' | 'leader';
 
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 6, mode: 'builder' | 'leader' = 'leader') {
+  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 3, mode: 'builder' | 'leader' = 'leader') {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
@@ -19,10 +19,10 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   }
 
   async createResume(
-    jobId: string, 
-    cvFilePath: string, 
-    outputPath?: string, 
-    regenerate: boolean = true, 
+    jobId: string,
+    cvFilePath: string,
+    outputPath?: string,
+    regenerate: boolean = true,
     generate: boolean | string = false,
     critique: boolean = true,
     source: 'cli' | 'programmatic' = 'programmatic'
@@ -30,17 +30,17 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     try {
       // Load job data
       let jobData = this.loadJobData(jobId);
-      
+
       // If generate flag is provided, check if we need to generate job description
       if (generate !== false && (!jobData.description || jobData.description.trim() === '' || this.isGenericDescription(jobData.description))) {
         console.log('🤖 Generating job description from company information...');
         const companyUrl = typeof generate === 'string' ? generate : undefined;
         jobData = await this.generateJobDescription(jobData, jobId, companyUrl);
       }
-      
+
       // Check if this is the first time creating a resume
       const isFirstGeneration = this.isFirstGeneration(jobId);
-      
+
       // If --regen is used, skip critique and just rebuild from existing content
       if (regenerate) {
         console.log(`🔄 Regenerating PDF from existing tailored content for job ${jobId}`);
@@ -828,7 +828,7 @@ header-includes: |
   \\geometry{bottom=0.5in, footskip=0.33in}
   \\pagestyle{fancy}
   \\fancyhf{}
-  \\fancyfoot[C]{\\footnotesize \\textit{Powered by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
+  \\fancyfoot[C]{\\footnotesize \\textit{Customized by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
   \\renewcommand{\\headrulewidth}{0pt}
 ---
 `;
