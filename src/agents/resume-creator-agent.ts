@@ -917,7 +917,9 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       }
     }
 
+    console.log('⏳ Generating tailored resume content...');
     const response = await this.makeClaudeRequest(prompt);
+    console.log('📝 Parsing response and extracting content...');
     
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);

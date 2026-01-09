@@ -6,7 +6,7 @@ export abstract class ClaudeBaseAgent {
   protected model: string;
   protected maxTokens: number;
 
-  constructor(claudeApiKey: string, model: string = 'claude-3-5-sonnet-20241022', maxTokens: number = 4000) {
+  constructor(claudeApiKey: string, model: string = 'claude-3-7-sonnet-20250219', maxTokens: number = 4000) {
     this.anthropic = new Anthropic({
       apiKey: claudeApiKey,
     });
@@ -16,6 +16,9 @@ export abstract class ClaudeBaseAgent {
 
   protected async makeClaudeRequest(prompt: string): Promise<string> {
     try {
+      const startTime = Date.now();
+      console.log(`🤖 Sending request to Claude (${this.model})...`);
+
       const response = await this.anthropic.messages.create({
         model: this.model,
         max_tokens: this.maxTokens,
@@ -26,6 +29,11 @@ export abstract class ClaudeBaseAgent {
           },
         ],
       });
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      const inputTokens = response.usage.input_tokens;
+      const outputTokens = response.usage.output_tokens;
+      console.log(`✅ Response received in ${duration}s (${inputTokens} input tokens, ${outputTokens} output tokens)`);
 
       // Extract text content from the response
       const textContent = response.content.find(block => block.type === 'text');
