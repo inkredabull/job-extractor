@@ -18,7 +18,7 @@ async function testResumePrompt() {
       config.anthropicApiKey,
       config.model,
       config.maxTokens,
-      6, // maxRoles
+      config.maxRoles,
       'leader' // mode
     );
     

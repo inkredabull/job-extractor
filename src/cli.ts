@@ -616,8 +616,8 @@ program
       
       const mode = (options.mode || 'leader') as 'leader' | 'builder';
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
-      
-      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, 6, mode);
+
+      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, anthropicConfig.maxRoles, mode);
       
       // Show generate mode if enabled
       if (options.generate) {
@@ -1217,7 +1217,7 @@ program
 
       const openaiConfig = getConfig();
       const anthropicConfig = getAnthropicConfig();
-      const applicationAgent = new ApplicationAgent(openaiConfig, anthropicConfig.anthropicApiKey);
+      const applicationAgent = new ApplicationAgent(openaiConfig, anthropicConfig.anthropicApiKey, anthropicConfig.maxRoles);
       
       // Display mode information
       if (options.dryRun) {

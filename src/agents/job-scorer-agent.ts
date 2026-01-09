@@ -409,7 +409,8 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
       const resumeCreator = new ResumeCreatorAgent(
         anthropicConfig.anthropicApiKey,
         anthropicConfig.model,
-        anthropicConfig.maxTokens
+        anthropicConfig.maxTokens,
+        anthropicConfig.maxRoles
       );
       
       const result = await resumeCreator.createResume(

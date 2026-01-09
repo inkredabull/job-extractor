@@ -19,10 +19,10 @@ export class ApplicationAgent extends BaseAgent {
   private lastSubmissionWasSuccessful: boolean = false;
   private shouldKeepBrowserOpen: boolean = false;
 
-  constructor(config: AgentConfig, anthropicApiKey: string) {
+  constructor(config: AgentConfig, anthropicApiKey: string, maxRoles?: number) {
     super(config);
     // Initialize sub-agents for data retrieval
-    this.resumeAgent = new ResumeCreatorAgent(anthropicApiKey);
+    this.resumeAgent = new ResumeCreatorAgent(anthropicApiKey, undefined, undefined, maxRoles);
     this.interviewAgent = new InterviewPrepAgent(anthropicApiKey);
     this.outreachAgent = new OutreachAgent();
   }

@@ -20,17 +20,18 @@ export function getConfig(): AgentConfig {
   };
 }
 
-export function getAnthropicConfig(): { anthropicApiKey: string; model: string; maxTokens: number } {
+export function getAnthropicConfig(): { anthropicApiKey: string; model: string; maxTokens: number; maxRoles: number } {
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  
+
   if (!anthropicApiKey) {
     throw new Error('ANTHROPIC_API_KEY environment variable is required');
   }
 
   return {
     anthropicApiKey,
-    model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
+    model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
     maxTokens: process.env.ANTHROPIC_MAX_TOKENS ? parseInt(process.env.ANTHROPIC_MAX_TOKENS) : 4000,
+    maxRoles: process.env.MAX_ROLES ? parseInt(process.env.MAX_ROLES) : 4,
   };
 }
 
