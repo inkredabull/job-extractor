@@ -1,5 +1,48 @@
 # Job Extractor
 
+> AI-powered career toolkit monorepo - extraction, scoring, resume creation, and interview preparation
+
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://inkredabull.github.io/job-extractor/)
+[![Monorepo](https://img.shields.io/badge/structure-monorepo-orange)](./packages/)
+
+## 📦 Components
+
+This monorepo is organized into the following components:
+
+- **[Core CLI Tool](./packages/core/)** - Main TypeScript CLI with AI-powered agents
+- **[Chrome Extension](./packages/chrome-extension/)** - Browser extension for job applications
+- **[MCP Server](./packages/mcp-server/)** - Model Context Protocol server for CV access
+- **[Unified Server](./packages/unified-server/)** - Combined server functionality
+- **[AMA App](./packages/ama-app/)** - React/Vite application
+
+## 📚 Documentation
+
+- **GitHub Pages**: [View Documentation](https://inkredabull.github.io/job-extractor/)
+- **Core Component**: [packages/core/](./packages/core/) | [Docs](https://inkredabull.github.io/job-extractor/job-extractor-core/)
+- **Chrome Extension**: [packages/chrome-extension/](./packages/chrome-extension/) | [Docs](https://inkredabull.github.io/job-extractor/chrome-extension/)
+- **MCP Server**: [packages/mcp-server/](./packages/mcp-server/) | [Docs](https://inkredabull.github.io/job-extractor/mcp-server/)
+- **Unified Server**: [packages/unified-server/](./packages/unified-server/) | [Docs](https://inkredabull.github.io/job-extractor/unified-server/)
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies for all packages
+npm install
+
+# Build all packages
+npm run build
+
+# Run core CLI tool
+npm run dev
+
+# Start unified server
+npm run unified-server
+```
+
+---
+
+# Job Extractor
+
 ## High-level
 
   Job Extractor is an AI-powered career toolkit that transforms how you approach job applications and interview preparation. It automatically extracts and analyzes job postings, generates tailored resumes and cover letters, creates personalized interview stories using the STAR method, and helps you connect with relevant professionals on LinkedIn. The tool learns from your CV to provide contextual career advice and can even auto-fill job applications, making your job search more strategic and efficient.

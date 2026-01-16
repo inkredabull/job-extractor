@@ -1,32 +1,36 @@
 {
   "name": "job-extractor",
   "version": "1.0.0",
-  "description": "A TypeScript CLI tool for extracting job information from web pages using AI",
-  "main": "dist/index.js",
-  "bin": {
-    "job-extractor": "dist/cli.js"
-  },
+  "description": "Monorepo for AI-powered job search toolkit - extraction, scoring, resume creation, and interview preparation",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "dev": "ts-node src/cli.ts",
-    "start": "node -r dotenv/config -r tsconfig-paths/register dist/index.js",
-    "test": "jest --config jest.config.js",
-    "test:watch": "jest --watch --config jest.config.js",
-    "lint": "eslint src --ext .ts",
-    "clean": "rm -rf dist",
-    "unified-server": "node unified-server.js",
-    "unified-server:llm": "node unified-server.js --llm",
-    "mcp-server": "echo 'DEPRECATED: Use npm run unified-server instead' && node unified-server.js",
-    "cli-server": "echo 'DEPRECATED: Use npm run unified-server instead' && node unified-server.js",
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build --workspace=@inkredabull/job-extractor-core",
+    "dev": "npm run dev --workspace=@inkredabull/job-extractor-core",
+    "test": "npm run test --workspaces",
+    "test:watch": "npm run test:watch --workspace=@inkredabull/job-extractor-core",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf dist",
+    "unified-server": "npm run start --workspace=@inkredabull/job-extractor-unified-server",
+    "unified-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-unified-server",
+    "mcp-server": "npm run start --workspace=@inkredabull/job-extractor-mcp-server",
+    "mcp-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-mcp-server",
     "setup-gmail": "node scripts/setup-gmail-auth.js"
   },
   "keywords": [
+    "monorepo",
     "job",
     "extractor",
     "cli",
     "typescript",
     "ai",
-    "scraping"
+    "resume",
+    "interview",
+    "chrome-extension",
+    "mcp-server"
   ],
   "author": "",
   "license": "MIT",
