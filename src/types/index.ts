@@ -308,3 +308,34 @@ export interface ApplicationResult {
   instructions?: string;
   submitted?: boolean;
 }
+
+export type AboutMeSection = 'opener' | 'focus-story' | 'themes' | 'why';
+
+export interface AboutMeSectionData {
+  content: string;
+  generatedAt: string;
+  lastModified: string;
+  version: number;
+  metadata?: {
+    userTheme?: string;
+    [key: string]: any;
+  };
+}
+
+export interface SectionGenerationResult {
+  success: boolean;
+  content?: string;
+  section?: AboutMeSection;
+  error?: string;
+}
+
+export interface SectionCritiqueResult {
+  success: boolean;
+  section?: AboutMeSection;
+  rating?: number; // 1-10 scale
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendations?: string[];
+  detailedAnalysis?: string;
+  error?: string;
+}

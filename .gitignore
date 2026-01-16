@@ -39,6 +39,7 @@ Thumbs.db
 
 # Logs
 logs/
+archive/
 *.log
 
 # Coverage directory used by tools like istanbul

@@ -1394,7 +1394,7 @@ const builderCreator = new ResumeCreatorAgent(claudeApiKey, model, maxTokens, ma
 
 **Parameters:**
 - `claudeApiKey: string` - Anthropic API key
-- `model?: string` - Claude model to use (default: `claude-3-5-sonnet-20241022`)
+- `model?: string` - Claude model to use (default: `claude-3-7-sonnet-20250219`)
 - `maxTokens?: number` - Maximum tokens (default: `4000`)
 - `maxRoles: number` - Maximum number of roles to include (default: `4`)
 - `mode: 'builder' | 'leader'` - Resume generation mode (default: `'leader'`)
@@ -1600,7 +1600,7 @@ python examples/langsmith_evaluation.py
 | `OPENAI_TEMPERATURE` | Model temperature (0-1) | `0.3` |
 | `OPENAI_MAX_TOKENS` | Maximum tokens in response | `2000` |
 | `ANTHROPIC_API_KEY` | Anthropic API key (required for resume generation) | - |
-| `ANTHROPIC_MODEL` | Anthropic model to use | `claude-3-5-sonnet-20241022` |
+| `ANTHROPIC_MODEL` | Anthropic model to use | `claude-3-7-sonnet-20250219` |
 | `ANTHROPIC_MAX_TOKENS` | Maximum tokens in response | `4000` |
 | `LANGSMITH_API_KEY` | LangSmith API key (optional, for evaluation and monitoring) | - |
 | `AUTO_RESUME_THRESHOLD` | Score threshold for automatic resume generation (0-100) | `80` |

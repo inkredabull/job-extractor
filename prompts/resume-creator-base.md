@@ -10,8 +10,7 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 
 {{modeSpecificInstructions}}
 - Use keywords from the job description where appropriate
-- Maintain all factual information - do not fabricate anything
-- Include 'Career Break' as role
+- Maintain all factual information - DO NOT fabricate anything
 
 {{recommendationsSection}}{{companyValuesSection}}
 
@@ -39,14 +38,14 @@ Include a "SUMMARY" section, beginning with a professional summary in the form o
 
 {{summaryGuidance}}
 
-The summary must be between 275 and 400 characters in length.
+The summary must be between 225 and 350 characters in length.
 Don't use "I" statements; lead with past-tense verb in the first person instead.
-Include at least one time-based statement (e.g. 'Shipped MVP in 5 (five) weeks' or 'Increased profits 50% in 5 (five) weeks')
-Include at least one improvement metric (e.g. 'Reduced latency by 25-26%' or 'Increased profits by 25-26%')
+Include at least one time-based accomplishment
+Include at least one improvement metric
 
 ## Roles
 
-Include the most recent {{maxRoles}} roles.  
+Include the most recent {{maxRoles}} roles in reverse-chronological order.  
 
 {{rolesSpecificInstructions}}
 
@@ -54,12 +53,12 @@ For each role, always include dates on the same line as title and company name.
 
 After the role, add a paragraph break.
 
-For each role, include an overview of the role of between 110 and 180 characters, being sure to include specific, quantitative {{metricsType}} metrics where referenced.
+For each role, include an overview of the role of between 175 and 225 characters, being sure to include specific, quantitative {{metricsType}} metrics where referenced.
 
 After the overview, add a paragraph break.
 
 Include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that. 
-Each bullet point should be between 80 and 95 characters.
+Each bullet point should be between 75 and 90 characters.
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.

@@ -1,5 +1,5 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, InterviewPrepResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult } from '../types';
+import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, InterviewPrepResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult, AboutMeSection, AboutMeSectionData, SectionGenerationResult, SectionCritiqueResult } from '../types';
 import { WebScraper } from '../utils/web-scraper';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -274,30 +274,16 @@ Format as:
     cvContent: string,
     options: StatementOptions
   ): Promise<string> {
+    // For about-me type, use section-based generation if available
+    if (type === 'about-me') {
+      return await this.createAboutMeMaterial(job, cvContent, options);
+    }
+    
+    // For other types, use the original monolithic approach
     let promptTemplate = this.loadPromptTemplate(type);
     
     // Load company values if available
     const companyValues = await this.loadCompanyValues(this.currentJobId);
-    
-    // For about-me type, check if themes exist and include them
-    if (type === 'about-me') {
-      // Ask user for theme preference (merged from focus functionality)
-      const userTheme = await this.askUserForTheme();
-      
-      const themes = await this.getOrExtractThemes(job);
-      const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job, userTheme);
-      // Get jobId from the generateMaterial caller context
-      const actualJobId = this.currentJobId;
-      await this.updateThemesWithExamples(job, themesWithExamples, actualJobId);
-      promptTemplate = this.injectThemesIntoPrompt(promptTemplate, themesWithExamples);
-      
-      // Inject user theme for focus story selection
-      if (userTheme) {
-        promptTemplate = promptTemplate.replace('{{userTheme}}', userTheme);
-      } else {
-        promptTemplate = promptTemplate.replace('{{userTheme}}', 'high-impact achievements that best demonstrate your capabilities');
-      }
-    }
     
     // Build the complete prompt
     const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options, companyValues);
@@ -312,6 +298,476 @@ Format as:
     
     // Clean up the response
     return this.cleanResponse(response, type);
+  }
+
+  private async createAboutMeMaterial(
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions
+  ): Promise<string> {
+    // Check if all sections already exist
+    const existingSections = this.listSections(this.currentJobId);
+    const allSections: AboutMeSection[] = ['opener', 'focus-story', 'themes', 'why'];
+    const missingSections = allSections.filter(s => !existingSections.includes(s));
+
+    // If all sections exist, combine them
+    if (missingSections.length === 0) {
+      console.log('📋 All sections exist, combining...');
+      return await this.combineSections(this.currentJobId);
+    }
+
+    // Generate missing sections
+    console.log(`📝 Generating missing sections: ${missingSections.join(', ')}`);
+    const companyValues = await this.loadCompanyValues(this.currentJobId);
+    
+    for (const section of missingSections) {
+      console.log(`📝 Generating ${section} section...`);
+      
+      switch (section) {
+        case 'opener':
+          const openerContent = await this.generateOpener(job, cvContent, options);
+          this.saveSection(this.currentJobId, 'opener', openerContent);
+          break;
+        case 'focus-story':
+          const userTheme = await this.askUserForTheme();
+          const focusContent = await this.generateFocusStory(job, cvContent, userTheme, options);
+          this.saveSection(this.currentJobId, 'focus-story', focusContent, { userTheme });
+          break;
+        case 'themes':
+          const themesContent = await this.generateThemes(job, cvContent, options);
+          this.saveSection(this.currentJobId, 'themes', themesContent);
+          break;
+        case 'why':
+          const whyContent = await this.generateWhyCompany(job, cvContent, companyValues, options);
+          this.saveSection(this.currentJobId, 'why', whyContent);
+          break;
+      }
+    }
+
+    // Combine all sections
+    return await this.combineSections(this.currentJobId);
+  }
+
+  // Section-specific generation methods
+  private loadSectionPrompt(section: AboutMeSection): string {
+    try {
+      const promptPath = path.resolve('prompts', `statement-about-me-${section}.md`);
+      return fs.readFileSync(promptPath, 'utf-8');
+    } catch (error) {
+      console.warn(`⚠️  Failed to load prompt template for ${section}, using fallback`);
+      return this.getFallbackSectionPrompt(section);
+    }
+  }
+
+  private getFallbackSectionPrompt(section: AboutMeSection): string {
+    const basePrompt = `You are a professional interview coach creating ${section} section for a "Tell me about yourself" response.`;
+    
+    switch (section) {
+      case 'opener':
+        return `${basePrompt}\n\nCreate the opener and 3 professional summary bullets in RTF format.`;
+      case 'focus-story':
+        return `${basePrompt}\n\nCreate a detailed STAR method focus story in RTF format.`;
+      case 'themes':
+        return `${basePrompt}\n\nCreate key themes with examples in RTF format.`;
+      case 'why':
+        return `${basePrompt}\n\nCreate the company fit section in RTF format.`;
+      default:
+        return basePrompt;
+    }
+  }
+
+  async generateSection(
+    section: AboutMeSection,
+    jobId: string,
+    cvFilePath: string,
+    options: StatementOptions = {},
+    regenerate: boolean = false
+  ): Promise<SectionGenerationResult> {
+    try {
+      this.currentJobId = jobId;
+      
+      // Check if section exists and we're not regenerating
+      if (!regenerate) {
+        const existing = this.loadSection(jobId, section);
+        if (existing) {
+          console.log(`📋 Using existing ${section} section for job ${jobId}`);
+          return {
+            success: true,
+            content: existing.content,
+            section
+          };
+        }
+      }
+
+      const jobData = this.loadJobData(jobId);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const companyValues = await this.loadCompanyValues(jobId);
+
+      let content: string;
+      switch (section) {
+        case 'opener':
+          content = await this.generateOpener(jobData, cvContent, options);
+          break;
+        case 'focus-story':
+          const userTheme = await this.askUserForTheme();
+          content = await this.generateFocusStory(jobData, cvContent, userTheme, options);
+          this.saveSection(jobId, section, content, { userTheme });
+          return { success: true, content, section };
+        case 'themes':
+          content = await this.generateThemes(jobData, cvContent, options);
+          break;
+        case 'why':
+          content = await this.generateWhyCompany(jobData, cvContent, companyValues, options);
+          break;
+        default:
+          return { success: false, section, error: `Unknown section: ${section}` };
+      }
+
+      this.saveSection(jobId, section, content);
+      return { success: true, content, section };
+    } catch (error) {
+      return {
+        success: false,
+        section,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  private async generateOpener(
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions
+  ): Promise<string> {
+    const promptTemplate = this.loadSectionPrompt('opener');
+    const prompt = this.buildSectionPrompt(promptTemplate, 'opener', job, cvContent, options);
+    
+    this.logPromptToFile(prompt, 'about-me-opener');
+    console.log('📝 Generating opener section...');
+    
+    const response = await this.makeClaudeRequest(prompt);
+    return this.cleanResponse(response, 'about-me');
+  }
+
+  private async generateFocusStory(
+    job: JobListing,
+    cvContent: string,
+    userTheme: string | null,
+    options: StatementOptions
+  ): Promise<string> {
+    let promptTemplate = this.loadSectionPrompt('focus-story');
+    
+    // Inject user theme
+    if (userTheme) {
+      promptTemplate = promptTemplate.replace('{{userTheme}}', userTheme);
+    } else {
+      promptTemplate = promptTemplate.replace('{{userTheme}}', 'high-impact achievements that best demonstrate your capabilities');
+    }
+    
+    const prompt = this.buildSectionPrompt(promptTemplate, 'focus-story', job, cvContent, options);
+    
+    this.logPromptToFile(prompt, 'about-me-focus-story');
+    console.log('📝 Generating focus story section...');
+    
+    const response = await this.makeClaudeRequest(prompt);
+    return this.cleanResponse(response, 'about-me');
+  }
+
+  private async generateThemes(
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions
+  ): Promise<string> {
+    const promptTemplate = this.loadSectionPrompt('themes');
+    
+    // Get or extract themes
+    const userTheme = await this.askUserForTheme();
+    const themes = await this.getOrExtractThemes(job);
+    const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job, userTheme);
+    await this.updateThemesWithExamples(job, themesWithExamples, this.currentJobId);
+    
+    // Inject themes into prompt
+    const themesList = themesWithExamples
+      .map((theme, index) => {
+        let themeText = `${index + 1}. **${theme.name}**: ${theme.definition}`;
+        if (theme.examples && theme.examples.length > 0) {
+          themeText += '\n   Examples from CV:';
+          theme.examples.forEach((example) => {
+            themeText += `\n   - ${example.text} (${example.impact})`;
+          });
+        }
+        return themeText;
+      })
+      .join('\n\n');
+    
+    let prompt = promptTemplate.replace('{{themesWithExamples}}', themesList);
+    prompt = this.buildSectionPrompt(prompt, 'themes', job, cvContent, options);
+    
+    this.logPromptToFile(prompt, 'about-me-themes');
+    console.log('📝 Generating themes section...');
+    
+    const response = await this.makeClaudeRequest(prompt);
+    return this.cleanResponse(response, 'about-me');
+  }
+
+  private async generateWhyCompany(
+    job: JobListing,
+    cvContent: string,
+    companyValues: string | null,
+    options: StatementOptions
+  ): Promise<string> {
+    const promptTemplate = this.loadSectionPrompt('why');
+    const prompt = this.buildSectionPrompt(promptTemplate, 'why', job, cvContent, options, companyValues);
+    
+    this.logPromptToFile(prompt, 'about-me-why');
+    console.log('📝 Generating why company section...');
+    
+    const response = await this.makeClaudeRequest(prompt);
+    return this.cleanResponse(response, 'about-me');
+  }
+
+  private buildSectionPrompt(
+    template: string,
+    section: AboutMeSection,
+    job: JobListing,
+    cvContent: string,
+    options: StatementOptions,
+    companyValues?: string | null
+  ): string {
+    // Build company values section if available
+    let companyValuesSection = '';
+    if (companyValues) {
+      companyValuesSection = `\n\nCompany Values:\n${companyValues}\n\nEnsure your response aligns with and demonstrates these company values through specific examples and language choices.`;
+    }
+
+    // Replace template variables
+    let prompt = template
+      .replace(/{{job\.title}}/g, job.title)
+      .replace(/{{job\.company}}/g, job.company)
+      .replace(/{{job\.description}}/g, job.description)
+      .replace(/{{cvContent}}/g, cvContent)
+      .replace(/{{emphasis}}/g, options.emphasis || '')
+      .replace(/{{companyInfo}}/g, options.companyInfo || '')
+      .replace(/{{customInstructions}}/g, options.customInstructions || '')
+      .replace(/{{companyValues}}/g, companyValuesSection || '')
+      .replace(/{{person}}/g, options.person || 'first');
+
+    prompt += `\n\nJob Posting:\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\n\nWork History:\n${cvContent}`;
+
+    return prompt;
+  }
+
+  async combineSections(jobId: string): Promise<string> {
+    try {
+      const jobData = this.loadJobData(jobId);
+      const sections: AboutMeSection[] = ['opener', 'focus-story', 'themes', 'why'];
+      const sectionContents: Record<AboutMeSection, string> = {} as Record<AboutMeSection, string>;
+      
+      // Load all sections
+      for (const section of sections) {
+        const sectionData = this.loadSection(jobId, section);
+        if (sectionData) {
+          sectionContents[section] = sectionData.content;
+        } else {
+          throw new Error(`Missing section: ${section}. Please generate all sections first.`);
+        }
+      }
+
+      // Extract RTF content from each section (remove RTF header/footer if present)
+      const extractRTFBody = (rtfContent: string): string => {
+        // Remove RTF header if present
+        let body = rtfContent.replace(/^\{?\\rtf1[^}]*\}?/i, '');
+        // Remove RTF footer if present
+        body = body.replace(/\}$/, '');
+        return body.trim();
+      };
+
+      // Combine sections in order: opener, themes, why, focus-story
+      const openerBody = extractRTFBody(sectionContents.opener);
+      const themesBody = extractRTFBody(sectionContents.themes);
+      const whyBody = extractRTFBody(sectionContents.why);
+      const focusStoryBody = extractRTFBody(sectionContents['focus-story']);
+
+      // Combine into final RTF document
+      const combinedRTF = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+${openerBody}
+${themesBody}
+${whyBody}
+${focusStoryBody}
+}`;
+
+      // Save combined output
+      const jobDir = path.resolve('logs', jobId);
+      const combinedPath = path.join(jobDir, 'about-me-combined.md');
+      fs.writeFileSync(combinedPath, combinedRTF, 'utf-8');
+      console.log(`📝 Combined sections saved to: ${combinedPath}`);
+
+      return combinedRTF;
+    } catch (error) {
+      throw new Error(`Failed to combine sections: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async critiqueSection(
+    jobId: string,
+    section: AboutMeSection,
+    cvFilePath: string
+  ): Promise<SectionCritiqueResult> {
+    try {
+      const sectionData = this.loadSection(jobId, section);
+      if (!sectionData) {
+        return {
+          success: false,
+          section,
+          error: `Section ${section} not found. Please generate it first.`
+        };
+      }
+
+      const jobData = this.loadJobData(jobId);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+
+      const sectionNames: Record<AboutMeSection, string> = {
+        'opener': 'Opener and Professional Summary',
+        'focus-story': 'Focus Story (STAR method)',
+        'themes': 'Key Themes with Examples',
+        'why': 'Why Company section'
+      };
+
+      const prompt = `You are an expert interview coach critiquing the ${sectionNames[section]} section of a "Tell me about yourself" interview response.
+
+## Section Content:
+${sectionData.content}
+
+## Job Context:
+**Title:** ${jobData.title}
+**Company:** ${jobData.company}
+**Description:** ${jobData.description.substring(0, 500)}...
+
+## Work History:
+${cvContent.substring(0, 1000)}...
+
+## Instructions:
+Provide a comprehensive critique of this section. Evaluate:
+1. **Clarity and Impact**: Is the message clear and compelling?
+2. **Relevance**: Does it align with the job requirements?
+3. **Specificity**: Are examples concrete and quantifiable?
+4. **Structure**: Is the format appropriate for an interview response?
+5. **Tone**: Is the tone appropriate (informal but professional)?
+
+Rate the section on a scale of 1-10 and provide:
+- **Strengths**: What works well
+- **Weaknesses**: What needs improvement
+- **Recommendations**: Specific, actionable suggestions for improvement
+- **Detailed Analysis**: A paragraph explaining your overall assessment
+
+Respond in JSON format:
+{
+  "rating": 8,
+  "strengths": ["strength 1", "strength 2"],
+  "weaknesses": ["weakness 1", "weakness 2"],
+  "recommendations": ["recommendation 1", "recommendation 2"],
+  "detailedAnalysis": "Overall assessment paragraph..."
+}`;
+
+      const response = await this.makeClaudeRequest(prompt);
+      
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No JSON found in response');
+        }
+
+        const critique = JSON.parse(jsonMatch[0]);
+        
+        return {
+          success: true,
+          section,
+          rating: critique.rating,
+          strengths: critique.strengths || [],
+          weaknesses: critique.weaknesses || [],
+          recommendations: critique.recommendations || [],
+          detailedAnalysis: critique.detailedAnalysis || ''
+        };
+      } catch (parseError) {
+        // If JSON parsing fails, return a basic critique
+        return {
+          success: true,
+          section,
+          detailedAnalysis: response
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        section,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  async refineSection(
+    jobId: string,
+    section: AboutMeSection,
+    editedContent: string,
+    cvFilePath: string
+  ): Promise<SectionGenerationResult> {
+    try {
+      const jobData = this.loadJobData(jobId);
+      const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
+      const companyValues = await this.loadCompanyValues(jobId);
+
+      const sectionNames: Record<AboutMeSection, string> = {
+        'opener': 'Opener and Professional Summary',
+        'focus-story': 'Focus Story (STAR method)',
+        'themes': 'Key Themes with Examples',
+        'why': 'Why Company section'
+      };
+
+      const prompt = `You are an expert interview coach refining the ${sectionNames[section]} section of a "Tell me about yourself" interview response.
+
+## User's Edited Content:
+${editedContent}
+
+## Job Context:
+**Title:** ${jobData.title}
+**Company:** ${jobData.company}
+**Description:** ${jobData.description.substring(0, 500)}...
+
+## Work History:
+${cvContent.substring(0, 1000)}...
+
+${companyValues ? `## Company Values:\n${companyValues}\n` : ''}
+
+## Instructions:
+The user has manually edited this section. Your task is to refine it while:
+1. **Preserving user intent**: Keep the user's key messages, examples, and personal touches
+2. **Improving clarity**: Make the language clearer and more impactful
+3. **Enhancing alignment**: Better align with the job requirements and company values
+4. **Maintaining format**: Keep the RTF format and structure appropriate for this section
+5. **Preserving tone**: Maintain the informal but professional tone
+
+Do NOT rewrite from scratch - refine what the user provided. Make targeted improvements while keeping their voice and intent.
+
+Return ONLY the refined RTF content, no explanations or commentary.`;
+
+      const response = await this.makeClaudeRequest(prompt);
+      const refinedContent = this.cleanResponse(response, 'about-me');
+
+      // Save the refined section
+      this.saveSection(jobId, section, refinedContent, { refined: true });
+
+      return {
+        success: true,
+        content: refinedContent,
+        section
+      };
+    } catch (error) {
+      return {
+        success: false,
+        section,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
   private buildPrompt(
@@ -527,6 +983,87 @@ Format as:
       console.log(`📝 Interview material cached to: ${cachePath}`);
     } catch (error) {
       console.warn(`⚠️  Failed to cache interview material: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Section-based storage methods for granular about-me generation
+  getSectionFilePath(jobId: string, section: AboutMeSection): string {
+    const jobDir = path.resolve('logs', jobId);
+    if (!fs.existsSync(jobDir)) {
+      fs.mkdirSync(jobDir, { recursive: true });
+    }
+    return path.join(jobDir, `about-me-${section}.json`);
+  }
+
+  saveSection(jobId: string, section: AboutMeSection, content: string, metadata?: Record<string, any>): void {
+    try {
+      const filePath = this.getSectionFilePath(jobId, section);
+      const now = new Date().toISOString();
+      
+      // Load existing section if it exists to preserve version
+      let existingData: AboutMeSectionData | null = null;
+      if (fs.existsSync(filePath)) {
+        try {
+          const existingContent = fs.readFileSync(filePath, 'utf-8');
+          existingData = JSON.parse(existingContent);
+        } catch {
+          // If we can't parse existing, start fresh
+        }
+      }
+
+      const sectionData: AboutMeSectionData = {
+        content,
+        generatedAt: existingData?.generatedAt || now,
+        lastModified: now,
+        version: existingData ? existingData.version + 1 : 1,
+        metadata: metadata || existingData?.metadata || {}
+      };
+
+      fs.writeFileSync(filePath, JSON.stringify(sectionData, null, 2));
+      console.log(`📝 Saved ${section} section to: ${filePath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to save ${section} section: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  loadSection(jobId: string, section: AboutMeSection): AboutMeSectionData | null {
+    try {
+      const filePath = this.getSectionFilePath(jobId, section);
+      if (!fs.existsSync(filePath)) {
+        return null;
+      }
+
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const sectionData: AboutMeSectionData = JSON.parse(content);
+      return sectionData;
+    } catch (error) {
+      console.warn(`⚠️  Failed to load ${section} section: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  listSections(jobId: string): AboutMeSection[] {
+    try {
+      const jobDir = path.resolve('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        return [];
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const sections: AboutMeSection[] = [];
+      
+      const sectionTypes: AboutMeSection[] = ['opener', 'focus-story', 'themes', 'why'];
+      for (const section of sectionTypes) {
+        const sectionFile = `about-me-${section}.json`;
+        if (files.includes(sectionFile)) {
+          sections.push(section);
+        }
+      }
+
+      return sections;
+    } catch (error) {
+      console.warn(`⚠️  Failed to list sections: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
     }
   }
 

@@ -10,13 +10,14 @@ import { OutreachAgent } from './agents/outreach-agent';
 import { MetricsAgent } from './agents/metrics-agent';
 import { ApplicationAgent } from './agents/application-agent';
 import { WhoGotHiredAgent } from './agents/whogothired-agent';
-import { StatementType } from './types';
+import { StatementType, AboutMeSection } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as fss from 'fs';
 import { execSync } from 'child_process';
+import * as readline from 'readline';
 
 // Helper function to find CV file automatically
 async function findCvFile(): Promise<string> {
@@ -108,6 +109,239 @@ function unescapeRTF(content: string): string {
     .replace(/\\\\/g, '\\')  // Convert double backslashes to single
     .replace(/\\{/g, '{')    // Convert escaped braces
     .replace(/\\}/g, '}');   // Convert escaped braces
+}
+
+// Interactive about-me section management
+async function interactiveAboutMeGeneration(jobId: string, options: any): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const question = (query: string): Promise<string> => {
+    return new Promise((resolve) => {
+      rl.question(query, resolve);
+    });
+  };
+
+  try {
+    const config = getAnthropicConfig();
+    const interviewPrepAgent = new InterviewPrepAgent(
+      config.anthropicApiKey,
+      config.model,
+      config.maxTokens
+    );
+    const cvFile = await findCvFile();
+
+    const materialOptions = {
+      emphasis: options.emphasis,
+      companyInfo: options.companyInfo,
+      customInstructions: options.instructions,
+      person: options.person as 'first' | 'third'
+    };
+
+    const sectionNames: Record<AboutMeSection, string> = {
+      'opener': 'Opener & Professional Summary',
+      'focus-story': 'Focus Story (STAR)',
+      'themes': 'Key Themes with Examples',
+      'why': 'Why Company'
+    };
+
+    while (true) {
+      console.log('\n' + '='.repeat(60));
+      console.log('📝 About-Me Section Manager');
+      console.log('='.repeat(60));
+      console.log(`Job ID: ${jobId}`);
+      console.log('');
+
+      // Show section status
+      const sections: AboutMeSection[] = ['opener', 'focus-story', 'themes', 'why'];
+      console.log('Section Status:');
+      for (const section of sections) {
+        // Check if section exists
+        const sectionData = interviewPrepAgent.loadSection(jobId, section);
+        const status = sectionData ? '✅' : '❌';
+        console.log(`  ${status} ${sectionNames[section]}`);
+      }
+      console.log('');
+
+      console.log('Options:');
+      console.log('  1. Generate all sections');
+      console.log('  2. Generate specific section');
+      console.log('  3. Regenerate specific section');
+      console.log('  4. Critique specific section');
+      console.log('  5. Refine section (edit and improve)');
+      console.log('  6. View section content');
+      console.log('  7. Combine sections into final output');
+      console.log('  8. Exit');
+      console.log('');
+
+      const choice = await question('Select an option (1-8): ');
+
+      if (choice === '1') {
+        console.log('\n📝 Generating all sections...');
+        const result = await interviewPrepAgent.generateMaterial(
+          'about-me',
+          jobId,
+          cvFile,
+          materialOptions,
+          false,
+          false
+        );
+        if (result.success) {
+          console.log('✅ All sections generated successfully');
+          if (result.content) {
+            await copyToClipboard(result.content);
+            console.log('📋 Combined content copied to clipboard');
+          }
+        } else {
+          console.error(`❌ Generation failed: ${result.error}`);
+        }
+      } else if (choice === '2' || choice === '3') {
+        console.log('\nSelect section to generate:');
+        sections.forEach((section, index) => {
+          console.log(`  ${index + 1}. ${sectionNames[section]}`);
+        });
+        const sectionChoice = await question('\nEnter section number: ');
+        const sectionIndex = parseInt(sectionChoice) - 1;
+        if (sectionIndex >= 0 && sectionIndex < sections.length) {
+          const section = sections[sectionIndex];
+          console.log(`\n📝 ${choice === '3' ? 'Regenerating' : 'Generating'} ${sectionNames[section]}...`);
+          const result = await interviewPrepAgent.generateSection(
+            section,
+            jobId,
+            cvFile,
+            materialOptions,
+            choice === '3'
+          );
+          if (result.success) {
+            console.log(`✅ ${sectionNames[section]} ${choice === '3' ? 'regenerated' : 'generated'} successfully`);
+          } else {
+            console.error(`❌ Failed: ${result.error}`);
+          }
+        } else {
+          console.error('❌ Invalid section number');
+        }
+      } else if (choice === '4') {
+        console.log('\nSelect section to critique:');
+        sections.forEach((section, index) => {
+          console.log(`  ${index + 1}. ${sectionNames[section]}`);
+        });
+        const sectionChoice = await question('\nEnter section number: ');
+        const sectionIndex = parseInt(sectionChoice) - 1;
+        if (sectionIndex >= 0 && sectionIndex < sections.length) {
+          const section = sections[sectionIndex];
+          console.log(`\n🔍 Critiquing ${sectionNames[section]}...`);
+          const result = await interviewPrepAgent.critiqueSection(jobId, section, cvFile);
+          if (result.success) {
+            console.log('\n' + '='.repeat(60));
+            console.log(`📊 Critique: ${sectionNames[section]}`);
+            console.log('='.repeat(60));
+            if (result.rating) {
+              console.log(`\n⭐ Rating: ${result.rating}/10`);
+            }
+            if (result.strengths && result.strengths.length > 0) {
+              console.log('\n💪 Strengths:');
+              result.strengths.forEach((s: string, i: number) => {
+                console.log(`  ${i + 1}. ${s}`);
+              });
+            }
+            if (result.weaknesses && result.weaknesses.length > 0) {
+              console.log('\n⚠️  Weaknesses:');
+              result.weaknesses.forEach((w: string, i: number) => {
+                console.log(`  ${i + 1}. ${w}`);
+              });
+            }
+            if (result.recommendations && result.recommendations.length > 0) {
+              console.log('\n💡 Recommendations:');
+              result.recommendations.forEach((r: string, i: number) => {
+                console.log(`  ${i + 1}. ${r}`);
+              });
+            }
+            if (result.detailedAnalysis) {
+              console.log('\n📝 Detailed Analysis:');
+              console.log(result.detailedAnalysis);
+            }
+          } else {
+            console.error(`❌ Critique failed: ${result.error}`);
+          }
+        } else {
+          console.error('❌ Invalid section number');
+        }
+      } else if (choice === '5') {
+        console.log('\nSelect section to refine:');
+        sections.forEach((section, index) => {
+          console.log(`  ${index + 1}. ${sectionNames[section]}`);
+        });
+        const sectionChoice = await question('\nEnter section number: ');
+        const sectionIndex = parseInt(sectionChoice) - 1;
+        if (sectionIndex >= 0 && sectionIndex < sections.length) {
+          const section = sections[sectionIndex];
+          const sectionData = interviewPrepAgent.loadSection(jobId, section);
+          if (!sectionData) {
+            console.error(`❌ Section ${sectionNames[section]} not found. Generate it first.`);
+          } else {
+            console.log(`\n📝 Current ${sectionNames[section]} content:`);
+            console.log('='.repeat(60));
+            // Extract readable text from RTF for display
+            const readableContent = sectionData.content.replace(/\\[a-z]+\d*\s?/gi, ' ').replace(/\{[^}]*\}/g, '').trim();
+            console.log(readableContent.substring(0, 500) + (readableContent.length > 500 ? '...' : ''));
+            console.log('='.repeat(60));
+            console.log('\n💡 Edit the content above, then paste it here (or press Enter to skip):');
+            const editedContent = await question('\nEdited content: ');
+            if (editedContent.trim()) {
+              console.log('\n🔧 Refining section...');
+              const result = await (interviewPrepAgent as any).refineSection(jobId, section, editedContent, cvFile);
+              if (result.success) {
+                console.log(`✅ ${sectionNames[section]} refined successfully`);
+              } else {
+                console.error(`❌ Refinement failed: ${result.error}`);
+              }
+            }
+          }
+        } else {
+          console.error('❌ Invalid section number');
+        }
+      } else if (choice === '6') {
+        console.log('\nSelect section to view:');
+        sections.forEach((section, index) => {
+          console.log(`  ${index + 1}. ${sectionNames[section]}`);
+        });
+        const sectionChoice = await question('\nEnter section number: ');
+        const sectionIndex = parseInt(sectionChoice) - 1;
+        if (sectionIndex >= 0 && sectionIndex < sections.length) {
+          const section = sections[sectionIndex];
+          const sectionData = interviewPrepAgent.loadSection(jobId, section);
+          if (sectionData) {
+            console.log(`\n📄 ${sectionNames[section]}:`);
+            console.log('='.repeat(60));
+            console.log(sectionData.content);
+            console.log('='.repeat(60));
+          } else {
+            console.error(`❌ Section ${sectionNames[section]} not found`);
+          }
+        } else {
+          console.error('❌ Invalid section number');
+        }
+      } else if (choice === '7') {
+        console.log('\n🔗 Combining sections...');
+        try {
+          const combined = await interviewPrepAgent.combineSections(jobId);
+          await copyToClipboard(combined);
+          console.log('✅ Sections combined and copied to clipboard');
+        } catch (error) {
+          console.error(`❌ Failed to combine: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else if (choice === '8') {
+        console.log('\n👋 Exiting...');
+        break;
+      } else {
+        console.error('❌ Invalid option');
+      }
+    }
+  } finally {
+    rl.close();
+  }
 }
 
 // Copy content to clipboard using pbcopy
@@ -749,6 +983,7 @@ program
   .option('-p, --person <person>', 'Writing perspective: first (I/me) or third (he/Anthony)', 'first')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
+  .option('--interactive', 'Interactive mode for about-me: select sections to generate, critique, or refine')
   .action(async (type: string, jobId: string, projectNumber: string, options) => {
     try {
       // Handle themes extraction separately
@@ -1016,6 +1251,12 @@ program
       if (!jobId) {
         console.error(`❌ Job ID is required for ${type} generation`);
         process.exit(1);
+      }
+
+      // Handle interactive mode for about-me
+      if (type === 'about-me' && options.interactive) {
+        await interactiveAboutMeGeneration(jobId, options);
+        return;
       }
 
       // Automatically find CV file for statement types
@@ -1425,5 +1666,114 @@ program
       process.exit(1);
     }
   });
+
+// Individual section commands for granular about-me management
+const sectionCommands: Record<string, AboutMeSection> = {
+  'about-me-opener': 'opener',
+  'about-me-focus-story': 'focus-story',
+  'about-me-themes': 'themes',
+  'about-me-why': 'why'
+};
+
+for (const [commandName, section] of Object.entries(sectionCommands)) {
+  program
+    .command(commandName)
+    .description(`Generate or manage the ${section} section of about-me statement`)
+    .argument('<jobId>', 'Job ID to generate section for')
+    .option('-e, --emphasis <text>', 'Special emphasis or instructions')
+    .option('-c, --company-info <text>', 'Additional company information')
+    .option('-i, --instructions <text>', 'Custom instructions')
+    .option('--regen', 'Force regenerate section')
+    .option('--critique', 'Critique the section')
+    .option('--view', 'View the section content')
+    .action(async (jobId: string, options) => {
+      try {
+        const cvFile = await findCvFile();
+        const config = getAnthropicConfig();
+        const interviewPrepAgent = new InterviewPrepAgent(
+          config.anthropicApiKey,
+          config.model,
+          config.maxTokens
+        );
+
+        const materialOptions = {
+          emphasis: options.emphasis,
+          companyInfo: options.companyInfo,
+          customInstructions: options.instructions
+        };
+
+        if (options.view) {
+          const sectionData = interviewPrepAgent.loadSection(jobId, section);
+          if (sectionData) {
+            console.log(`\n📄 ${section} Section:`);
+            console.log('='.repeat(60));
+            console.log(sectionData.content);
+            console.log('='.repeat(60));
+          } else {
+            console.error(`❌ Section ${section} not found. Generate it first.`);
+            process.exit(1);
+          }
+        } else if (options.critique) {
+          console.log(`\n🔍 Critiquing ${section} section...`);
+          const result = await interviewPrepAgent.critiqueSection(jobId, section, cvFile);
+          if (result.success) {
+            console.log('\n' + '='.repeat(60));
+            console.log(`📊 Critique: ${section}`);
+            console.log('='.repeat(60));
+            if (result.rating) {
+              console.log(`\n⭐ Rating: ${result.rating}/10`);
+            }
+            if (result.strengths && result.strengths.length > 0) {
+              console.log('\n💪 Strengths:');
+              result.strengths.forEach((s: string, i: number) => {
+                console.log(`  ${i + 1}. ${s}`);
+              });
+            }
+            if (result.weaknesses && result.weaknesses.length > 0) {
+              console.log('\n⚠️  Weaknesses:');
+              result.weaknesses.forEach((w: string, i: number) => {
+                console.log(`  ${i + 1}. ${w}`);
+              });
+            }
+            if (result.recommendations && result.recommendations.length > 0) {
+              console.log('\n💡 Recommendations:');
+              result.recommendations.forEach((r: string, i: number) => {
+                console.log(`  ${i + 1}. ${r}`);
+              });
+            }
+            if (result.detailedAnalysis) {
+              console.log('\n📝 Detailed Analysis:');
+              console.log(result.detailedAnalysis);
+            }
+          } else {
+            console.error(`❌ Critique failed: ${result.error}`);
+            process.exit(1);
+          }
+        } else {
+          console.log(`📝 Generating ${section} section...`);
+          const result = await interviewPrepAgent.generateSection(
+            section,
+            jobId,
+            cvFile,
+            materialOptions,
+            !!options.regen
+          );
+          if (result.success) {
+            console.log(`✅ ${section} section generated successfully`);
+            if (result.content) {
+              await copyToClipboard(result.content);
+              console.log('📋 Section content copied to clipboard');
+            }
+          } else {
+            console.error(`❌ Generation failed: ${result.error}`);
+            process.exit(1);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error:', error instanceof Error ? error.message : 'Unknown error');
+        process.exit(1);
+      }
+    });
+}
 
 program.parse();

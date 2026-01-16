@@ -78,7 +78,7 @@ Format your response with:
 Keep under 250 words and answer in first person:`;
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-7-sonnet-20250219',
         max_tokens: 300,
         temperature: 0.3,
         messages: [

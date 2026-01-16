@@ -296,7 +296,7 @@ Interview Question: ${question}
 IMPORTANT: Keep your response between 200-400 characters. Be concise, direct, and impactful. Focus on the most relevant accomplishment or experience that answers the question.`;
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-7-sonnet-20250219',
         max_tokens: 150,
         temperature: 0.7,
         messages: [
@@ -612,7 +612,7 @@ ${question ? `Specific Question: ${question}` : ''}
 IMPORTANT: Keep your response between 200-400 characters. Be concise and focus on the most critical insights: key strengths to highlight and one major gap to address.`;
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-7-sonnet-20250219',
         max_tokens: 150,
         temperature: 0.7,
         messages: [

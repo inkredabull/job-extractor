@@ -80,7 +80,7 @@ describe('ResumeCriticAgent', () => {
     (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
     (fs.appendFileSync as jest.Mock).mockImplementation(() => {});
 
-    agent = new ResumeCriticAgent('test-anthropic-api-key', 'claude-3-5-sonnet-20241022', 4000);
+    agent = new ResumeCriticAgent('test-anthropic-api-key', 'claude-3-7-sonnet-20250219', 4000);
   });
 
   afterEach(() => {

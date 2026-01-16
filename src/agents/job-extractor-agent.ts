@@ -88,8 +88,12 @@ export class JobExtractorAgent extends BaseAgent {
       const logFileName = `job-${timestamp}.json`;
       const logFilePath = path.join(jobDir, logFileName);
 
-      // Save JSON to log file
-      const jobDataWithSource = { ...jobData, source: sourceUrl ? "extracted" : "html_parsed" };
+      // Save JSON to log file with jobId included
+      const jobDataWithSource = { 
+        ...jobData, 
+        jobId,  // Add the jobId to the saved data
+        source: sourceUrl ? "extracted" : "html_parsed" 
+      };
       const jsonOutput = JSON.stringify(jobDataWithSource, null, 2);
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);

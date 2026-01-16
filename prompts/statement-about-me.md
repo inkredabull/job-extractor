@@ -53,14 +53,25 @@ You are a professional interview coach creating talking points for a "Tell me ab
 Please respond in RTF format using the following nested structure with subheadings:
 
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
-\par \li720 \bullet \b OPENER:\b0
-\par \li1080 \bullet I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%.
+\par \li720 \bullet \b ABOUT ME:\b0
+\par \li1080 \bullet 
 \par \li0
+        * •I'm a hands-on player/coach who scales teams and companies into predictable delivery engines. 
+        * Since leaving Myna in 2024, my focus has been building and shipping LLM-powered systems, both in an entrepreneurial capacity while also advising others on how to do that.
+            * A big theme in 2025 has been helping teams go from experimentation to production: designing architecture including embracing MCP & agents, setting up evaluation frameworks, and make sure to drive real business metrics.
+        * A few leadership roles prior to that…
+            * As CTO at Myna, I delivered the company's first $1M in revenue and cut cycle time 95%. 
+            * As VP of Engineering at CourseKey, I improved delivery speed 12x while also boosting ARR by 50%.  (Worked with Marcelo and team)
+            * As Head of Engineering at Decorist, I scaled the team from 7 to 46 and cut cloud costs by 70%.
 
-\par \li720 \bullet \b PROFESSIONAL SUMMARY:\b0
-\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
-\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
-\par \li1080 \bullet [Brief career highlight ≤75 chars - avoid repeating Myna/CourseKey from opener]
+\par \li720 \bullet \b KEY THEMES:\b0
+\par \li1080 \bullet \b [Main theme (high-level)]\b0
+\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
+\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
+\par \li1080 \bullet \b [Main theme (high-level)]\b0
+\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
+\par \li1080 \bullet \b [Main theme (high-level)]\b0
+\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
 \par \li0
 
 \par \li720 \bullet \b WHY {{job.company}}?\b0
@@ -78,15 +89,6 @@ Please respond in RTF format using the following nested structure with subheadin
 \par \li1440 \bullet [Measurable outcomes and impact]
 \par \li0
 
-\par \li720 \bullet \b KEY THEMES:\b0
-\par \li1080 \bullet \b [Main theme (high-level)]\b0
-\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
-\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
-\par \li1080 \bullet \b [Main theme (high-level)]\b0
-\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
-\par \li1080 \bullet \b [Main theme (high-level)]\b0
-\par \li1440 \bullet [Supporting example (specific example, ≈85 characters)]
-\par \li0
 }
 
 Example RTF structure:
