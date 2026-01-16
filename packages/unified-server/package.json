@@ -1,0 +1,27 @@
+{
+  "name": "@inkredabull/job-extractor-unified-server",
+  "version": "1.0.0",
+  "description": "Unified server combining CLI server and MCP server functionality",
+  "main": "unified-server.js",
+  "bin": {
+    "job-extractor-server": "unified-server.js"
+  },
+  "scripts": {
+    "start": "node unified-server.js",
+    "start:llm": "node unified-server.js --llm"
+  },
+  "keywords": [
+    "server",
+    "unified",
+    "mcp",
+    "cli-server"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.55.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  }
+}
