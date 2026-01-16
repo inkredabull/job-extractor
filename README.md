@@ -102,6 +102,7 @@ Table of Contents
       * [Common Issues](#common-issues)
       * [Getting Help](#getting-help)
       * [Misc](#misc)
+   * [Maintenance](#maintenance)
 
 <!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
@@ -1666,6 +1667,38 @@ The project includes comprehensive unit tests for:
 - Resume creator agent with CV parsing and PDF generation
 - Web scraper utility and structured data extraction
 - Error handling scenarios and edge cases
+
+## 🛠️ Maintenance
+
+### Archiving Old Jobs
+
+To keep your logs directory clean, you can archive old job data using the archive script:
+
+```bash
+# Archive jobs older than 30 days (default)
+npm run archive:jobs
+
+# Dry run (show what would be archived)
+npm run archive:jobs -- --dry-run
+
+# Archive jobs older than 60 days
+npm run archive:jobs -- --days 60
+
+# Custom source and destination directories
+npm run archive:jobs -- --logs-dir ./custom-logs --archive-dir ./custom-archive
+
+# Show verbose output
+npm run archive:jobs -- --verbose
+```
+
+**Options:**
+- `--days <number>`: Archive jobs older than this many days (default: 30)
+- `--dry-run`: Show what would be archived without making changes
+- `--logs-dir <path>`: Path to the logs directory (default: './logs')
+- `--archive-dir <path>`: Path to the archive directory (default: './archive')
+- `--verbose`: Show detailed information about each job
+
+The archive directory is automatically added to `.gitignore` to prevent archived jobs from being committed to version control.
 
 ## Contributing
 
