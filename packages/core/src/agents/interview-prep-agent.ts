@@ -2058,7 +2058,7 @@ ${project.result}`;
     });
   }
 
-  private async generateFocusStory(jobId: string, cvFilePath: string, regenerate: boolean): Promise<StatementResult> {
+  private async generateStandaloneFocusStory(jobId: string, cvFilePath: string, regenerate: boolean): Promise<StatementResult> {
     try {
       // Check if we should use cached content or regenerate
       if (!regenerate) {

@@ -171,7 +171,7 @@ export interface ResumeCritique {
   error?: string;
 }
 
-export type StatementType = 'cover-letter' | 'endorsement' | 'about-me' | 'general';
+export type StatementType = 'cover-letter' | 'endorsement' | 'about-me' | 'general' | 'about-me-opener' | 'about-me-focus-story' | 'about-me-themes' | 'about-me-why';
 
 export interface StatementOptions {
   emphasis?: string;
