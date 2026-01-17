@@ -1,0 +1,19 @@
+# GitHub Pages Jekyll Configuration
+title: Job Extractor
+description: AI-powered career toolkit monorepo
+theme: jekyll-theme-minimal
+
+# Navigation
+nav:
+  - title: Home
+    url: /
+  - title: Core CLI
+    url: /job-extractor-core/
+  - title: Chrome Extension
+    url: /chrome-extension/
+  - title: MCP Server
+    url: /mcp-server/
+  - title: Unified Server
+    url: /unified-server/
+  - title: AMA App
+    url: /ama-app/

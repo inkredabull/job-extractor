@@ -122,3 +122,4 @@ data/
 # Personal configuration files
 macos-reminder-config.yaml
 auto-workflow-config.yaml
+migration/
