@@ -21,15 +21,43 @@ import * as readline from 'readline';
 
 // Helper function to find CV file automatically
 async function findCvFile(): Promise<string> {
+  // Try to find project root by looking for package.json with workspaces
+  let projectRoot = process.cwd();
+  try {
+    // Walk up to find project root (contains package.json with workspaces)
+    let currentDir = process.cwd();
+    while (currentDir !== path.dirname(currentDir)) {
+      const pkgPath = path.join(currentDir, 'package.json');
+      if (fss.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fss.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.workspaces) {
+          projectRoot = currentDir;
+          break;
+        }
+      }
+      currentDir = path.dirname(currentDir);
+    }
+  } catch {
+    // If we can't find project root, use current directory
+  }
+
   const possiblePaths = [
+    // Try current directory first
     'cv.txt',
     './cv.txt',
     'CV.txt',
     './CV.txt',
     'sample-cv.txt',
-    './sample-cv.txt'
+    './sample-cv.txt',
+    // Try project root
+    path.join(projectRoot, 'cv.txt'),
+    path.join(projectRoot, 'CV.txt'),
+    path.join(projectRoot, 'sample-cv.txt'),
+    // Try data directory in project root
+    path.join(projectRoot, 'data', 'cv.txt'),
+    path.join(projectRoot, 'data', 'CV.txt')
   ];
-  
+
   for (const cvPath of possiblePaths) {
     try {
       await fs.access(cvPath);
@@ -39,7 +67,7 @@ async function findCvFile(): Promise<string> {
       // File doesn't exist, continue searching
     }
   }
-  
+
   throw new Error('CV file not found. Please create a cv.txt file in the current directory or specify the path.');
 }
 
