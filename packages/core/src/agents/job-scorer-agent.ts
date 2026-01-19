@@ -1,6 +1,7 @@
 import { BaseAgent } from './base-agent';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import { JobListing, JobCriteria, JobScore, AgentConfig } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import { getAnthropicConfig, getAutoResumeConfig } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -71,7 +72,7 @@ export class JobScorerAgent extends BaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);

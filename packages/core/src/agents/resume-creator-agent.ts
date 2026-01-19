@@ -1,5 +1,6 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeResult } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -123,7 +124,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);
@@ -142,7 +143,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private isFirstGeneration(jobId: string): boolean {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return true;
@@ -306,7 +307,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private cleanupTailoredFiles(jobId: string): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return;
@@ -329,7 +330,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private loadMostRecentTailoredContent(jobId: string): { markdownContent: string; changes: string[] } | null {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       // Check if job directory exists
       if (!fs.existsSync(jobDir)) {
@@ -406,7 +407,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private loadCachedTailoredContent(jobId: string, cvFilePath: string): { markdownContent: string; changes: string[] } | null {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       // Check if job directory exists
       if (!fs.existsSync(jobDir)) {
@@ -462,7 +463,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private saveTailoredContent(jobId: string, cvFilePath: string, content: { markdownContent: string; changes: string[] }): void {
     try {
-      const logsDir = path.resolve('logs');
+      const logsDir = resolveFromProjectRoot('logs');
       const jobDir = path.resolve(logsDir, jobId);
       
       // Create logs directory if it doesn't exist
@@ -641,7 +642,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     if (!jobId) return recommendations;
     
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       // Check for recommendations.txt file in job directory
       const recommendationsFile = path.join(jobDir, 'recommendations.txt');
@@ -684,7 +685,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     if (!jobId) return null;
     
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       const companyValuesFile = path.join(jobDir, 'company-values.txt');
       
       if (fs.existsSync(companyValuesFile)) {
@@ -888,7 +889,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     // Write prompt to log file in job subdirectory
     if (jobId) {
       try {
-        const logsDir = path.resolve('logs');
+        const logsDir = resolveFromProjectRoot('logs');
         const jobDir = path.resolve(logsDir, jobId);
         
         // Create logs and job directories if they don't exist
@@ -1053,7 +1054,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
 
   private async checkAndRunCritique(jobId: string): Promise<void> {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return;
@@ -1212,7 +1213,7 @@ ${simplifiedHtml.slice(0, 8000)}...`;
 
   private saveUpdatedJobData(jobId: string, jobData: JobListing): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `job-${timestamp}.json`;
       const filePath = path.join(jobDir, fileName);

@@ -1,4 +1,5 @@
 import { JobListing, OutreachResult } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -50,7 +51,7 @@ export class OutreachAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);

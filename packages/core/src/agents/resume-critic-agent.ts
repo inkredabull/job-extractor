@@ -1,5 +1,6 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeCritique, ResumeResult } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import { getResumeOutputDir } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -73,7 +74,7 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
     }
 
     // Search in logs directory (legacy location)
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     if (fs.existsSync(jobDir)) {
       const files = fs.readdirSync(jobDir);
       const logResumeFiles = files
@@ -139,7 +140,7 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);

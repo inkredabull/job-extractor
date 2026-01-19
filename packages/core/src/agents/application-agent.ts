@@ -1,5 +1,6 @@
 import { BaseAgent } from './base-agent';
 import { AgentConfig, ExtractorResult, ApplicationFormField, ApplicationFormData, ApplicationResult } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import { InterviewPrepAgent } from './interview-prep-agent';
 import { OutreachAgent } from './outreach-agent';
@@ -663,7 +664,7 @@ export class ApplicationAgent extends BaseAgent {
   private async loadApplicationData(jobId: string, dryRun: boolean = false, skipGeneration: boolean = false): Promise<any> {
     console.log('📄 Loading resume and interview prep data...');
     
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);
     }
@@ -1411,7 +1412,7 @@ To complete the application:
 
   private logApplicationSession(jobId: string, url: string, formData: ApplicationFormData, filledFields: Record<string, string>, submitted: boolean = false): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }

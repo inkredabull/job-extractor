@@ -1,5 +1,6 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing } from '../types';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -59,7 +60,7 @@ export class MetricsAgent extends ClaudeBaseAgent {
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);
@@ -181,7 +182,7 @@ Make the KPIs specific to the role level and company context. For senior roles, 
 
   private logMetrics(jobId: string, metrics: { ninetyDay: KPIMetric[]; firstYear: KPIMetric[] }): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
