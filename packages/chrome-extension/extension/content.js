@@ -1835,7 +1835,7 @@ function getProfilePersonName() {
   }
 }
 
-function extractMutualConnectionNames() {
+async function extractMutualConnectionNames() {
   console.log('Extracting mutual connection names...');
 
   try {
@@ -1867,30 +1867,62 @@ function extractMutualConnectionNames() {
     var nameElements = [];
     var result = 'Full,PersonName,PersonURL\n'; // CSV headers
 
+    // Debug: Wait a moment for LinkedIn's dynamic content to load
+    console.log('Waiting 1 second for LinkedIn content to load...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Debug: Log what's available on the page
+    console.log('Debug - Analyzing page structure:');
+    console.log('- .reusable-search__result-container:', document.querySelectorAll('.reusable-search__result-container').length);
+    console.log('- .entity-result__item:', document.querySelectorAll('.entity-result__item').length);
+    console.log('- .search-results-container:', document.querySelectorAll('.search-results-container').length);
+    console.log('- li.reusable-search__result-container:', document.querySelectorAll('li.reusable-search__result-container').length);
+    console.log('- [data-chameleon-result-urn]:', document.querySelectorAll('[data-chameleon-result-urn]').length);
+
     // Strategy 1: Try to find mutual connection links in search results
     // LinkedIn uses various class patterns, try common ones
     var selectors = [
-      // Modern LinkedIn search results (2024+)
-      '.entity-result__item a.app-aware-link span[aria-hidden="true"]',
-      '.reusable-search__result-container a.app-aware-link span.entity-result__title-text span[aria-hidden="true"]',
+      // Modern LinkedIn search results (2024+) - try different variations
+      'li.reusable-search__result-container .entity-result__title-text a span[aria-hidden="true"]',
+      '.search-results-container .entity-result__title-text a span[aria-hidden="true"]',
+      '[data-chameleon-result-urn] .entity-result__title-text a span[aria-hidden="true"]',
+      '.entity-result__item .entity-result__title-text a span[aria-hidden="true"]',
+      // Try without the nested span
+      '.entity-result__title-text a[href*="/in/"]',
       // Older patterns
       '.t-16 a span>span:not(.visually-hidden)',
       'div.mb1 a span>span:not(.visually-hidden)',
-      // Fallback: any search result link with visible name
-      '.entity-result__title-text a span[aria-hidden="true"]'
+      // Very broad fallback
+      'a[href*="/in/"] span.entity-result__title-text span[aria-hidden="true"]'
     ];
 
     for (var selector of selectors) {
-      nameElements = Array.from(document.querySelectorAll(selector));
-      if (nameElements.length > 0) {
-        console.log(`Found ${nameElements.length} mutual connections using selector: ${selector}`);
+      var elements = Array.from(document.querySelectorAll(selector));
+      console.log(`Trying selector "${selector}": found ${elements.length} elements`);
+
+      if (elements.length > 0) {
+        // For link elements, get the text content
+        if (selector.includes('a[href')) {
+          nameElements = elements.map(el => ({
+            innerText: el.textContent || el.innerText || ''
+          }));
+        } else {
+          nameElements = elements;
+        }
+        console.log(`✓ Using selector: ${selector} (${nameElements.length} matches)`);
         break;
       }
     }
 
     if (nameElements.length === 0) {
       console.log('Could not find mutual connections with any known selector');
-      console.log('Available search result containers:', document.querySelectorAll('.reusable-search__result-container').length);
+      console.log('Dumping first search result HTML for debugging:');
+      var firstResult = document.querySelector('li.reusable-search__result-container, .entity-result__item, [data-chameleon-result-urn]');
+      if (firstResult) {
+        console.log(firstResult.outerHTML.substring(0, 500) + '...');
+      } else {
+        console.log('No search results found on page');
+      }
       return;
     }
 
