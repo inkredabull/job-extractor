@@ -330,7 +330,7 @@ Format as:
           break;
         case 'focus-story':
           const userTheme = await this.askUserForTheme();
-          const focusContent = await this.generateFocusStory(job, cvContent, userTheme, options);
+          const focusContent = await this.generateFocusStorySection(job, cvContent, userTheme, options);
           this.saveSection(this.currentJobId, 'focus-story', focusContent, { userTheme });
           break;
         case 'themes':
@@ -410,7 +410,7 @@ Format as:
           break;
         case 'focus-story':
           const userTheme = await this.askUserForTheme();
-          content = await this.generateFocusStory(jobData, cvContent, userTheme, options);
+          content = await this.generateFocusStorySection(jobData, cvContent, userTheme, options);
           this.saveSection(jobId, section, content, { userTheme });
           return { success: true, content, section };
         case 'themes':
@@ -449,7 +449,7 @@ Format as:
     return this.cleanResponse(response, 'about-me');
   }
 
-  private async generateFocusStory(
+  private async generateFocusStorySection(
     job: JobListing,
     cvContent: string,
     userTheme: string | null,
@@ -2456,7 +2456,7 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
     }
   }
 
-  private logPromptToFile(prompt: string, type: StatementType): void {
+  private logPromptToFile(prompt: string, type: string): void {
     try {
       if (!this.currentJobId) {
         // No job ID available, skip logging
