@@ -1837,12 +1837,12 @@ function getProfilePersonName() {
 
 function extractMutualConnectionNames() {
   console.log('Extracting mutual connection names...');
-  
+
   try {
-    // Get the target profile URL from localStorage 
+    // Get the target profile URL from localStorage
     var targetProfileUrl = localStorage.getItem('linkedin_target_profile_url') || '';
     console.log(`Target profile URL: "${targetProfileUrl}"`);
-    
+
     // Extract first name directly from the URL
     var targetFirstName = 'Unknown';
     if (targetProfileUrl) {
@@ -1854,40 +1854,61 @@ function extractMutualConnectionNames() {
           .split('-')[0]                    // Get first part before hyphens
           .replace(/\d+/g, '')             // Remove any numbers
           .trim();
-        
+
         if (firstName.length > 0) {
           targetFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
         }
       }
     }
-    
+
     console.log(`Extracted first name from URL: "${targetFirstName}"`);
-    
-    // Extract mutual connections
-    var identifier = document.querySelectorAll('div.mb1 a')[0]?.className.trim();
-    if (!identifier) {
-      console.log('Could not find identifier for mutual connections');
+
+    // Try multiple selector strategies for mutual connections
+    var nameElements = [];
+    var result = 'Full,PersonName,PersonURL\n'; // CSV headers
+
+    // Strategy 1: Try to find mutual connection links in search results
+    // LinkedIn uses various class patterns, try common ones
+    var selectors = [
+      // Modern LinkedIn search results (2024+)
+      '.entity-result__item a.app-aware-link span[aria-hidden="true"]',
+      '.reusable-search__result-container a.app-aware-link span.entity-result__title-text span[aria-hidden="true"]',
+      // Older patterns
+      '.t-16 a span>span:not(.visually-hidden)',
+      'div.mb1 a span>span:not(.visually-hidden)',
+      // Fallback: any search result link with visible name
+      '.entity-result__title-text a span[aria-hidden="true"]'
+    ];
+
+    for (var selector of selectors) {
+      nameElements = Array.from(document.querySelectorAll(selector));
+      if (nameElements.length > 0) {
+        console.log(`Found ${nameElements.length} mutual connections using selector: ${selector}`);
+        break;
+      }
+    }
+
+    if (nameElements.length === 0) {
+      console.log('Could not find mutual connections with any known selector');
+      console.log('Available search result containers:', document.querySelectorAll('.reusable-search__result-container').length);
       return;
     }
-    
-    var result = 'Full,PersonName,PersonURL\n'; // CSV headers
-    var selector = '.t-16 a.' + identifier + '>span>span:not(.visually-hidden)';
-    var nameElements = document.querySelectorAll(selector);
-    
+
     nameElements.forEach((element) => {
       var mutualConnectionName = element.innerText.trim();
-      if (mutualConnectionName) {
+      if (mutualConnectionName && mutualConnectionName.length > 0) {
         // Output format: mutual connection full name, target profile first name, target profile URL
         var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
         result += csvRow + '\n';
       }
     });
-    
+
     if (nameElements.length > 0) {
       console.log('Complete CSV output:');
       console.log(result);
+      console.log(`Total mutual connections found: ${nameElements.length}`);
     }
-    
+
   } catch (error) {
     console.error('Error extracting mutual connection names:', error);
   }
