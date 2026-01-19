@@ -1,6 +1,7 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, AgentConfig, StatementType, StatementOptions, StatementResult, InterviewPrepResult, JobTheme, ThemeExtractionResult, ThemeExample, ProfileConfig, ProfileResult, ProjectInfo, ProjectExtractionResult, AboutMeSection, AboutMeSectionData, SectionGenerationResult, SectionCritiqueResult } from '../types';
 import { WebScraper } from '../utils/web-scraper';
+import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
@@ -155,7 +156,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
   private async generateCompanyRubric(jobId: string): Promise<boolean> {
     try {
       const jobData = this.loadJobData(jobId);
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       // Check if company-rubric.txt already exists (unless regenerating)
       const rubricPath = path.join(jobDir, 'company-rubric.txt');
@@ -224,12 +225,12 @@ Format as:
   }
 
   private loadJobData(jobId: string): JobListing {
-    const jobDir = path.resolve('logs', jobId);
-    
+    const jobDir = resolveFromProjectRoot('logs', jobId);
+
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);
     }
-    
+
     const files = fs.readdirSync(jobDir);
     const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
     if (!jobFile) {
@@ -597,7 +598,7 @@ ${focusStoryBody}
 }`;
 
       // Save combined output
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       const combinedPath = path.join(jobDir, 'about-me-combined.md');
       fs.writeFileSync(combinedPath, combinedRTF, 'utf-8');
       console.log(`📝 Combined sections saved to: ${combinedPath}`);
@@ -860,7 +861,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
 
   private loadMostRecentMaterial(jobId: string, type: StatementType, options: StatementOptions = {}): string | null {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return null;
@@ -907,7 +908,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
     options: StatementOptions
   ): string | null {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return null;
@@ -958,7 +959,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
     options: StatementOptions
   ): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
@@ -988,7 +989,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
 
   // Section-based storage methods for granular about-me generation
   getSectionFilePath(jobId: string, section: AboutMeSection): string {
-    const jobDir = path.resolve('logs', jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobId);
     if (!fs.existsSync(jobDir)) {
       fs.mkdirSync(jobDir, { recursive: true });
     }
@@ -1044,7 +1045,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
 
   listSections(jobId: string): AboutMeSection[] {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         return [];
       }
@@ -1195,7 +1196,7 @@ Please respond in the following JSON format:
 
   private logThemes(jobId: string, themes: JobTheme[]): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
@@ -1248,7 +1249,7 @@ Please respond in the following JSON format:
   private loadExistingThemes(jobTitle: string, jobCompany: string): JobTheme[] | null {
     try {
       // Look for theme files that match this job (by checking all job directories)
-      const logsDir = path.resolve('logs');
+      const logsDir = resolveFromProjectRoot('logs');
       if (!fs.existsSync(logsDir)) {
         return null;
       }
@@ -1380,7 +1381,7 @@ Respond in this JSON format:
   private async updateThemesWithExamples(job: JobListing, themesWithExamples: JobTheme[], actualJobId?: string): Promise<void> {
     try {
       const jobId = actualJobId || this.currentJobId;
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
@@ -1465,7 +1466,7 @@ Respond in this JSON format:
 
   async getInterviewStories(jobId: string): Promise<{ success: boolean; stories?: string[]; highlightedExamples?: ThemeExample[]; error?: string }> {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return { success: false, error: 'Job directory not found' };
@@ -1678,7 +1679,7 @@ function cmf2() {
 
   private loadThemesData(jobId: string): any {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return null;
@@ -2115,7 +2116,7 @@ ${project.result}`;
 
   private async loadCompanyValues(jobId: string): Promise<string | null> {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       const valuesPath = path.join(jobDir, 'company-values.txt');
       
       if (fs.existsSync(valuesPath)) {
@@ -2370,7 +2371,7 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
 
   private loadCachedFocusStory(jobId: string, cvFilePath: string): string | null {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       
       if (!fs.existsSync(jobDir)) {
         return null;
@@ -2405,7 +2406,7 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
 
   private cacheFocusStory(jobId: string, content: string, cvFilePath: string): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
@@ -2432,7 +2433,7 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
 
   private logFocusStoryGeneration(jobId: string, response: string): void {
     try {
-      const jobDir = path.resolve('logs', jobId);
+      const jobDir = resolveFromProjectRoot('logs', jobId);
       if (!fs.existsSync(jobDir)) {
         fs.mkdirSync(jobDir, { recursive: true });
       }
@@ -2463,7 +2464,7 @@ IMPORTANT: Structure the story to lead with impact (key results), tell the compl
         return;
       }
 
-      const logsDir = path.resolve('logs');
+      const logsDir = resolveFromProjectRoot('logs');
       const jobDir = path.resolve(logsDir, this.currentJobId);
       
       // Create logs and job directories if they don't exist
