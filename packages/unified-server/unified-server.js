@@ -390,8 +390,8 @@ app.post('/extract', async (req, res) => {
       console.log(`  -> Processing JSON data:`, data);
       console.log(`  -> Reminder priority:`, reminderPriority || 'default');
       
-      // Change to the main project directory
-      const projectDir = path.resolve(__dirname);
+      // Change to the main project directory (two levels up from packages/unified-server)
+      const projectDir = path.resolve(__dirname, '..', '..');
       process.chdir(projectDir);
       
       // Create a temporary JSON file with the job data
@@ -519,8 +519,8 @@ app.post('/extract', async (req, res) => {
       
       console.log(`  -> Extracting job from URL: ${url}`);
       
-      // Change to the main project directory
-      const projectDir = path.resolve(__dirname);
+      // Change to the main project directory (two levels up from packages/unified-server)
+      const projectDir = path.resolve(__dirname, '..', '..');
       process.chdir(projectDir);
       
       // Execute the extract command
@@ -611,8 +611,8 @@ app.post('/linkedin-reminder', async (req, res) => {
   console.log(`  -> Creating reminder: ${title.substring(0, 50)}...`);
   
   try {
-    // Change to the main project directory
-    const projectDir = path.resolve(__dirname);
+    // Change to the main project directory (two levels up from packages/unified-server)
+    const projectDir = path.resolve(__dirname, '..', '..');
     
     // Use the MacOS reminder creation via CLI
     const output = await new Promise((resolve, reject) => {
