@@ -1878,10 +1878,17 @@ async function extractMutualConnectionNames() {
     console.log('- .search-results-container:', document.querySelectorAll('.search-results-container').length);
     console.log('- li.reusable-search__result-container:', document.querySelectorAll('li.reusable-search__result-container').length);
     console.log('- [data-chameleon-result-urn]:', document.querySelectorAll('[data-chameleon-result-urn]').length);
+    console.log('- a[data-view-name="search-result-lockup-title"]:', document.querySelectorAll('a[data-view-name="search-result-lockup-title"]').length);
+    console.log('- [data-view-name="people-search-result"]:', document.querySelectorAll('[data-view-name="people-search-result"]').length);
+    console.log('- All <li> elements:', document.querySelectorAll('li').length);
+    console.log('- All <a> elements with /in/:', document.querySelectorAll('a[href*="/in/"]').length);
 
     // Strategy 1: Try to find mutual connection links in search results
     // LinkedIn uses various class patterns, try common ones
     var selectors = [
+      // 2025+ LinkedIn with obfuscated classes - use stable data attributes
+      'a[data-view-name="search-result-lockup-title"]',
+      '[data-view-name="people-search-result"] a[href*="/in/"]',
       // Modern LinkedIn search results (2024+) - try different variations
       'li.reusable-search__result-container .entity-result__title-text a span[aria-hidden="true"]',
       '.search-results-container .entity-result__title-text a span[aria-hidden="true"]',
@@ -1922,6 +1929,16 @@ async function extractMutualConnectionNames() {
         console.log(firstResult.outerHTML.substring(0, 500) + '...');
       } else {
         console.log('No search results found on page');
+        // Try to find ANY list items or profile links
+        var anyLi = document.querySelector('li');
+        var anyProfileLink = document.querySelector('a[href*="/in/"]');
+        if (anyLi) {
+          console.log('Found a <li> element, here\'s the HTML:', anyLi.outerHTML.substring(0, 800) + '...');
+        }
+        if (anyProfileLink) {
+          console.log('Found a profile link, here\'s the HTML:', anyProfileLink.outerHTML.substring(0, 500) + '...');
+          console.log('Parent of profile link:', anyProfileLink.parentElement?.outerHTML.substring(0, 500) + '...');
+        }
       }
       return;
     }
