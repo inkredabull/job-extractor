@@ -411,35 +411,46 @@ app.post('/extract', async (req, res) => {
           // This allows immediate response to the extension
           args.push('--skip-post-workflow');
           args.push(tempJsonFile);
-          
+
+          console.log(`  -> Command: npx ${args.join(' ')}`);
+
           const child = spawn('npx', args, {
             cwd: projectDir,
             stdio: ['pipe', 'pipe', 'pipe']
           });
-          
+
           let stdout = '';
           let stderr = '';
-          
+
           child.stdout.on('data', (data) => {
-            stdout += data;
+            const output = data.toString();
+            stdout += output;
+            // Log stdout in real-time with prefix
+            output.split('\n').filter(line => line.trim()).forEach(line => {
+              console.log(`     [CLI] ${line}`);
+            });
           });
-          
+
           child.stderr.on('data', (data) => {
-            stderr += data;
+            const output = data.toString();
+            stderr += output;
+            // Log stderr in real-time with prefix (errors/warnings)
+            output.split('\n').filter(line => line.trim()).forEach(line => {
+              console.log(`     [CLI:err] ${line}`);
+            });
           });
-          
+
           child.on('close', (code) => {
-            console.log(`  -> Command finished with code ${code}`);
-            console.log(`  -> STDOUT: ${stdout}`);
-            console.log(`  -> STDERR: ${stderr}`);
-            
+            console.log(`  -> Command finished with exit code ${code}`);
+
             if (code === 0) {
               resolve(stdout);
             } else {
+              console.log(`  -> Command failed. Full stderr: ${stderr}`);
               reject(new Error(`Command failed with code ${code}: ${stderr}`));
             }
           });
-          
+
           // Set timeout
           setTimeout(() => {
             child.kill();
@@ -447,18 +458,19 @@ app.post('/extract', async (req, res) => {
           }, 30000);
         });
         
-        console.log(`  -> Command output: ${output}`);
-        
         // Parse the output to extract job ID
         const jobIdMatch = output.match(/([a-f0-9]{8})\s*$/m);
         const jobId = jobIdMatch ? jobIdMatch[1] : null;
-        
+
         if (!jobId) {
+          console.log(`  -> ❌ Failed to extract job ID from output`);
           return res.status(500).json({
             success: false,
             error: 'Could not extract job ID from command output'
           });
         }
+
+        console.log(`  -> ✅ Job extracted successfully with ID: ${jobId}`);
         
         // Try to read the job file to get processed job data
         let jobData = null;
@@ -466,14 +478,15 @@ app.post('/extract', async (req, res) => {
           const jobDir = path.join(projectDir, 'logs', jobId);
           const files = fs.readdirSync(jobDir);
           const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
-          
+
           if (jobFile) {
             const jobFilePath = path.join(jobDir, jobFile);
             const jobDataRaw = fs.readFileSync(jobFilePath, 'utf-8');
             jobData = JSON.parse(jobDataRaw);
+            console.log(`  -> 📄 Job data saved to: logs/${jobId}/${jobFile}`);
           }
         } catch (error) {
-          console.log('  -> Could not read processed job data:', error.message);
+          console.log(`  -> ⚠️  Could not read processed job data: ${error.message}`);
         }
         
         res.json({
@@ -482,21 +495,23 @@ app.post('/extract', async (req, res) => {
           filePath: `logs/${jobId}/`,
           jobData: jobData || data // Return original data if processed data not available
         });
-        
+
+        console.log(`  -> 🎉 Response sent to Chrome extension`);
+
         // Async background processing for Medium/High priority jobs
         // Priority: 1=High, 5=Medium, 9=Low
         const priority = parseInt(reminderPriority) || 5;
         if (priority <= 5) { // Medium (5) or High (1) priority
-          console.log(`  -> Triggering async background scoring and resume generation for priority ${priority} job`);
+          console.log(`  -> 🔄 Triggering async background scoring and resume generation for priority ${priority} job`);
           setImmediate(async () => {
             try {
               await triggerAsyncJobProcessing(jobId, priority, projectDir);
             } catch (error) {
-              console.log(`  -> Background processing failed for job ${jobId}:`, error.message);
+              console.log(`  -> ❌ Background processing failed for job ${jobId}: ${error.message}`);
             }
           });
         } else {
-          console.log(`  -> Skipping background processing for Low priority (${priority}) job`);
+          console.log(`  -> ⏭️  Skipping background processing for Low priority (${priority}) job`);
         }
         
       } finally {
@@ -742,20 +757,30 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
       
       let stdout = '';
       let stderr = '';
-      
+
       scoreChild.stdout.on('data', (data) => {
-        stdout += data;
+        const output = data.toString();
+        stdout += output;
+        // Log scoring progress in real-time
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [SCORE] ${line}`);
+        });
       });
-      
+
       scoreChild.stderr.on('data', (data) => {
-        stderr += data;
+        const output = data.toString();
+        stderr += output;
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [SCORE:err] ${line}`);
+        });
       });
-      
+
       scoreChild.on('close', (code) => {
-        console.log(`  -> Job scoring finished with code ${code}`);
+        console.log(`  -> Job scoring finished with exit code ${code}`);
         if (code === 0) {
           resolve(stdout);
         } else {
+          console.log(`  -> Scoring failed. Full stderr: ${stderr}`);
           reject(new Error(`Job scoring failed with code ${code}: ${stderr}`));
         }
       });
@@ -831,20 +856,30 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
       
       let stdout = '';
       let stderr = '';
-      
+
       resumeChild.stdout.on('data', (data) => {
-        stdout += data;
+        const output = data.toString();
+        stdout += output;
+        // Log resume generation progress in real-time
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [RESUME] ${line}`);
+        });
       });
-      
+
       resumeChild.stderr.on('data', (data) => {
-        stderr += data;
+        const output = data.toString();
+        stderr += output;
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [RESUME:err] ${line}`);
+        });
       });
-      
+
       resumeChild.on('close', (code) => {
-        console.log(`  -> Resume generation finished with code ${code}`);
+        console.log(`  -> Resume generation finished with exit code ${code}`);
         if (code === 0) {
           resolve(stdout);
         } else {
+          console.log(`  -> Resume generation failed. Full stderr: ${stderr}`);
           reject(new Error(`Resume generation failed with code ${code}: ${stderr}`));
         }
       });
