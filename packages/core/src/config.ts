@@ -1,9 +1,39 @@
 import dotenv from 'dotenv';
 import os from 'os';
 import path from 'path';
+import fs from 'fs';
 import { AgentConfig } from './types';
 
-dotenv.config();
+// Find and load .env from project root (supports running from workspace packages)
+function loadEnvFromProjectRoot() {
+  let currentDir = __dirname;
+
+  // Walk up to find project root (contains package.json with workspaces)
+  while (currentDir !== path.dirname(currentDir)) {
+    const pkgPath = path.join(currentDir, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.workspaces) {
+          // Found project root, load .env from here
+          const envPath = path.join(currentDir, '.env');
+          if (fs.existsSync(envPath)) {
+            dotenv.config({ path: envPath });
+            return;
+          }
+        }
+      } catch {
+        // Continue searching
+      }
+    }
+    currentDir = path.dirname(currentDir);
+  }
+
+  // Fallback to default behavior
+  dotenv.config();
+}
+
+loadEnvFromProjectRoot();
 
 export function getConfig(): AgentConfig {
   const openaiApiKey = process.env.OPENAI_API_KEY;
