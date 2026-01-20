@@ -2154,7 +2154,7 @@ ${project.result}`;
       console.log(`🔍 Researching company values for: ${companyName}`);
 
       // Use provided URL if available, otherwise prompt user
-      let companyUrl = providedCompanyUrl;
+      let companyUrl: string | null = providedCompanyUrl || null;
       if (!companyUrl) {
         companyUrl = await this.promptForCompanyUrl(companyName);
         if (!companyUrl) {
