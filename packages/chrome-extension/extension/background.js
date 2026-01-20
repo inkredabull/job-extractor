@@ -494,6 +494,9 @@ async function handleGenerateBlurb(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling generate blurb request');
     console.log('Job ID:', request.jobId);
+    if (request.companyWebsite) {
+      console.log('Company Website:', request.companyWebsite);
+    }
 
     if (!request.jobId) {
       sendResponse({
@@ -504,7 +507,7 @@ async function handleGenerateBlurb(request, sendResponse) {
     }
 
     // Call unified server to generate blurb
-    const blurbResponse = await callUnifiedServerGenerateBlurb(request.jobId);
+    const blurbResponse = await callUnifiedServerGenerateBlurb(request.jobId, request.companyWebsite);
 
     sendResponse({
       success: true,
@@ -523,18 +526,24 @@ async function handleGenerateBlurb(request, sendResponse) {
 }
 
 // Call unified server to generate blurb
-async function callUnifiedServerGenerateBlurb(jobId) {
+async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '') {
   try {
     console.log('Job Extractor Background: Calling unified server for blurb generation');
+
+    const requestBody = {
+      jobId: jobId
+    };
+
+    if (companyWebsite) {
+      requestBody.companyWebsite = companyWebsite;
+    }
 
     const response = await fetch('http://localhost:3000/generate-blurb', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        jobId: jobId
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {

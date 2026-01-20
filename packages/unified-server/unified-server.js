@@ -710,7 +710,7 @@ app.post('/linkedin-reminder', async (req, res) => {
 app.post('/generate-blurb', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Generate blurb request`);
   try {
-    const { jobId } = req.body;
+    const { jobId, companyWebsite } = req.body;
 
     if (!jobId) {
       return res.status(400).json({
@@ -720,6 +720,9 @@ app.post('/generate-blurb', async (req, res) => {
     }
 
     console.log(`  -> Generating third-person blurb for job: ${jobId}`);
+    if (companyWebsite) {
+      console.log(`  -> Using company website: ${companyWebsite}`);
+    }
 
     // Change to the main project directory
     const projectDir = path.resolve(__dirname, '..', '..');
@@ -736,6 +739,11 @@ app.post('/generate-blurb', async (req, res) => {
 
     const output = await new Promise((resolve, reject) => {
       const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', 'third', '--content'];
+
+      // Add company URL if provided
+      if (companyWebsite) {
+        args.push('--company-url', companyWebsite);
+      }
 
       console.log(`  -> Command: npm ${args.join(' ')}`);
 

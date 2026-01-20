@@ -1009,6 +1009,7 @@ program
   .option('-c, --company-info <text>', 'Additional company information (for about-me materials)')
   .option('-i, --instructions <text>', 'Custom instructions for the material')
   .option('-p, --person <person>', 'Writing perspective: first (I/me) or third (he/Anthony)', 'first')
+  .option('--company-url <url>', 'Company website URL for company values research (skips interactive prompt)')
   .option('--content', 'Output only the material content without formatting')
   .option('--regen', 'Force regenerate material (ignores cached content)')
   .option('--interactive', 'Interactive mode for about-me: select sections to generate, critique, or refine')
@@ -1315,7 +1316,8 @@ program
         emphasis: options.emphasis,
         companyInfo: options.companyInfo,
         customInstructions: options.instructions,
-        person: options.person as 'first' | 'third'
+        person: options.person as 'first' | 'third',
+        companyUrl: options.companyUrl
       };
 
       const result = await interviewPrepAgent.generateMaterial(

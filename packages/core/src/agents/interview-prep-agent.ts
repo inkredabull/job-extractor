@@ -282,10 +282,10 @@ Format as:
     
     // For other types, use the original monolithic approach
     let promptTemplate = this.loadPromptTemplate(type);
-    
+
     // Load company values if available
-    const companyValues = await this.loadCompanyValues(this.currentJobId);
-    
+    const companyValues = await this.loadCompanyValues(this.currentJobId, options.companyUrl);
+
     // Build the complete prompt
     const prompt = this.buildPrompt(promptTemplate, type, job, cvContent, options, companyValues);
     
@@ -319,8 +319,8 @@ Format as:
 
     // Generate missing sections
     console.log(`📝 Generating missing sections: ${missingSections.join(', ')}`);
-    const companyValues = await this.loadCompanyValues(this.currentJobId);
-    
+    const companyValues = await this.loadCompanyValues(this.currentJobId, options.companyUrl);
+
     for (const section of missingSections) {
       console.log(`📝 Generating ${section} section...`);
       
@@ -402,7 +402,7 @@ Format as:
 
       const jobData = this.loadJobData(jobId);
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
-      const companyValues = await this.loadCompanyValues(jobId);
+      const companyValues = await this.loadCompanyValues(jobId, options.companyUrl);
 
       let content: string;
       switch (section) {
@@ -2114,7 +2114,7 @@ ${project.result}`;
     }
   }
 
-  private async loadCompanyValues(jobId: string): Promise<string | null> {
+  private async loadCompanyValues(jobId: string, providedCompanyUrl?: string): Promise<string | null> {
     try {
       const jobDir = resolveFromProjectRoot('logs', jobId);
       const valuesPath = path.join(jobDir, 'company-values.txt');
@@ -2130,8 +2130,8 @@ ${project.result}`;
         // Company values file doesn't exist - research and create it
         console.log('📋 No company-values.txt found. Researching company values...');
       }
-      const companyValues = await this.researchCompanyValues(jobId);
-      
+      const companyValues = await this.researchCompanyValues(jobId, providedCompanyUrl);
+
       if (companyValues) {
         fs.writeFileSync(valuesPath, companyValues);
         console.log(`✅ Company values researched and saved to: ${valuesPath}`);
@@ -2145,7 +2145,7 @@ ${project.result}`;
     }
   }
 
-  private async researchCompanyValues(jobId: string): Promise<string | null> {
+  private async researchCompanyValues(jobId: string, providedCompanyUrl?: string): Promise<string | null> {
     try {
       // Load job data to get company name
       const jobData = this.loadJobData(jobId);
@@ -2153,11 +2153,16 @@ ${project.result}`;
 
       console.log(`🔍 Researching company values for: ${companyName}`);
 
-      // Prompt user for company URL
-      const companyUrl = await this.promptForCompanyUrl(companyName);
+      // Use provided URL if available, otherwise prompt user
+      let companyUrl = providedCompanyUrl;
       if (!companyUrl) {
-        console.log('⏭️  Skipping company values research - no URL provided');
-        return null;
+        companyUrl = await this.promptForCompanyUrl(companyName);
+        if (!companyUrl) {
+          console.log('⏭️  Skipping company values research - no URL provided');
+          return null;
+        }
+      } else {
+        console.log(`🌐 Using provided company URL: ${companyUrl}`);
       }
 
       console.log(`🌐 Fetching company website: ${companyUrl}`);

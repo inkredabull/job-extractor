@@ -178,6 +178,7 @@ export interface StatementOptions {
   companyInfo?: string;
   customInstructions?: string;
   person?: 'first' | 'third';
+  companyUrl?: string;
 }
 
 export interface StatementResult {

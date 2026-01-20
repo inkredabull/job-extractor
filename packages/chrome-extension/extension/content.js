@@ -135,6 +135,11 @@ function createGutter() {
           <button id="submit-query" class="submit-btn">Submit</button>
         </div>
 
+        <div class="form-field" style="margin-top: 10px;">
+          <label for="company-website" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Company Website (optional, for blurb):</label>
+          <input type="text" id="company-website" class="job-input" placeholder="e.g., https://company.com" title="Used to research company values for blurb generation">
+        </div>
+
         <div class="button-row" style="margin-top: 10px;">
           <button id="generate-blurb" class="blurb-btn" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
             📝 Generate Third-Person Blurb
@@ -1168,12 +1173,20 @@ async function handleGenerateBlurb() {
       return;
     }
 
+    // Get the company website URL from the form field (optional)
+    const companyWebsiteField = document.getElementById('company-website');
+    const companyWebsite = companyWebsiteField?.value?.trim() || '';
+
     console.log('Job Extractor: Generating blurb for job ID:', jobId);
+    if (companyWebsite) {
+      console.log('Job Extractor: Using company website:', companyWebsite);
+    }
 
     // Send message to background script to call unified server
     const response = await chrome.runtime.sendMessage({
       action: 'generateBlurb',
-      jobId: jobId
+      jobId: jobId,
+      companyWebsite: companyWebsite
     });
 
     if (response.success) {
