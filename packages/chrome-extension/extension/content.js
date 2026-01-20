@@ -6,6 +6,19 @@ let extractedJobDescription = '';
 // Global toggle for Job Extractor Assistant
 let jobExtractorEnabled = true;
 
+// Debounce utility function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 // Expose global toggle function to browser console immediately
 window.toggleJobExtractor = function(enabled) {
   if (typeof enabled === 'boolean') {
@@ -140,11 +153,11 @@ function createGutter() {
           <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">Perspective:</label>
           <div style="display: flex; gap: 16px;">
             <label style="display: flex; align-items: center; cursor: pointer;">
-              <input type="radio" name="blurb-person" value="first" style="margin-right: 6px;">
+              <input type="radio" name="blurb-person" value="first" style="width: auto; margin-right: 6px; opacity: 1; position: static; appearance: auto; -webkit-appearance: radio;">
               <span style="font-size: 13px;">First Person (I/my)</span>
             </label>
             <label style="display: flex; align-items: center; cursor: pointer;">
-              <input type="radio" name="blurb-person" value="third" checked style="margin-right: 6px;">
+              <input type="radio" name="blurb-person" value="third" checked style="width: auto; margin-right: 6px; opacity: 1; position: static; appearance: auto; -webkit-appearance: radio;">
               <span style="font-size: 13px;">Third Person (Anthony/his)</span>
             </label>
           </div>
@@ -286,12 +299,23 @@ function createGutter() {
   // Add generate blurb button functionality
   document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
 
+  // Add job ID field change listener to update scoring section
+  document.getElementById('job-id').addEventListener('input', debounce(async (e) => {
+    const jobId = e.target.value.trim();
+    await updateScoringSection(jobId);
+  }, 500)); // Debounce to avoid too many requests while typing
 
   // Extract job information automatically when gutter opens (with slight delay for DOM)
-  setTimeout(() => {
+  setTimeout(async () => {
     extractJobInformation();
+
+    // Also check if there's already a job ID and update scoring section
+    const jobIdField = document.getElementById('job-id');
+    if (jobIdField && jobIdField.value.trim()) {
+      await updateScoringSection(jobIdField.value.trim());
+    }
   }, 100);
-  
+
   // Analyze page content for questions
   analyzePageContent();
   
