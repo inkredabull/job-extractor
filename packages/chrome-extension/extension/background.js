@@ -36,6 +36,19 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 });
 
+// Handle keyboard commands
+chrome.commands.onCommand.addListener((command) => {
+  console.log('Command received:', command);
+
+  if (command === 'toggle-panel') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        toggleJobTrackerPanel(tabs[0].id);
+      }
+    });
+  }
+});
+
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   console.log('Context menu clicked:', info.menuItemId);
@@ -61,22 +74,19 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// Handle extension icon click
-chrome.action.onClicked.addListener((tab) => {
-  console.log('Extension icon clicked for tab:', tab.url);
-  
-  // Send message to content script to toggle the assistant panel
-  chrome.tabs.sendMessage(tab.id, {action: 'toggleGutter'}, function(response) {
+// Helper function to toggle job tracker panel
+function toggleJobTrackerPanel(tabId) {
+  chrome.tabs.sendMessage(tabId, { action: 'toggleGutter' }, function(response) {
     if (chrome.runtime.lastError) {
       console.log('Content script not found, injecting it...');
       // Content script not ready, inject it manually
       chrome.scripting.executeScript({
-        target: { tabId: tab.id },
+        target: { tabId: tabId },
         files: ['content.js']
       }, () => {
         // Wait a moment for script to initialize, then try again
         setTimeout(() => {
-          chrome.tabs.sendMessage(tab.id, {action: 'toggleGutter'}, function(response) {
+          chrome.tabs.sendMessage(tabId, { action: 'toggleGutter' }, function(response) {
             if (response?.success) {
               console.log('Panel toggled successfully:', response.isOpen ? 'opened' : 'closed');
             } else {
@@ -87,14 +97,18 @@ chrome.action.onClicked.addListener((tab) => {
       });
       return;
     }
-    
+
     if (response?.success) {
       console.log('Panel toggled successfully:', response.isOpen ? 'opened' : 'closed');
     } else {
       console.error('Failed to toggle panel');
     }
   });
-});
+}
+
+// NOTE: chrome.action.onClicked doesn't fire when a popup is defined
+// Use keyboard command (Ctrl+Shift+J / Cmd+Shift+J) to toggle panel instead
+// Or add a button in the popup
 
 // Message handling for future communication between components
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
