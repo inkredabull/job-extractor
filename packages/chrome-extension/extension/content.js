@@ -6,15 +6,6 @@ let extractedJobDescription = '';
 // Global toggle for Job Extractor Assistant
 let jobExtractorEnabled = true;
 
-// Track if we've already processed a search page to avoid duplicates
-let searchPageProcessed = false;
-
-// Track profiles that have already been prompted to avoid duplicate confirmations
-let promptedProfiles = new Set();
-
-// Track if extraction is already running to avoid duplicates
-let linkedInExtractionRunning = false;
-
 // Expose global toggle function to browser console immediately
 window.toggleJobExtractor = function(enabled) {
   if (typeof enabled === 'boolean') {
@@ -1742,34 +1733,19 @@ function checkForLinkedInExtraction() {
   }
 }
 
-// Run check when page loads - handle multiple scenarios
-if (document.readyState === 'loading') {
-  // DOM is still loading
-  document.addEventListener('DOMContentLoaded', checkForLinkedInExtraction);
-} else {
-  // DOM is already loaded
-  checkForLinkedInExtraction();
-}
+// NOTE: LinkedIn networking code is now in separate component
+// See: components/linkedin-networking/linkedin-networking-content.js
+// The following initialization is DISABLED - LinkedIn networking runs in separate content script
 
-// Also listen for window load event as fallback
-window.addEventListener('load', checkForLinkedInExtraction);
-
-// Also run check when URL changes (for SPA navigation)
-let currentUrl = window.location.href;
-function checkUrlChange() {
-  if (window.location.href !== currentUrl) {
-    currentUrl = window.location.href;
-    function delayedCheck() {
-      checkForLinkedInExtraction();
-      checkForLinkedInFeed(); // Also check for feed page
-    }
-    setTimeout(delayedCheck, 1000); // Wait for page content to load
-  }
-}
-setInterval(checkUrlChange, 1000);
-
-// Run initial check immediately in case we missed the load events
-checkForLinkedInExtraction();
+// Run check when page loads - DISABLED
+// if (document.readyState === 'loading') {
+//   document.addEventListener('DOMContentLoaded', checkForLinkedInExtraction);
+// } else {
+//   checkForLinkedInExtraction();
+// }
+// window.addEventListener('load', checkForLinkedInExtraction);
+// setInterval(checkUrlChange, 1000);
+// checkForLinkedInExtraction();
 
 // LinkedIn Profile Mutual Connections Handler
 function detectLinkedInProfile() {
@@ -2221,23 +2197,16 @@ window.addEventListener('message', function(event) {
   }
 });
 
-// Also run profile check when page loads  
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', checkForLinkedInProfile);
-} else {
-  checkForLinkedInProfile();
-}
+// NOTE: LinkedIn profile checking is now in separate component
+// See: components/linkedin-networking/linkedin-networking-content.js
+// The following initialization is DISABLED
 
-window.addEventListener('load', checkForLinkedInProfile);
-
-// Monitor URL changes for profile pages too
-let profileCurrentUrl = window.location.href;
-setInterval(() => {
-  if (window.location.href !== profileCurrentUrl) {
-    profileCurrentUrl = window.location.href;
-    setTimeout(checkForLinkedInProfile, 1000);
-  }
-}, 1000);
+// if (document.readyState === 'loading') {
+//   document.addEventListener('DOMContentLoaded', checkForLinkedInProfile);
+// } else {
+//   checkForLinkedInProfile();
+// }
+// window.addEventListener('load', checkForLinkedInProfile);
 
 
 // LinkedIn Feed Post Save Detection
@@ -2546,167 +2515,19 @@ function checkForLinkedInFeed() {
   }
 }
 
-// Run feed check on load and URL changes
-setTimeout(() => {
-  console.log('LinkedIn Feed: Running initial feed check after delay...');
-  checkForLinkedInFeed();
-}, 2000); // Give LinkedIn time to load
+// NOTE: LinkedIn feed monitoring is now in separate component
+// See: components/linkedin-networking/linkedin-networking-content.js
+// The following initialization is DISABLED
+
+// setTimeout(() => {
+//   console.log('LinkedIn Feed: Running initial feed check after delay...');
+//   checkForLinkedInFeed();
+// }, 2000);
 
 console.log('Job Extractor Assistant: Content script loaded');
 console.log('💡 Console functions available:');
 console.log('  • toggleJobExtractor(true/false) - Enable/disable automation');
 console.log('  • getJobExtractorStatus() - Check current status');
-console.log('💡 LinkedIn Feed: Post save monitoring active on linkedin.com/feed');
 console.log('');
-console.log('📋 For mutual connections extraction, copy/paste this function:');
-console.log(`
-function extractCurrentPage() {
-  try {
-    var targetProfileUrl = localStorage.getItem('linkedin_target_profile_url') || '';
-    console.log('Target profile URL: "' + targetProfileUrl + '"');
-    
-    var targetFirstName = 'Unknown';
-    if (targetProfileUrl) {
-      var urlMatch = targetProfileUrl.match(/linkedin\\.com\\/in\\/([^\\/\\?]+)/);
-      if (urlMatch) {
-        var urlSlug = urlMatch[1];
-        var firstName = urlSlug.split('-')[0].replace(/\\d+/g, '').trim();
-        if (firstName.length > 0) {
-          targetFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-        }
-      }
-    }
-    
-    console.log('Extracted first name from URL: "' + targetFirstName + '"');
-    
-    var identifier = document.querySelectorAll('div.mb1 a')[0]?.className.trim();
-    if (!identifier) {
-      console.log('Could not find identifier for mutual connections on this page');
-      return null;
-    }
-    
-    var result = 'Full,PersonName,PersonURL\\n';
-    var selector = '.t-16 a.' + identifier + '>span>span:not(.visually-hidden)';
-    var nameElements = document.querySelectorAll(selector);
-    
-    nameElements.forEach(function(element) {
-      var mutualConnectionName = element.innerText.trim();
-      if (mutualConnectionName) {
-        var csvRow = '"' + mutualConnectionName + '","' + targetFirstName + '","' + targetProfileUrl + '"';
-        result += csvRow + '\\n';
-      }
-    });
-    
-    if (nameElements.length > 0) {
-      console.log('Complete CSV output:');
-      console.log(result);
-      return result;
-    } else {
-      console.log('No mutual connection names found on current page');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error extracting mutual connections:', error);
-    return null;
-  }
-}
-`);
-
-// Debug: Verify functions are available
-console.log('🔧 Functions loaded:', {
-  toggleJobExtractor: typeof window.toggleJobExtractor,
-  getJobExtractorStatus: typeof window.getJobExtractorStatus,
-  extractCurrentPage: typeof window.extractCurrentPage
-});
-
-// Simple workaround - just expose the function using a different method
-// Since CSP blocks inline scripts, let's use a simpler approach
-console.log('🔧 Setting up extractCurrentPage() via DOM event...');
-
-// Create a global function that can be called from console
-window.addEventListener('message', function(event) {
-  if (event.data.action === 'extractCurrentPage' && event.source === window) {
-    // Call the extraction function from content script context
-    const result = window.extractCurrentPage();
-    // Post result back
-    console.log('📤 Extraction result:', result);
-  }
-});
-
-// Override console to intercept extractCurrentPage calls
-const originalLog = console.log;
-let extractCurrentPageOverride = null;
-
-// Create a simple workaround by monitoring console commands
-Object.defineProperty(window, 'extractCurrentPage', {
-  get: function() {
-    if (!extractCurrentPageOverride) {
-      extractCurrentPageOverride = function() {
-        console.log('🔄 Running extractCurrentPage from content script...');
-        
-        try {
-          // Get the target profile URL from localStorage 
-          var targetProfileUrl = localStorage.getItem('linkedin_target_profile_url') || '';
-          console.log(`Target profile URL: "${targetProfileUrl}"`);
-          
-          // Extract first name directly from the URL
-          var targetFirstName = 'Unknown';
-          if (targetProfileUrl) {
-            var urlMatch = targetProfileUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
-            if (urlMatch) {
-              var urlSlug = urlMatch[1];
-              // Convert URL slug to first name: "seldo" -> "Seldo"
-              var firstName = urlSlug
-                .split('-')[0]                    // Get first part before hyphens
-                .replace(/\d+/g, '')             // Remove any numbers
-                .trim();
-              
-              if (firstName.length > 0) {
-                targetFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-              }
-            }
-          }
-          
-          console.log(`Extracted first name from URL: "${targetFirstName}"`);
-          
-          // Extract mutual connections
-          var identifier = document.querySelectorAll('div.mb1 a')[0]?.className.trim();
-          if (!identifier) {
-            console.log('Could not find identifier for mutual connections on this page');
-            return null;
-          }
-          
-          var result = 'Full,PersonName,PersonURL\n'; // CSV headers
-          var selector = '.t-16 a.' + identifier + '>span>span:not(.visually-hidden)';
-          var nameElements = document.querySelectorAll(selector);
-          
-          nameElements.forEach((element) => {
-            var mutualConnectionName = element.innerText.trim();
-            if (mutualConnectionName) {
-              // Output format: mutual connection full name, target profile first name, target profile URL
-              var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
-              result += csvRow + '\n';
-            }
-          });
-          
-          if (nameElements.length > 0) {
-            console.log('Complete CSV output:');
-            console.log(result);
-            return result;
-          } else {
-            console.log('No mutual connection names found on current page');
-            return null;
-          }
-          
-        } catch (error) {
-          console.error('Error extracting mutual connections from current page:', error);
-          return null;
-        }
-      };
-    }
-    return extractCurrentPageOverride;
-  },
-  configurable: true
-});
-
-console.log('✅ extractCurrentPage() accessible via property override');
+console.log('💡 LinkedIn networking features: See separate component (components/linkedin-networking/)');
+console.log('   Enable in extension popup (click extension icon) and use context menu on LinkedIn pages');

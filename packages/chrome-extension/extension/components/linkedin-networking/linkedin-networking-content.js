@@ -1,0 +1,634 @@
+// LinkedIn Networking Component - Content Script
+// Handles LinkedIn connection extraction, mutual connections, and feed post saves
+
+// Track if extraction is already running to avoid duplicates
+let linkedInExtractionRunning = false;
+
+// Track profiles that have already been prompted to avoid duplicate confirmations
+let promptedProfiles = new Set();
+
+// Track if we've already processed a search page to avoid duplicates
+let searchPageProcessed = false;
+
+// Settings
+let linkedInNetworkingEnabled = false; // Disabled by default, requires opt-in
+
+// Load settings from storage
+chrome.storage.sync.get(['linkedInNetworkingEnabled'], (result) => {
+  linkedInNetworkingEnabled = result.linkedInNetworkingEnabled || false;
+  console.log(`LinkedIn Networking: ${linkedInNetworkingEnabled ? 'ENABLED' : 'DISABLED'}`);
+});
+
+// Listen for settings changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.linkedInNetworkingEnabled) {
+    linkedInNetworkingEnabled = changes.linkedInNetworkingEnabled.newValue;
+    console.log(`LinkedIn Networking: ${linkedInNetworkingEnabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+});
+
+// ===== LinkedIn Company People Page Extraction =====
+
+function detectLinkedInCompanyPeople() {
+  const url = window.location.href;
+  return url.includes('linkedin.com/company/') && url.includes('/people/');
+}
+
+function runLinkedInConnectionExtraction() {
+  if (!linkedInNetworkingEnabled) {
+    console.log('LinkedIn Networking: Feature disabled in settings');
+    return;
+  }
+
+  console.log("LinkedIn Connection Extractor - Starting profile clicks...");
+
+  // Try multiple selectors to find LinkedIn profile cards
+  var clickableElements = [];
+
+  // Multiple selector patterns to try
+  var selectorPatterns = [
+    // Standard company people page
+    ".org-people-profile-card a[href*='/in/']",
+    ".org-people-profile-card__profile-info a[href*='/in/']",
+    // Alternative patterns
+    "[data-control-name='people_profile_card'] a[href*='/in/']",
+    ".people-card a[href*='/in/']",
+    ".entity-result a[href*='/in/']",
+    // More generic LinkedIn profile links
+    "a[href*='linkedin.com/in/']",
+    "a[href*='/in/'][href*='linkedin']"
+  ];
+
+  // Track unique URLs to avoid duplicates
+  var seenUrls = new Set();
+
+  // Try each selector pattern
+  for (let pattern of selectorPatterns) {
+    var foundElements = document.querySelectorAll(pattern);
+    console.log(`Trying selector "${pattern}": found ${foundElements.length} elements`);
+
+    if (foundElements.length > 0) {
+      for (let i = 0; i < foundElements.length; i++) {
+        var profileLink = foundElements[i];
+        var profileUrl = profileLink.href;
+
+        // Skip if we've already seen this URL
+        if (seenUrls.has(profileUrl)) {
+          continue;
+        }
+        seenUrls.add(profileUrl);
+
+        var card = profileLink.closest('.org-people-profile-card, .entity-result, .people-card, [data-control-name="people_profile_card"]');
+
+        var nameElement = card ? card.querySelector('.t-black, .entity-result__title-text, .t-16, .t-bold') : null;
+        var headlineElement = card ? card.querySelector('.t-14, .entity-result__primary-subtitle, .t-12') : null;
+
+        var name = nameElement ? nameElement.innerText.trim() : `Profile ${clickableElements.length + 1}`;
+        var headline = headlineElement ? headlineElement.innerText.trim() : "";
+
+        console.log(`Found unique connection: ${name} - ${headline}`);
+        clickableElements.push({
+            element: profileLink,
+            name: name,
+            headline: headline
+        });
+      }
+      break; // Stop trying other patterns if we found some elements
+    }
+  }
+
+  console.log(`Found ${clickableElements.length} connection profiles.`);
+
+  if (clickableElements.length > 0) {
+    console.log(`LinkedIn networking: Found ${clickableElements.length} profiles. Use context menu to extract.`);
+    linkedInExtractionRunning = false;
+  } else {
+    console.log("No clickable connection profiles found with any selector pattern.");
+    linkedInExtractionRunning = false;
+  }
+}
+
+// Auto-detect LinkedIn company people pages and run extraction
+function checkForLinkedInExtraction() {
+  if (detectLinkedInCompanyPeople()) {
+    if (!linkedInExtractionRunning) {
+      linkedInExtractionRunning = true;
+      // Clear previous session's prompted profiles when starting fresh extraction
+      promptedProfiles.clear();
+      console.log('LinkedIn company people page detected - waiting 5 seconds before extraction...');
+      setTimeout(() => {
+        runLinkedInConnectionExtraction();
+      }, 5000);
+    }
+  }
+}
+
+// ===== LinkedIn Profile Mutual Connections Handler =====
+
+function detectLinkedInProfile() {
+  const url = window.location.href;
+  return url.includes('linkedin.com/in/');
+}
+
+function getProfilePersonName() {
+  try {
+    // Try multiple selectors for the profile name
+    const selectors = [
+      'h1.text-heading-xlarge',
+      'h1.inline.t-24.v-align-middle.break-words',
+      '.pv-text-details__left-panel h1',
+      'div.ph5 h1',
+      '[data-anonymize="person-name"]'
+    ];
+
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element && element.innerText && element.innerText.trim().length > 0) {
+        return element.innerText.trim();
+      }
+    }
+
+    // Fallback: try to extract from document title
+    const title = document.title;
+    if (title && !title.includes('LinkedIn')) {
+      // Title format is usually "Name | LinkedIn" or "Name - LinkedIn"
+      const nameMatch = title.match(/^(.+?)\s*[\|\-]\s*LinkedIn/);
+      if (nameMatch) {
+        return nameMatch[1].trim();
+      }
+    }
+
+    return 'Unknown Profile';
+  } catch (error) {
+    console.log('Error getting profile person name:', error);
+    return 'Unknown Profile';
+  }
+}
+
+function findAndClickMutualConnections() {
+  if (!linkedInNetworkingEnabled) {
+    console.log('LinkedIn Networking: Mutual connections feature disabled in settings');
+    return;
+  }
+
+  console.log('Looking for mutual connections link...');
+
+  // Don't run on search results pages
+  if (window.location.href.includes('/search/results/')) {
+    console.log('Skipping mutual connections search - already on search results page');
+    return;
+  }
+
+  // Get the current profile person's name from the page
+  var profileName = getProfilePersonName();
+  console.log(`Profile person name: "${profileName}"`);
+
+  // Look specifically for the main mutual connections link, not individual connection links
+  var mutualConnectionLink = null;
+
+  // Find elements that contain mutual connections text - be more specific
+  var textElements = document.querySelectorAll('span.t-normal, span.hoverable-link-text');
+  for (let textElement of textElements) {
+    var text = textElement.innerText || textElement.textContent || '';
+    // Look for text that says "X other mutual connections" or "and X other mutual connections"
+    if (text.includes('mutual connection') && text.includes('other')) {
+      // Found text like "Dawn Ho, Robert Monarch, and 5 other mutual connections"
+      var linkElement = textElement.closest('a');
+      if (linkElement) {
+        var linkText = linkElement.innerText;
+        if (linkText.includes('other mutual connection')) {
+          mutualConnectionLink = linkElement;
+          console.log(`Found mutual connections link with full text: "${linkText.trim()}"`);
+          break;
+        }
+      }
+    }
+  }
+
+  // Alternative approach: find all links and look for mutual connections text
+  if (!mutualConnectionLink) {
+    var allLinks = document.querySelectorAll('a');
+    for (let link of allLinks) {
+      var linkText = link.innerText || link.textContent || '';
+      // Make sure it contains the full mutual connections text and not just a name
+      if (linkText.includes('mutual connection') && linkText.includes('other') && !link.href.includes('/in/')) {
+        mutualConnectionLink = link;
+        console.log(`Selected mutual connections link: "${linkText.trim()}"`);
+        break;
+      }
+    }
+  }
+
+  if (mutualConnectionLink) {
+    console.log('Found mutual connections link, clicking...');
+    console.log(`Link URL: ${mutualConnectionLink.href}`);
+
+    // Store the current profile's information for extraction
+    var currentUrl = window.location.href;
+    var nameToStore = profileName;
+
+    // Extract first name from URL as fallback
+    var urlMatch = currentUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+    if (urlMatch) {
+      var urlSlug = urlMatch[1];
+      var firstName = urlSlug
+        .split('-')[0]
+        .replace(/\d+/g, '')
+        .trim();
+
+      if (firstName.length > 0) {
+        var extractedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+        if (profileName === 'Unknown Profile') {
+          nameToStore = extractedFirstName;
+        }
+      }
+    }
+
+    // Store in localStorage for mutual connections extraction
+    localStorage.setItem('linkedin_target_profile_url', currentUrl);
+    localStorage.setItem('linkedin_target_profile_name', nameToStore);
+    localStorage.setItem('linkedin_extraction_timestamp', Date.now().toString());
+
+    console.log(`Stored profile info - name: "${nameToStore}", URL: "${currentUrl}"`);
+
+    mutualConnectionLink.click();
+  } else {
+    console.log('No mutual connections link found on this profile');
+  }
+}
+
+async function extractMutualConnectionNames() {
+  if (!linkedInNetworkingEnabled) {
+    console.log('LinkedIn Networking: Mutual connections extraction disabled in settings');
+    return;
+  }
+
+  console.log('Extracting mutual connection names...');
+
+  try {
+    // Get the target profile URL from localStorage
+    var targetProfileUrl = localStorage.getItem('linkedin_target_profile_url') || '';
+    console.log(`Target profile URL: "${targetProfileUrl}"`);
+
+    // Extract first name directly from the URL
+    var targetFirstName = 'Unknown';
+    if (targetProfileUrl) {
+      var urlMatch = targetProfileUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+      if (urlMatch) {
+        var urlSlug = urlMatch[1];
+        // Convert URL slug to first name: "samuel-bigio-42918b128" -> "Samuel"
+        var firstName = urlSlug
+          .split('-')[0]
+          .replace(/\d+/g, '')
+          .trim();
+
+        if (firstName.length > 0) {
+          targetFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+        }
+      }
+    }
+
+    console.log(`Extracted first name from URL: "${targetFirstName}"`);
+
+    // Try multiple selector strategies for mutual connections
+    var nameElements = [];
+    var result = 'Full,PersonName,PersonURL\n'; // CSV headers
+
+    // Wait for LinkedIn's dynamic content to load
+    console.log('Waiting 1 second for LinkedIn content to load...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Strategy 1: Try to find mutual connection links in search results
+    var selectors = [
+      // 2025+ LinkedIn with obfuscated classes - use stable data attributes
+      'a[data-view-name="search-result-lockup-title"]',
+      '[data-view-name="people-search-result"] a[href*="/in/"]',
+      // Modern LinkedIn search results (2024+)
+      'li.reusable-search__result-container .entity-result__title-text a span[aria-hidden="true"]',
+      '.search-results-container .entity-result__title-text a span[aria-hidden="true"]',
+      '[data-chameleon-result-urn] .entity-result__title-text a span[aria-hidden="true"]',
+      '.entity-result__item .entity-result__title-text a span[aria-hidden="true"]',
+      // Try without the nested span
+      '.entity-result__title-text a[href*="/in/"]',
+      // Older patterns
+      '.t-16 a span>span:not(.visually-hidden)',
+      'div.mb1 a span>span:not(.visually-hidden)'
+    ];
+
+    for (var selector of selectors) {
+      var elements = Array.from(document.querySelectorAll(selector));
+      console.log(`Trying selector "${selector}": found ${elements.length} elements`);
+
+      if (elements.length > 0) {
+        // For link elements, get the text content
+        if (selector.includes('a[href')) {
+          nameElements = elements.map(el => ({
+            innerText: el.textContent || el.innerText || ''
+          }));
+        } else {
+          nameElements = elements;
+        }
+        console.log(`✓ Using selector: ${selector} (${nameElements.length} matches)`);
+        break;
+      }
+    }
+
+    if (nameElements.length === 0) {
+      console.log('Could not find mutual connections with any known selector');
+      return;
+    }
+
+    nameElements.forEach((element) => {
+      var mutualConnectionName = element.innerText.trim();
+      if (mutualConnectionName && mutualConnectionName.length > 0) {
+        // Output format: mutual connection full name, target profile first name, target profile URL
+        var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
+        result += csvRow + '\n';
+      }
+    });
+
+    if (nameElements.length > 0) {
+      console.log('Complete CSV output:');
+      console.log(result);
+      console.log(`Total mutual connections found: ${nameElements.length}`);
+    }
+
+  } catch (error) {
+    console.error('Error extracting mutual connection names:', error);
+  }
+}
+
+// Auto-detect LinkedIn profile pages and find mutual connections
+function checkForLinkedInProfile() {
+  if (!linkedInNetworkingEnabled) {
+    return; // Skip if disabled
+  }
+
+  // Only run on individual profile pages, NOT on company people pages or search results pages
+  var url = window.location.href;
+  var isProfilePage = url.includes('linkedin.com/in/');
+  var isCompanyPage = detectLinkedInCompanyPeople();
+  var isSearchPage = url.includes('/search/results/');
+
+  console.log(`checkForLinkedInProfile: isProfilePage=${isProfilePage}, isCompanyPage=${isCompanyPage}, isSearchPage=${isSearchPage}`);
+
+  if (isProfilePage && !isCompanyPage && !isSearchPage) {
+    console.log('LinkedIn profile page detected - waiting 5 seconds before looking for mutual connections...');
+    searchPageProcessed = false; // Reset for new profile
+    setTimeout(() => {
+      findAndClickMutualConnections();
+    }, 5000);
+  } else if (isSearchPage && url.includes('facetConnectionOf') && !searchPageProcessed) {
+    // This is a mutual connections search page - just extract the data ONCE
+    console.log('LinkedIn mutual connections search page detected - waiting 4 seconds before extracting...');
+    searchPageProcessed = true;
+    setTimeout(() => {
+      extractMutualConnectionNames();
+    }, 4000);
+  }
+}
+
+// ===== LinkedIn Feed Post Save Detection =====
+
+function detectLinkedInFeed() {
+  const url = window.location.href;
+  const isLinkedInFeed = url.includes('linkedin.com/feed');
+  console.log('LinkedIn Feed: URL check:', { url, isLinkedInFeed });
+  return isLinkedInFeed;
+}
+
+function initLinkedInFeedMonitoring() {
+  if (!linkedInNetworkingEnabled) {
+    console.log('LinkedIn Feed: Monitoring disabled in settings');
+    return;
+  }
+
+  if (!detectLinkedInFeed()) {
+    console.log('LinkedIn Feed: Not on feed page, skipping monitoring');
+    return;
+  }
+
+  console.log('LinkedIn Feed: ✅ Monitoring for post saves activated!');
+
+  // Monitor network requests for LinkedIn save API calls
+  setupLinkedInNetworkMonitoring();
+}
+
+function setupLinkedInNetworkMonitoring() {
+  console.log('LinkedIn Feed: Setting up postMessage listener for injected script...');
+
+  // Listen for messages from the injected script
+  window.addEventListener('message', function(event) {
+    // Only accept messages from the same origin
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+
+    // Check if this is a LinkedIn post save message
+    if (event.data && event.data.type === 'LINKEDIN_POST_SAVED') {
+      console.log('LinkedIn Feed: 🎯 Received post save message from injected script!', event.data);
+
+      const { activityUrn, url, timestamp } = event.data;
+      if (activityUrn) {
+        console.log('LinkedIn Feed: Processing saved post with activity URN:', activityUrn);
+
+        // Small delay to let the UI update, then find and process the post
+        setTimeout(() => {
+          findAndProcessSavedPost(activityUrn);
+        }, 1000);
+      }
+    }
+  });
+
+  console.log('LinkedIn Feed: ✅ PostMessage listener set up successfully');
+}
+
+function findAndProcessSavedPost(activityUrn) {
+  try {
+    console.log('LinkedIn Feed: Looking for post with activity URN:', activityUrn);
+
+    // Find the post element by looking for elements with the activity URN
+    const postElement = findPostByActivityUrn(activityUrn);
+
+    if (postElement) {
+      console.log('LinkedIn Feed: Found post element for saved post!');
+      extractAndCreateReminderFromPost(postElement);
+    } else {
+      console.log('LinkedIn Feed: Could not find post element for activity URN:', activityUrn);
+    }
+  } catch (error) {
+    console.error('LinkedIn Feed: Error processing saved post:', error);
+  }
+}
+
+function findPostByActivityUrn(activityUrn) {
+  // Try to find post by data-urn attribute
+  const postElement = document.querySelector(`[data-urn*="${activityUrn}"]`);
+  if (postElement) {
+    console.log('LinkedIn Feed: Found post by data-urn attribute');
+    return postElement;
+  }
+
+  return null;
+}
+
+function extractAndCreateReminderFromPost(postElement) {
+  try {
+    console.log('LinkedIn Feed: Extracting post information...');
+
+    const postInfo = extractLinkedInPostInfo(postElement);
+
+    if (postInfo && postInfo.author) {
+      console.log('LinkedIn Feed: Creating reminder for saved post...', postInfo);
+
+      chrome.runtime.sendMessage({
+        action: 'createLinkedInPostReminder',
+        postInfo: postInfo
+      }, response => {
+        if (response && response.success) {
+          console.log('LinkedIn Feed: ✅ Reminder created successfully!');
+          showLinkedInFeedNotification('📌 Reminder created for saved post');
+        } else {
+          console.log('LinkedIn Feed: ❌ Failed to create reminder:', response?.error);
+        }
+      });
+    } else {
+      console.log('LinkedIn Feed: ⚠️ Could not extract enough post information');
+    }
+  } catch (error) {
+    console.error('LinkedIn Feed: Error creating reminder:', error);
+  }
+}
+
+function extractLinkedInPostInfo(postElement) {
+  try {
+    const postInfo = {
+      author: '',
+      title: '',
+      url: '',
+      content: ''
+    };
+
+    // Extract author name
+    const authorElement = postElement.querySelector('.update-components-actor__name, .feed-shared-actor__name');
+    if (authorElement) {
+      postInfo.author = authorElement.innerText.trim();
+    }
+
+    // Extract post content
+    const contentElement = postElement.querySelector('.feed-shared-text, .update-components-text');
+    if (contentElement) {
+      const contentText = contentElement.innerText.trim();
+      postInfo.content = contentText.substring(0, 200);
+      const contentPreview = contentText.substring(0, 50);
+      postInfo.title = `LinkedIn post by ${postInfo.author}: ${contentPreview}`;
+    } else {
+      postInfo.title = `LinkedIn post by ${postInfo.author}`;
+    }
+
+    console.log('LinkedIn Feed: Extracted post info:', postInfo);
+    return postInfo;
+  } catch (error) {
+    console.error('LinkedIn Feed: Error extracting post info:', error);
+    return null;
+  }
+}
+
+function showLinkedInFeedNotification(message) {
+  // Create a simple notification element
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #0a66c2;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    notification.style.transition = 'opacity 0.3s';
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
+}
+
+// Initialize LinkedIn feed monitoring when on feed page
+function checkForLinkedInFeed() {
+  console.log('LinkedIn Feed: checkForLinkedInFeed() called');
+  if (detectLinkedInFeed()) {
+    console.log('LinkedIn Feed: Detected LinkedIn feed page, initializing monitoring...');
+    initLinkedInFeedMonitoring();
+  } else {
+    console.log('LinkedIn Feed: Not on LinkedIn feed page, skipping...');
+  }
+}
+
+// ===== Message Handlers =====
+
+// Listen for messages from background script (context menu actions)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'extractLinkedInConnections') {
+    runLinkedInConnectionExtraction();
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.action === 'extractMutualConnections') {
+    extractMutualConnectionNames();
+    sendResponse({ success: true });
+    return true;
+  }
+});
+
+// ===== Initialization =====
+
+// Run check when page loads - handle multiple scenarios
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    checkForLinkedInExtraction();
+    checkForLinkedInProfile();
+    checkForLinkedInFeed();
+  });
+} else {
+  checkForLinkedInExtraction();
+  checkForLinkedInProfile();
+  checkForLinkedInFeed();
+}
+
+// Also listen for window load event as fallback
+window.addEventListener('load', () => {
+  checkForLinkedInExtraction();
+  checkForLinkedInProfile();
+  checkForLinkedInFeed();
+});
+
+// Monitor URL changes for SPA navigation
+let currentUrl = window.location.href;
+function checkUrlChange() {
+  if (window.location.href !== currentUrl) {
+    currentUrl = window.location.href;
+    setTimeout(() => {
+      checkForLinkedInExtraction();
+      checkForLinkedInProfile();
+      checkForLinkedInFeed();
+    }, 1000);
+  }
+}
+setInterval(checkUrlChange, 1000);
+
+console.log('LinkedIn Networking: Content script loaded');
+console.log('💡 LinkedIn Feed: Post save monitoring available when enabled');

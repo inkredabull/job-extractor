@@ -3,13 +3,60 @@
 // Installation handler
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Job Extractor Assistant installed:', details.reason);
-  
+
   if (details.reason === 'install') {
     // Set default settings
     chrome.storage.sync.set({
       firstInstall: Date.now(),
       gutterWidth: 33.333,
-      autoDetectJobSites: true
+      autoDetectJobSites: true,
+      linkedInNetworkingEnabled: false // Disabled by default
+    });
+  }
+
+  // Create context menu items for LinkedIn networking
+  chrome.contextMenus.create({
+    id: 'extract-linkedin-connections',
+    title: 'Extract LinkedIn Connections',
+    contexts: ['page'],
+    documentUrlPatterns: [
+      'https://www.linkedin.com/company/*/people/*',
+      'https://www.linkedin.com/company/*'
+    ]
+  });
+
+  chrome.contextMenus.create({
+    id: 'extract-mutual-connections',
+    title: 'Extract Mutual Connections',
+    contexts: ['page'],
+    documentUrlPatterns: [
+      'https://www.linkedin.com/in/*',
+      'https://www.linkedin.com/search/results/people/*'
+    ]
+  });
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  console.log('Context menu clicked:', info.menuItemId);
+
+  if (info.menuItemId === 'extract-linkedin-connections') {
+    chrome.tabs.sendMessage(tab.id, { action: 'extractLinkedInConnections' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error sending message:', chrome.runtime.lastError);
+      } else {
+        console.log('LinkedIn connections extraction started');
+      }
+    });
+  }
+
+  if (info.menuItemId === 'extract-mutual-connections') {
+    chrome.tabs.sendMessage(tab.id, { action: 'extractMutualConnections' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error sending message:', chrome.runtime.lastError);
+      } else {
+        console.log('Mutual connections extraction started');
+      }
     });
   }
 });
