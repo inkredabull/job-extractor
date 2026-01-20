@@ -1228,67 +1228,171 @@ function analyzePageContent() {
 // Find questions on the current page
 function findQuestionsOnPage() {
   const questions = [];
-  const questionPatterns = [
-    /\b[A-Z][^.!?]*\?/g, // Basic question pattern
-    /What\s+[^?]+\?/gi,
-    /How\s+[^?]+\?/gi,
-    /Why\s+[^?]+\?/gi,
-    /When\s+[^?]+\?/gi,
-    /Where\s+[^?]+\?/gi,
-    /Who\s+[^?]+\?/gi,
-    /Which\s+[^?]+\?/gi,
-    /Can\s+you\s+[^?]+\?/gi,
-    /Do\s+you\s+[^?]+\?/gi,
-    /Are\s+you\s+[^?]+\?/gi,
-    /Have\s+you\s+[^?]+\?/gi,
-    /Would\s+you\s+[^?]+\?/gi,
-    /Could\s+you\s+[^?]+\?/gi
-  ];
-  
-  // Get all text content from the page
-  const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, td, span, div:not(script):not(style)');
   const seenQuestions = new Set();
-  
-  textElements.forEach(element => {
-    // Skip our own extension content
-    if (element.closest('#job-extractor-gutter')) return;
-    
-    const text = element.textContent || '';
-    
-    questionPatterns.forEach(pattern => {
-      const matches = text.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          const cleanQuestion = match.trim();
-          // Filter out very short questions, duplicates, and common non-questions
-          if (cleanQuestion.length > 10 && 
-              cleanQuestion.length < 200 && 
-              !seenQuestions.has(cleanQuestion.toLowerCase()) &&
-              !isCommonNonQuestion(cleanQuestion)) {
-            questions.push(cleanQuestion);
-            seenQuestions.add(cleanQuestion.toLowerCase());
+
+  // Strategy 1: Look for semantic form elements (labels, legends, field descriptions)
+  // This is the most reliable way to find actual application questions
+  const formQuestionSelectors = [
+    'label',           // Standard form labels
+    'legend',          // Fieldset legends
+    '[role="label"]',  // ARIA labels
+    '.question',       // Common class names
+    '.field-label',
+    '.form-label',
+    '.input-label',
+    '[data-qa*="question"]',
+    '[data-test*="question"]',
+    '[class*="question"]',
+    '[class*="field-title"]',
+    '[class*="label"]'
+  ];
+
+  formQuestionSelectors.forEach(selector => {
+    try {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(element => {
+        // Skip our own extension content
+        if (element.closest('#job-extractor-gutter')) return;
+
+        // Get direct text content (not nested elements)
+        let text = '';
+        Array.from(element.childNodes).forEach(node => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            text += node.textContent;
           }
         });
-      }
-    });
+
+        // If no direct text, try the full text content but be more careful
+        if (!text.trim()) {
+          text = element.textContent || '';
+        }
+
+        text = text.trim();
+
+        // Look for question-like content
+        if (text && isLikelyQuestion(text) && !seenQuestions.has(text.toLowerCase())) {
+          // Clean up common prefixes like "YesNo", "TrueFalse", etc.
+          const cleanedText = cleanupQuestionText(text);
+          if (cleanedText && cleanedText.length >= 10 && cleanedText.length < 300) {
+            questions.push(cleanedText);
+            seenQuestions.add(cleanedText.toLowerCase());
+          }
+        }
+      });
+    } catch (e) {
+      console.log(`Error processing selector ${selector}:`, e);
+    }
   });
-  
-  // Limit to first 10 questions to avoid overwhelming the UI
-  return questions.slice(0, 10);
+
+  // Strategy 2: Look for text patterns that indicate questions
+  // Only do this if we haven't found many questions yet (form-based detection is preferred)
+  if (questions.length < 5) {
+    const questionPatterns = [
+      /^[A-Z][^.!]*\?$/,  // Complete question starting with capital, ending with ?
+      /^(?:What|How|Why|When|Where|Who|Which|Can\s+you|Do\s+you|Are\s+you|Have\s+you|Would\s+you|Could\s+you|Will\s+you|Should\s+you)\s+.+\?$/gi
+    ];
+
+    // Target specific containers more likely to have questions
+    const questionContainers = document.querySelectorAll('form, .application-form, .questions-section, main, article, .content');
+
+    questionContainers.forEach(container => {
+      if (container.closest('#job-extractor-gutter')) return;
+
+      // Look at immediate text nodes and small text elements
+      const smallTextElements = container.querySelectorAll('p, li, h4, h5, h6, div[class*="question"], div[class*="field"]');
+
+      smallTextElements.forEach(element => {
+        if (element.closest('#job-extractor-gutter')) return;
+
+        const text = element.textContent?.trim() || '';
+
+        // Only process reasonably sized text blocks
+        if (text.length < 10 || text.length > 300) return;
+
+        questionPatterns.forEach(pattern => {
+          const matches = text.match(pattern);
+          if (matches) {
+            matches.forEach(match => {
+              const cleanQuestion = cleanupQuestionText(match.trim());
+              if (cleanQuestion &&
+                  cleanQuestion.length >= 10 &&
+                  cleanQuestion.length < 300 &&
+                  !seenQuestions.has(cleanQuestion.toLowerCase()) &&
+                  !isCommonNonQuestion(cleanQuestion)) {
+                questions.push(cleanQuestion);
+                seenQuestions.add(cleanQuestion.toLowerCase());
+              }
+            });
+          }
+        });
+      });
+    });
+  }
+
+  // Limit to first 15 questions
+  return questions.slice(0, 15);
+}
+
+// Check if text is likely a question
+function isLikelyQuestion(text) {
+  if (!text || text.length < 5) return false;
+
+  // Ends with question mark
+  if (text.endsWith('?')) return true;
+
+  // Contains question words at the start
+  const questionWords = /^(what|how|why|when|where|who|which|can\s+you|do\s+you|are\s+you|have\s+you|would\s+you|could\s+you|will\s+you|should\s+you|describe|explain|tell\s+us|tell\s+me)/i;
+  if (questionWords.test(text)) return true;
+
+  // Common application question patterns (even without ?)
+  const applicationPatterns = [
+    /status\s*$/i,               // "H-1B status", "visa status"
+    /authorized\s+to\s+work/i,
+    /eligible\s+to\s+work/i,
+    /require\s+sponsorship/i,
+    /previously\s+worked/i,
+    /years?\s+of\s+experience/i,
+    /available\s+to\s+(start|work)/i,
+    /willing\s+to/i,
+    /consent\s+to/i,
+    /complete\s+this\s+form/i
+  ];
+
+  return applicationPatterns.some(pattern => pattern.test(text));
+}
+
+// Clean up question text by removing common prefixes and formatting issues
+function cleanupQuestionText(text) {
+  if (!text) return '';
+
+  // Remove common form control prefixes that get concatenated
+  text = text
+    .replace(/^(YesNo|TrueFalse|Yes\/No|True\/False)\s*/i, '')
+    .replace(/^(Radio|Checkbox|Select|Dropdown)\s*/i, '')
+    .replace(/^\*\s*/, '') // Remove required asterisks
+    .replace(/\s+/g, ' ')  // Normalize whitespace
+    .trim();
+
+  return text;
 }
 
 // Filter out common patterns that aren't real questions
 function isCommonNonQuestion(text) {
   const nonQuestionPatterns = [
     /^(what|how|why|when|where|who)\s*(is|are|was|were)?\s*$/i, // Too short
-    /\b(username|password|email|phone|name|address)\b/i, // Form fields
-    /\b(search|find|looking for)\b/i, // Search queries
     /^\s*\?\s*$/,  // Just question marks
     /\d+\s*\?\s*\d+/,  // Math expressions
     /\$\d+/,  // Price questions
-    /\b(faq|q&a)\b/i  // FAQ headers
+    /\b(faq|q&a)\b/i,  // FAQ headers
+    /^(search|find|filter|sort|view|show|hide|toggle|click|select|choose)\b/i, // UI actions
+    /^(home|about|contact|privacy|terms|help|support|login|logout|sign\s+in|sign\s+out)\b/i, // Navigation
+    /^(next|previous|back|continue|submit|cancel|save|edit|delete)\b/i, // Form buttons
+    /^(yes|no|true|false|maybe|ok|okay)\s*$/i, // Simple answers
+    /\b(cookie|gdpr|consent\s+to\s+cookies)\b/i, // Cookie banners
+    /^(required|optional|recommended)\s*$/i, // Field requirements
+    /^\d+\s*(characters?|words?|minimum|maximum|min|max)\b/i // Character limits
   ];
-  
+
   return nonQuestionPatterns.some(pattern => pattern.test(text));
 }
 
