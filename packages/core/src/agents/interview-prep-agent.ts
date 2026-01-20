@@ -553,6 +553,16 @@ Format as:
       .replace(/{{companyValues}}/g, companyValuesSection || '')
       .replace(/{{person}}/g, options.person || 'first');
 
+    // Remove the section for the opposite person perspective to avoid confusion
+    const person = options.person || 'first';
+    if (person === 'third') {
+      // Remove FIRST PERSON section when using third person
+      prompt = prompt.replace(/\*\*FIRST PERSON\*\*[^]*?(?=\*\*THIRD PERSON\*\*)/s, '');
+    } else {
+      // Remove THIRD PERSON section when using first person
+      prompt = prompt.replace(/\*\*THIRD PERSON\*\*[^]*?(?=##|$)/s, '');
+    }
+
     prompt += `\n\nJob Posting:\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\n\nWork History:\n${cvContent}`;
 
     return prompt;
