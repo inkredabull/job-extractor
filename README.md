@@ -7,21 +7,13 @@
 
 ## 📦 Components
 
-This monorepo is organized into the following components:
+This monorepo solves distinct job search problems through specialized components:
 
-- **[Core CLI Tool](./packages/core/)** - Main TypeScript CLI with AI-powered agents
-- **[Chrome Extension](./packages/chrome-extension/)** - Browser extension for job applications
-- **[MCP Server](./packages/mcp-server/)** - Model Context Protocol server for CV access
-- **[Unified Server](./packages/unified-server/)** - Combined server functionality
-- **[AMA App](./packages/ama-app/)** - React/Vite application
-
-## 📚 Documentation
-
-- **GitHub Pages**: [View Documentation](https://inkredabull.github.io/job-extractor/)
-- **Core Component**: [packages/core/](./packages/core/) | [Docs](https://inkredabull.github.io/job-extractor/job-extractor-core/)
-- **Chrome Extension**: [packages/chrome-extension/](./packages/chrome-extension/) | [Docs](https://inkredabull.github.io/job-extractor/chrome-extension/)
-- **MCP Server**: [packages/mcp-server/](./packages/mcp-server/) | [Docs](https://inkredabull.github.io/job-extractor/mcp-server/)
-- **Unified Server**: [packages/unified-server/](./packages/unified-server/) | [Docs](https://inkredabull.github.io/job-extractor/unified-server/)
+- **[Core CLI Tool](./packages/core/)** - Solves the problem of manual job analysis by automating extraction, scoring, resume tailoring, and interview prep using AI-powered agents
+- **[Chrome Extension](./packages/chrome-extension/)** - Solves the context-switching problem by enabling one-click job tracking and CV-aware interview assistance directly in your browser
+- **[MCP Server](./packages/mcp-server/)** - Solves the privacy problem by providing secure, local-only CV data access to AI tools without exposing personal information
+- **[Unified Server](./packages/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking with CLI automation in a single endpoint
+- **[AMA App](./packages/ama-app/)** - Solves the interview preparation problem by providing an interactive interface for practicing answers with AI feedback
 
 ## 🚀 Quick Start
 
