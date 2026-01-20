@@ -850,6 +850,79 @@ app.post('/generate-blurb', async (req, res) => {
   }
 });
 
+// Generate scoring report
+app.post('/generate-score', async (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Generate score request`);
+
+  try {
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    console.log(`  -> Generating score for job: ${jobId}`);
+
+    // Change to the main project directory (two levels up from packages/unified-server)
+    const projectDir = path.resolve(__dirname, '..', '..');
+
+    // Run the CLI score command
+    const output = await new Promise((resolve, reject) => {
+      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'score', jobId];
+
+      console.log(`  -> Executing: npm ${args.join(' ')}`);
+
+      const scoreProcess = spawn('npm', args, {
+        cwd: projectDir,
+        shell: true
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      scoreProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+        console.log(`  -> ${data.toString().trim()}`);
+      });
+
+      scoreProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.error(`  -> ERROR: ${data.toString().trim()}`);
+      });
+
+      scoreProcess.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`Score generation failed with code ${code}: ${stderr}`));
+        } else {
+          resolve({ stdout, stderr });
+        }
+      });
+
+      scoreProcess.on('error', (error) => {
+        reject(error);
+      });
+    });
+
+    console.log(`  -> ✅ Score generated successfully`);
+
+    res.json({
+      success: true,
+      jobId: jobId
+    });
+
+  } catch (error) {
+    console.error('  -> Score generation failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Get scoring report HTML
 app.get('/report/:jobId', (req, res) => {
   const timestamp = new Date().toISOString();
@@ -918,8 +991,9 @@ app.listen(PORT, () => {
   console.log(`  • GET  /health           - Health check`);
   console.log(`  • POST /cv-question      - CV question answering`);
   console.log(`  • POST /extract          - Job extraction (URL or JSON)`);
+  console.log(`  • POST /generate-score   - Generate job scoring report`);
   console.log(`  • GET  /report/:jobId    - View scoring report HTML`);
-  console.log(`  • POST /generate-blurb   - Generate third-person blurb`);
+  console.log(`  • POST /generate-blurb   - Generate cover letter blurb`);
   console.log(`  • POST /linkedin-reminder - Create reminder for saved LinkedIn posts`);
   console.log(`  • POST /teal-track       - Deprecated (use Chrome extension)`);
   console.log('');

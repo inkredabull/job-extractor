@@ -147,6 +147,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleGenerateBlurb(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'generateScore':
+      handleGenerateScore(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -621,6 +625,66 @@ async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '', person
   } catch (error) {
     console.error('Job Extractor Background: Failed to call unified server for blurb:', error);
     throw new Error(`Failed to generate blurb: ${error.message}`);
+  }
+}
+
+// Handle generate score request
+async function handleGenerateScore(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Handling generate score request');
+    console.log('Job ID:', request.jobId);
+
+    if (!request.jobId) {
+      sendResponse({
+        success: false,
+        error: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Call unified server to generate score
+    const scoreResponse = await callUnifiedServerGenerateScore(request.jobId);
+
+    sendResponse({
+      success: true,
+      jobId: scoreResponse.jobId,
+      score: scoreResponse.score
+    });
+
+  } catch (error) {
+    console.error('Job Extractor Background: Generate score failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call unified server to generate score
+async function callUnifiedServerGenerateScore(jobId) {
+  try {
+    console.log('Job Extractor Background: Calling unified server for score generation');
+
+    const response = await fetch('http://localhost:3000/generate-score', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId: jobId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Job Extractor Background: Score generated successfully');
+
+    return data;
+
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to call unified server for score:', error);
+    throw new Error(`Failed to generate score: ${error.message}`);
   }
 }
 

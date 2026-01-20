@@ -174,7 +174,25 @@ function createGutter() {
           <ul id="questions-list"></ul>
         </div>
       </div>
-      
+
+      <div class="scoring-report-section">
+        <h4>📊 Job Scoring Report</h4>
+        <p>AI-powered job compatibility analysis:</p>
+
+        <div id="scoring-status" class="scoring-status" style="padding: 12px; margin: 10px 0; border-radius: 6px; background: #f3f4f6; color: #6b7280; font-size: 13px;">
+          <span id="scoring-status-text">Track a job to generate scoring report</span>
+        </div>
+
+        <div class="button-row" style="margin-top: 10px; display: flex; gap: 8px;">
+          <button id="generate-score" class="score-btn" style="flex: 1; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">
+            ✨ Generate Score
+          </button>
+          <button id="view-report" class="report-btn" style="flex: 1; padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">
+            📊 View Report
+          </button>
+        </div>
+      </div>
+
       <div class="job-information-section">
         <h4>📄 Job Information</h4>
         <p>Auto-extracted job details (editable):</p>
@@ -234,9 +252,6 @@ function createGutter() {
 
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
-          <button id="view-report" class="report-btn" style="display:none; margin-top: 8px; padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-            📊 View Scoring Report
-          </button>
         </div>
       </div>
     </div>
@@ -264,6 +279,9 @@ function createGutter() {
 
   // Add view report button functionality
   document.getElementById('view-report').addEventListener('click', handleViewReport);
+
+  // Add generate score button functionality
+  document.getElementById('generate-score').addEventListener('click', handleGenerateScore);
 
   // Add generate blurb button functionality
   document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
@@ -1150,11 +1168,8 @@ async function handleTrackFromForm() {
       console.log('📝 Job data and reminder saved successfully!');
       alert('Job data and reminder saved successfully!');
 
-      // Show the View Report button after successful tracking
-      const reportBtn = document.getElementById('view-report');
-      if (reportBtn) {
-        reportBtn.style.display = 'block';
-      }
+      // Update the scoring section after successful tracking
+      await updateScoringSection(response.jobId);
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);
@@ -1196,8 +1211,98 @@ async function handleViewReport() {
     alert(`Error opening report: ${error.message}`);
   } finally {
     // Reset button state
-    reportBtn.textContent = '📊 View Scoring Report';
+    reportBtn.textContent = '📊 View Report';
     reportBtn.disabled = false;
+  }
+}
+
+// Check if scoring report exists for a job
+async function checkScoringReportExists(jobId) {
+  if (!jobId) return false;
+
+  try {
+    const response = await fetch(`http://localhost:3000/report/${jobId}`, {
+      method: 'HEAD' // Just check if it exists without fetching content
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Error checking report existence:', error);
+    return false;
+  }
+}
+
+// Update scoring section UI based on job ID and report existence
+async function updateScoringSection(jobId) {
+  const statusText = document.getElementById('scoring-status-text');
+  const statusDiv = document.getElementById('scoring-status');
+  const generateBtn = document.getElementById('generate-score');
+  const viewBtn = document.getElementById('view-report');
+
+  if (!jobId) {
+    statusText.textContent = 'Track a job to generate scoring report';
+    statusDiv.style.background = '#f3f4f6';
+    statusDiv.style.color = '#6b7280';
+    generateBtn.style.display = 'none';
+    viewBtn.style.display = 'none';
+    return;
+  }
+
+  // Check if report exists
+  statusText.textContent = '⏳ Checking for existing report...';
+  const reportExists = await checkScoringReportExists(jobId);
+
+  if (reportExists) {
+    statusText.textContent = '✅ Scoring report available';
+    statusDiv.style.background = '#d1fae5';
+    statusDiv.style.color = '#065f46';
+    generateBtn.style.display = 'block';
+    generateBtn.textContent = '🔄 Regenerate Score';
+    viewBtn.style.display = 'block';
+  } else {
+    statusText.textContent = '⚠️ No scoring report found';
+    statusDiv.style.background = '#fef3c7';
+    statusDiv.style.color = '#92400e';
+    generateBtn.style.display = 'block';
+    generateBtn.textContent = '✨ Generate Score';
+    viewBtn.style.display = 'none';
+  }
+}
+
+// Handle generate score functionality
+async function handleGenerateScore() {
+  const generateBtn = document.getElementById('generate-score');
+  const jobIdField = document.getElementById('job-id');
+  const jobId = jobIdField?.value?.trim();
+
+  if (!jobId) {
+    alert('No Job ID found. Please track a job first.');
+    return;
+  }
+
+  // Show loading state
+  const originalText = generateBtn.textContent;
+  generateBtn.textContent = '⏳ Generating score...';
+  generateBtn.disabled = true;
+
+  try {
+    // Call the backend to generate score
+    const response = await chrome.runtime.sendMessage({
+      action: 'generateScore',
+      jobId: jobId
+    });
+
+    if (response.success) {
+      console.log('✅ Score generated successfully');
+      // Update the scoring section to show the new report
+      await updateScoringSection(jobId);
+    } else {
+      throw new Error(response.error || 'Failed to generate score');
+    }
+  } catch (error) {
+    console.error('Error generating score:', error);
+    alert(`Error generating score: ${error.message}`);
+    generateBtn.textContent = originalText;
+    generateBtn.disabled = false;
   }
 }
 
