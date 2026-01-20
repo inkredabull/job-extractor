@@ -706,6 +706,117 @@ app.post('/linkedin-reminder', async (req, res) => {
   }
 });
 
+// Generate third-person blurb endpoint
+app.post('/generate-blurb', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Generate blurb request`);
+  try {
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    console.log(`  -> Generating third-person blurb for job: ${jobId}`);
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+    process.chdir(projectDir);
+
+    // Verify job exists
+    const jobDir = path.join(projectDir, 'logs', jobId);
+    if (!fs.existsSync(jobDir)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job ID ${jobId} not found`
+      });
+    }
+
+    const output = await new Promise((resolve, reject) => {
+      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', 'third', '--content'];
+
+      console.log(`  -> Command: npm ${args.join(' ')}`);
+
+      const child = spawn('npm', args, {
+        cwd: projectDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (data) => {
+        const output = data.toString();
+        stdout += output;
+        // Log stdout in real-time with prefix
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [BLURB] ${line}`);
+        });
+      });
+
+      child.stderr.on('data', (data) => {
+        const output = data.toString();
+        stderr += output;
+        // Log stderr in real-time with prefix (errors/warnings)
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [BLURB:err] ${line}`);
+        });
+      });
+
+      child.on('close', (code) => {
+        console.log(`  -> Command finished with exit code ${code}`);
+
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          console.log(`  -> Command failed. Full stderr: ${stderr}`);
+          reject(new Error(`Command failed with code ${code}: ${stderr}`));
+        }
+      });
+
+      // Set timeout (cover letter generation can take a bit longer)
+      setTimeout(() => {
+        child.kill();
+        reject(new Error('Command timed out after 60 seconds'));
+      }, 60000);
+    });
+
+    // The output should be the blurb text (with --content flag, it returns just the content)
+    const blurb = output.trim();
+
+    if (!blurb) {
+      return res.status(500).json({
+        success: false,
+        error: 'No blurb content generated'
+      });
+    }
+
+    console.log(`  -> ✅ Blurb generated successfully (${blurb.length} characters)`);
+
+    res.json({
+      success: true,
+      jobId: jobId,
+      blurb: blurb,
+      characterCount: blurb.length
+    });
+
+  } catch (error) {
+    console.error('  -> Blurb generation failed:', error);
+
+    let errorMessage = error.message;
+    if (error.message.includes('timeout')) {
+      errorMessage = 'Blurb generation timed out - this can take up to 60 seconds';
+    }
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 Unified Job Extractor Server');

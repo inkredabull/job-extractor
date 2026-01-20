@@ -134,7 +134,13 @@ function createGutter() {
           <input type="text" id="llm-input" placeholder="Enter your question here...">
           <button id="submit-query" class="submit-btn">Submit</button>
         </div>
-        
+
+        <div class="button-row" style="margin-top: 10px;">
+          <button id="generate-blurb" class="blurb-btn" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+            📝 Generate Third-Person Blurb
+          </button>
+        </div>
+
         <div id="llm-response" class="response-section" style="display: none;">
           <div class="response-header">
             <span class="status-indicator success">✓</span>
@@ -237,8 +243,11 @@ function createGutter() {
   
   // Add track job from form fields functionality
   document.getElementById('track-job-info').addEventListener('click', handleTrackFromForm);
-  
-  
+
+  // Add generate blurb button functionality
+  document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
+
+
   // Extract job information automatically when gutter opens (with slight delay for DOM)
   setTimeout(() => {
     extractJobInformation();
@@ -1085,7 +1094,13 @@ async function handleTrackFromForm() {
     
     if (extractResponse.success) {
       console.log('✅ Successfully saved job data server-side:', extractResponse.jobId);
-      
+
+      // Store job ID in localStorage for blurb generation
+      if (extractResponse.jobId) {
+        localStorage.setItem('last_tracked_job_id', extractResponse.jobId);
+        console.log('💾 Stored job ID for blurb generation:', extractResponse.jobId);
+      }
+
       // TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
       /*
       // Conditionally open Teal tab based on checkbox state
@@ -1095,7 +1110,7 @@ async function handleTrackFromForm() {
           action: 'openTealAndFill',
           jobInfo: jobInfo
         });
-        
+
         if (tealResponse.success) {
           console.log('✅ Successfully opened Teal tab with job information');
         } else {
@@ -1107,7 +1122,7 @@ async function handleTrackFromForm() {
         alert('Job data saved successfully!');
       }
       */
-      
+
       console.log('📝 Job data and reminder saved successfully!');
       alert('Job data and reminder saved successfully!');
     } else {
@@ -1125,18 +1140,95 @@ async function handleTrackFromForm() {
   }
 }
 
+// Handle generate blurb functionality
+async function handleGenerateBlurb() {
+  const blurbBtn = document.getElementById('generate-blurb');
+  const responseDiv = document.getElementById('llm-response');
+  const responseContent = responseDiv.querySelector('.response-content');
+
+  // Show loading state
+  blurbBtn.textContent = '⏳ Generating blurb...';
+  blurbBtn.disabled = true;
+
+  try {
+    // Get the job ID from localStorage (set when job is tracked)
+    const jobId = localStorage.getItem('last_tracked_job_id');
+
+    if (!jobId) {
+      alert('No job tracked yet. Please track a job first before generating a blurb.');
+      return;
+    }
+
+    console.log('Job Extractor: Generating blurb for job ID:', jobId);
+
+    // Send message to background script to call unified server
+    const response = await chrome.runtime.sendMessage({
+      action: 'generateBlurb',
+      jobId: jobId
+    });
+
+    if (response.success) {
+      console.log('✅ Successfully generated blurb:', response.blurb.substring(0, 100) + '...');
+
+      // Display the blurb in the response section
+      responseDiv.style.display = 'block';
+      responseContent.innerHTML = `
+        <div style="margin-bottom: 10px;">
+          <strong>Third-Person Blurb (${response.characterCount} characters):</strong>
+        </div>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-family: inherit; line-height: 1.6;">
+          ${response.blurb.replace(/\n/g, '<br>')}
+        </div>
+        <div style="margin-top: 10px;">
+          <button id="copy-blurb" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+            📋 Copy to Clipboard
+          </button>
+        </div>
+      `;
+
+      // Add copy functionality
+      document.getElementById('copy-blurb').addEventListener('click', function() {
+        navigator.clipboard.writeText(response.blurb);
+        this.textContent = '✓ Copied!';
+        setTimeout(() => {
+          this.textContent = '📋 Copy to Clipboard';
+        }, 2000);
+      });
+
+      blurbBtn.textContent = '✓ Blurb Generated';
+      setTimeout(() => {
+        blurbBtn.textContent = '📝 Generate Third-Person Blurb';
+      }, 3000);
+
+    } else {
+      console.error('❌ Failed to generate blurb:', response.error);
+      alert(`Failed to generate blurb: ${response.error}`);
+    }
+
+  } catch (error) {
+    console.error('Job Extractor: Generate blurb failed', error);
+    alert(`Error generating blurb: ${error.message}`);
+  } finally {
+    // Reset button state
+    blurbBtn.disabled = false;
+    if (blurbBtn.textContent.includes('⏳')) {
+      blurbBtn.textContent = '📝 Generate Third-Person Blurb';
+    }
+  }
+}
+
 // Handle extract job functionality
 async function handleExtractJob() {
   const extractBtn = document.getElementById('extract-job');
   const statusDiv = document.getElementById('extract-status');
-  
+
   // Show loading state
   extractBtn.textContent = 'Extracting...';
   extractBtn.disabled = true;
   statusDiv.style.display = 'block';
   statusDiv.innerHTML = '<div class="loading">🚀 Running extraction...</div>';
   statusDiv.className = 'extract-status loading';
-  
+
   try {
     // Send message to background script to execute CLI command
     const response = await chrome.runtime.sendMessage({

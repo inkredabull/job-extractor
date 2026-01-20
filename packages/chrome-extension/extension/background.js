@@ -81,7 +81,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'createLinkedInPostReminder':
       handleCreateLinkedInPostReminder(request, sendResponse);
       return true; // Keep message channel open for async response
-      
+
+    case 'generateBlurb':
+      handleGenerateBlurb(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -485,11 +489,75 @@ async function handleExtractFromJson(request, sendResponse) {
   }
 }
 
+// Handle generate blurb request
+async function handleGenerateBlurb(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Handling generate blurb request');
+    console.log('Job ID:', request.jobId);
+
+    if (!request.jobId) {
+      sendResponse({
+        success: false,
+        error: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Call unified server to generate blurb
+    const blurbResponse = await callUnifiedServerGenerateBlurb(request.jobId);
+
+    sendResponse({
+      success: true,
+      jobId: blurbResponse.jobId,
+      blurb: blurbResponse.blurb,
+      characterCount: blurbResponse.characterCount
+    });
+
+  } catch (error) {
+    console.error('Job Extractor Background: Generate blurb failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call unified server to generate blurb
+async function callUnifiedServerGenerateBlurb(jobId) {
+  try {
+    console.log('Job Extractor Background: Calling unified server for blurb generation');
+
+    const response = await fetch('http://localhost:3000/generate-blurb', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jobId: jobId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Server returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Job Extractor Background: Blurb generated successfully');
+
+    return data;
+
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to call unified server for blurb:', error);
+    throw new Error(`Failed to generate blurb: ${error.message}`);
+  }
+}
+
 // Call local unified server with JSON data
 async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
   try {
     console.log('Job Extractor Background: Calling unified server for JSON extraction');
-    
+
     const response = await fetch('http://localhost:3000/extract', {
       method: 'POST',
       mode: 'cors',
