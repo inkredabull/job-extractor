@@ -491,7 +491,7 @@ Return your response as a JSON object with keys: problem_solving, hiring_archety
     };
 
     // Create job-specific subdirectory if it doesn't exist
-    const jobDir = path.resolve('logs', jobScore.jobId);
+    const jobDir = resolveFromProjectRoot('logs', jobScore.jobId);
     if (!fs.existsSync(jobDir)) {
       fs.mkdirSync(jobDir, { recursive: true });
     }
