@@ -192,7 +192,12 @@ function createGutter() {
           <label for="job-url">Job URL:</label>
           <input type="text" id="job-url" class="job-input" placeholder="Current page URL">
         </div>
-        
+
+        <div class="form-field">
+          <label for="job-id">Job ID:</label>
+          <input type="text" id="job-id" class="job-input" placeholder="e.g., 266070be (auto-filled or paste existing)" title="Enter or paste an 8-character job ID to generate a blurb">
+        </div>
+
         <div class="form-field">
           <label for="job-description">Description:</label>
           <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically..."></textarea>
@@ -1095,10 +1100,13 @@ async function handleTrackFromForm() {
     if (extractResponse.success) {
       console.log('✅ Successfully saved job data server-side:', extractResponse.jobId);
 
-      // Store job ID in localStorage for blurb generation
+      // Store job ID in the form field for blurb generation
       if (extractResponse.jobId) {
-        localStorage.setItem('last_tracked_job_id', extractResponse.jobId);
-        console.log('💾 Stored job ID for blurb generation:', extractResponse.jobId);
+        const jobIdField = document.getElementById('job-id');
+        if (jobIdField) {
+          jobIdField.value = extractResponse.jobId;
+          console.log('💾 Stored job ID in form field:', extractResponse.jobId);
+        }
       }
 
       // TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
@@ -1151,11 +1159,12 @@ async function handleGenerateBlurb() {
   blurbBtn.disabled = true;
 
   try {
-    // Get the job ID from localStorage (set when job is tracked)
-    const jobId = localStorage.getItem('last_tracked_job_id');
+    // Get the job ID from the form field
+    const jobIdField = document.getElementById('job-id');
+    const jobId = jobIdField?.value?.trim();
 
     if (!jobId) {
-      alert('No job tracked yet. Please track a job first before generating a blurb.');
+      alert('No Job ID found. Please track a job first or enter a Job ID manually.');
       return;
     }
 
