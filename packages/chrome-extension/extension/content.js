@@ -136,7 +136,12 @@ function createGutter() {
         </div>
 
         <div class="form-field" style="margin-top: 10px;">
-          <label for="company-website" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Company Website (optional, for blurb):</label>
+          <label for="job-id" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Job ID:</label>
+          <input type="text" id="job-id" class="job-input" placeholder="e.g., 266070be (auto-filled or paste existing)" title="Enter or paste an 8-character job ID to generate a blurb">
+        </div>
+
+        <div class="form-field" style="margin-top: 10px;">
+          <label for="company-website" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Company Website (optional):</label>
           <input type="text" id="company-website" class="job-input" placeholder="e.g., https://company.com" title="Used to research company values for blurb generation">
         </div>
 
@@ -196,11 +201,6 @@ function createGutter() {
         <div class="form-field">
           <label for="job-url">Job URL:</label>
           <input type="text" id="job-url" class="job-input" placeholder="Current page URL">
-        </div>
-
-        <div class="form-field">
-          <label for="job-id">Job ID:</label>
-          <input type="text" id="job-id" class="job-input" placeholder="e.g., 266070be (auto-filled or paste existing)" title="Enter or paste an 8-character job ID to generate a blurb">
         </div>
 
         <div class="form-field">
