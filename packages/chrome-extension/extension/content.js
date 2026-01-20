@@ -1699,44 +1699,16 @@ function runLinkedInConnectionExtraction() {
 
   console.log(`Found ${clickableElements.length} connection profiles.`);
 
-  // Open all profiles with delays
+  // DISABLED: Auto-opening profiles is too noisy and needs architectural refactoring
+  // TODO: Move to dedicated LinkedIn networking component as separate feature
+  // This functionality should be:
+  // 1. Opt-in via settings/toggle
+  // 2. Separate from job tracking modal
+  // 3. Have its own UI panel or context menu option
   if (clickableElements.length > 0) {
-      // Ask user for confirmation before opening all profiles
-      var confirmMessage = `Found ${clickableElements.length} connection profiles.\n\nClick OK to open all profiles in new tabs, or Cancel to skip.`;
-      var userConfirmed = confirm(confirmMessage);
-      
-      if (!userConfirmed) {
-          console.log('User cancelled profile opening');
-          linkedInExtractionRunning = false; // Reset flag when cancelled
-          return;
-      }
-      
-      console.log(`Opening ${clickableElements.length} profiles with random delays...`);
-      
-      function openProfilesWithDelay(elements, index = 0) {
-          if (index >= elements.length) {
-              console.log("Finished opening all connection profiles!");
-              linkedInExtractionRunning = false; // Reset flag when done
-              return;
-          }
-          
-          // Random delay between 1500-3000ms
-          var delay = Math.floor(Math.random() * (3000 - 1500 + 1)) + 1500;
-          
-          setTimeout(() => {
-              var connection = elements[index];
-              console.log(`Opening profile ${index + 1}/${elements.length} in new tab: ${connection.name}`);
-              
-              // Open in new tab
-              window.open(connection.element.href, '_blank');
-              
-              // Continue with next profile
-              openProfilesWithDelay(elements, index + 1);
-          }, delay);
-      }
-      
-      // Start opening all profiles
-      openProfilesWithDelay(clickableElements);
+      console.log(`LinkedIn networking feature disabled. Found ${clickableElements.length} profiles but not auto-opening.`);
+      linkedInExtractionRunning = false;
+      return;
   } else {
       console.log("No clickable connection profiles found with any selector pattern.");
       console.log("Available elements on page:");
