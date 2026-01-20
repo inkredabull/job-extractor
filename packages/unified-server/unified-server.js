@@ -738,7 +738,7 @@ app.post('/generate-blurb', async (req, res) => {
     }
 
     const output = await new Promise((resolve, reject) => {
-      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', 'third', '--content'];
+      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', 'third', '--content', '--regen'];
 
       // Add company URL if provided
       if (companyWebsite) {
@@ -791,8 +791,29 @@ app.post('/generate-blurb', async (req, res) => {
       }, 60000);
     });
 
-    // The output should be the blurb text (with --content flag, it returns just the content)
-    const blurb = output.trim();
+    // The output contains CLI logs + actual content
+    // With --content flag, the actual content is output after all the logging
+    // Extract only the content part (after the last emoji/arrow line)
+    const lines = output.split('\n');
+
+    // Find where the actual content starts (after the last line with emoji/logging markers)
+    let contentStartIndex = 0;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      // Skip empty lines
+      if (!line.trim()) continue;
+
+      // If line contains logging markers, content starts after this
+      if (line.includes('📝') || line.includes('✅') || line.includes('🤖') ||
+          line.includes('📄') || line.includes('->') || line.includes('📋') ||
+          line.includes('🔍') || line.includes('🌐')) {
+        contentStartIndex = i + 1;
+        break;
+      }
+    }
+
+    // Extract the actual content
+    const blurb = lines.slice(contentStartIndex).join('\n').trim();
 
     if (!blurb) {
       return res.status(500).json({
