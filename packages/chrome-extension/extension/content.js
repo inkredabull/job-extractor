@@ -136,9 +136,23 @@ function createGutter() {
           <input type="text" id="company-website" class="job-input" placeholder="e.g., https://company.com" title="Used to research company values for blurb generation">
         </div>
 
+        <div class="form-field" style="margin-top: 10px;">
+          <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">Perspective:</label>
+          <div style="display: flex; gap: 16px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="radio" name="blurb-person" value="first" style="margin-right: 6px;">
+              <span style="font-size: 13px;">First Person (I/my)</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="radio" name="blurb-person" value="third" checked style="margin-right: 6px;">
+              <span style="font-size: 13px;">Third Person (Anthony/his)</span>
+            </label>
+          </div>
+        </div>
+
         <div class="button-row" style="margin-top: 10px;">
           <button id="generate-blurb" class="blurb-btn" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-            📝 Generate Third-Person Blurb
+            📝 Generate Blurb
           </button>
         </div>
 
@@ -217,9 +231,12 @@ function createGutter() {
             <option value="1">High</option>
           </select>
         </div>
-        
+
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
+          <button id="view-report" class="report-btn" style="display:none; margin-top: 8px; padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+            📊 View Scoring Report
+          </button>
         </div>
       </div>
     </div>
@@ -244,6 +261,9 @@ function createGutter() {
   
   // Add track job from form fields functionality
   document.getElementById('track-job-info').addEventListener('click', handleTrackFromForm);
+
+  // Add view report button functionality
+  document.getElementById('view-report').addEventListener('click', handleViewReport);
 
   // Add generate blurb button functionality
   document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
@@ -1129,6 +1149,12 @@ async function handleTrackFromForm() {
 
       console.log('📝 Job data and reminder saved successfully!');
       alert('Job data and reminder saved successfully!');
+
+      // Show the View Report button after successful tracking
+      const reportBtn = document.getElementById('view-report');
+      if (reportBtn) {
+        reportBtn.style.display = 'block';
+      }
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);
@@ -1141,6 +1167,37 @@ async function handleTrackFromForm() {
     // Reset button state
     trackBtn.textContent = 'Track';
     trackBtn.disabled = false;
+  }
+}
+
+// Handle view report functionality
+async function handleViewReport() {
+  const reportBtn = document.getElementById('view-report');
+  const jobIdField = document.getElementById('job-id');
+  const jobId = jobIdField?.value?.trim();
+
+  if (!jobId) {
+    alert('No Job ID found. Please track a job first.');
+    return;
+  }
+
+  // Show loading state
+  reportBtn.textContent = '⏳ Loading report...';
+  reportBtn.disabled = true;
+
+  try {
+    // Open the report in a new tab
+    const reportUrl = `http://localhost:3000/report/${jobId}`;
+    window.open(reportUrl, '_blank');
+
+    console.log(`Opened scoring report for job ${jobId}`);
+  } catch (error) {
+    console.error('Error opening report:', error);
+    alert(`Error opening report: ${error.message}`);
+  } finally {
+    // Reset button state
+    reportBtn.textContent = '📊 View Scoring Report';
+    reportBtn.disabled = false;
   }
 }
 
@@ -1168,7 +1225,12 @@ async function handleGenerateBlurb() {
     const companyWebsiteField = document.getElementById('company-website');
     const companyWebsite = companyWebsiteField?.value?.trim() || '';
 
+    // Get the selected person (first or third)
+    const personRadio = document.querySelector('input[name="blurb-person"]:checked');
+    const person = personRadio?.value || 'third';
+
     console.log('Job Extractor: Generating blurb for job ID:', jobId);
+    console.log('Job Extractor: Perspective:', person);
     if (companyWebsite) {
       console.log('Job Extractor: Using company website:', companyWebsite);
     }
@@ -1177,7 +1239,8 @@ async function handleGenerateBlurb() {
     const response = await chrome.runtime.sendMessage({
       action: 'generateBlurb',
       jobId: jobId,
-      companyWebsite: companyWebsite
+      companyWebsite: companyWebsite,
+      person: person
     });
 
     if (response.success) {
@@ -1210,7 +1273,7 @@ async function handleGenerateBlurb() {
 
       blurbBtn.textContent = '✓ Blurb Generated';
       setTimeout(() => {
-        blurbBtn.textContent = '📝 Generate Third-Person Blurb';
+        blurbBtn.textContent = '📝 Generate Blurb';
       }, 3000);
 
     } else {
@@ -1225,7 +1288,7 @@ async function handleGenerateBlurb() {
     // Reset button state
     blurbBtn.disabled = false;
     if (blurbBtn.textContent.includes('⏳')) {
-      blurbBtn.textContent = '📝 Generate Third-Person Blurb';
+      blurbBtn.textContent = '📝 Generate Blurb';
     }
   }
 }

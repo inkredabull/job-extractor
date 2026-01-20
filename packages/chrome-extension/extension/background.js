@@ -568,7 +568,7 @@ async function handleGenerateBlurb(request, sendResponse) {
     }
 
     // Call unified server to generate blurb
-    const blurbResponse = await callUnifiedServerGenerateBlurb(request.jobId, request.companyWebsite);
+    const blurbResponse = await callUnifiedServerGenerateBlurb(request.jobId, request.companyWebsite, request.person);
 
     sendResponse({
       success: true,
@@ -587,12 +587,13 @@ async function handleGenerateBlurb(request, sendResponse) {
 }
 
 // Call unified server to generate blurb
-async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '') {
+async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '', person = 'third') {
   try {
     console.log('Job Extractor Background: Calling unified server for blurb generation');
 
     const requestBody = {
-      jobId: jobId
+      jobId: jobId,
+      person: person
     };
 
     if (companyWebsite) {

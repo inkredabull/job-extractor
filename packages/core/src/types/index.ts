@@ -110,6 +110,11 @@ export interface JobScore {
     location: string;
     company_match: string;
   };
+  strategic_analysis: {
+    problem_solving: string;      // What problem do they think they're trying to solve?
+    hiring_archetype: string;      // What archetype are they probably hiring for?
+    differentiation: string;       // Where am I differentiated or even misaligned?
+  };
   timestamp: string;
 }
 

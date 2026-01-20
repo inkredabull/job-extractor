@@ -710,7 +710,7 @@ app.post('/linkedin-reminder', async (req, res) => {
 app.post('/generate-blurb', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Generate blurb request`);
   try {
-    const { jobId, companyWebsite } = req.body;
+    const { jobId, companyWebsite, person } = req.body;
 
     if (!jobId) {
       return res.status(400).json({
@@ -719,7 +719,8 @@ app.post('/generate-blurb', async (req, res) => {
       });
     }
 
-    console.log(`  -> Generating third-person blurb for job: ${jobId}`);
+    const perspective = person || 'third';
+    console.log(`  -> Generating ${perspective}-person blurb for job: ${jobId}`);
     if (companyWebsite) {
       console.log(`  -> Using company website: ${companyWebsite}`);
     }
@@ -738,7 +739,7 @@ app.post('/generate-blurb', async (req, res) => {
     }
 
     const output = await new Promise((resolve, reject) => {
-      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', 'third', '--content', '--regen'];
+      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', perspective, '--content', '--regen'];
 
       // Add company URL if provided
       if (companyWebsite) {
@@ -813,7 +814,10 @@ app.post('/generate-blurb', async (req, res) => {
     }
 
     // Extract the actual content
-    const blurb = lines.slice(contentStartIndex).join('\n').trim();
+    let blurb = lines.slice(contentStartIndex).join('\n').trim();
+
+    // Remove em dashes (— or --) from the output
+    blurb = blurb.replace(/—/g, '-').replace(/\s+--\s+/g, ' - ');
 
     if (!blurb) {
       return res.status(500).json({
@@ -846,6 +850,63 @@ app.post('/generate-blurb', async (req, res) => {
   }
 });
 
+// Get scoring report HTML
+app.get('/report/:jobId', (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Scoring report request for job: ${req.params.jobId}`);
+
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    // Change to the main project directory (two levels up from packages/unified-server)
+    const projectDir = path.resolve(__dirname, '..', '..');
+    const jobDir = path.join(projectDir, 'logs', jobId);
+
+    if (!fs.existsSync(jobDir)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job ID ${jobId} not found`
+      });
+    }
+
+    // Find the most recent score report HTML file
+    const files = fs.readdirSync(jobDir);
+    const reportFiles = files.filter(f => f.startsWith('score-report-') && f.endsWith('.html'));
+
+    if (reportFiles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No scoring report found for this job. Score the job first.'
+      });
+    }
+
+    // Sort by filename (timestamp) and get the most recent
+    reportFiles.sort().reverse();
+    const reportPath = path.join(jobDir, reportFiles[0]);
+
+    console.log(`  -> Serving report: ${reportFiles[0]}`);
+
+    // Read and serve the HTML file
+    const htmlContent = fs.readFileSync(reportPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlContent);
+
+  } catch (error) {
+    console.error('  -> Report retrieval failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 Unified Job Extractor Server');
@@ -857,6 +918,8 @@ app.listen(PORT, () => {
   console.log(`  • GET  /health           - Health check`);
   console.log(`  • POST /cv-question      - CV question answering`);
   console.log(`  • POST /extract          - Job extraction (URL or JSON)`);
+  console.log(`  • GET  /report/:jobId    - View scoring report HTML`);
+  console.log(`  • POST /generate-blurb   - Generate third-person blurb`);
   console.log(`  • POST /linkedin-reminder - Create reminder for saved LinkedIn posts`);
   console.log(`  • POST /teal-track       - Deprecated (use Chrome extension)`);
   console.log('');

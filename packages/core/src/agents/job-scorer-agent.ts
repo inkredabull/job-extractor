@@ -3,6 +3,7 @@ import { ResumeCreatorAgent } from './resume-creator-agent';
 import { JobListing, JobCriteria, JobScore, AgentConfig } from '../types';
 import { resolveFromProjectRoot } from '../utils/project-root';
 import { getAnthropicConfig, getAutoResumeConfig } from '../config';
+import { generateScoringReportHTML } from '../utils/report-generator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -24,7 +25,7 @@ export class JobScorerAgent extends BaseAgent {
     try {
       const jobData = this.loadJobData(jobId);
       const score = await this.calculateScore(jobData);
-      
+
       const jobScore: JobScore = {
         jobId,
         overallScore: Math.round(score.overall * 100),
@@ -45,6 +46,7 @@ export class JobScorerAgent extends BaseAgent {
           location: score.explanations.location,
           company_match: score.explanations.company_match,
         },
+        strategic_analysis: await this.generateStrategicAnalysis(jobData),
         timestamp: new Date().toISOString(),
       };
 
@@ -402,6 +404,46 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
     return await this.makeOpenAIRequest(prompt);
   }
 
+  private async generateStrategicAnalysis(job: JobListing): Promise<{
+    problem_solving: string;
+    hiring_archetype: string;
+    differentiation: string;
+  }> {
+    const prompt = `
+Analyze this job posting and provide strategic insights by answering these three questions:
+
+Job Title: ${job.title}
+Company: ${job.company}
+Location: ${job.location}
+Description: ${job.description}
+
+Please answer the following questions with 2-3 sentences each:
+
+1. **What problem do they think they're trying to solve?**
+   Identify the core business challenge, technical pain point, or organizational need driving this hire.
+
+2. **What archetype are they probably hiring for?**
+   Describe the type of person/role archetype (e.g., "technical visionary", "execution-focused IC", "player-coach leader", "domain expert", "generalist problem-solver", etc.)
+
+3. **Where am I differentiated or even misaligned?**
+   Based on the job requirements and my criteria/background, what makes me stand out positively, and where might there be misalignment or gaps?
+
+Return your response as a JSON object with keys: problem_solving, hiring_archetype, differentiation
+`;
+
+    const response = await this.makeOpenAIRequest(prompt);
+    try {
+      return JSON.parse(response);
+    } catch (error) {
+      // Fallback if AI doesn't return valid JSON
+      return {
+        problem_solving: response.split('\n')[0] || 'Unable to determine',
+        hiring_archetype: response.split('\n')[1] || 'Unable to determine',
+        differentiation: response.split('\n')[2] || 'Unable to determine'
+      };
+    }
+  }
+
   private async generateAutoResume(jobId: string, score: number): Promise<void> {
     try {
       console.log(`🎯 Score of ${score}% exceeds threshold of ${this.autoResumeConfig.threshold}% - generating tailored resume...`);
@@ -445,6 +487,7 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
       rationale: jobScore.rationale,
       breakdown: jobScore.breakdown,
       explanations: jobScore.explanations,
+      strategic_analysis: jobScore.strategic_analysis,
     };
 
     // Create job-specific subdirectory if it doesn't exist
@@ -453,8 +496,20 @@ Provide a concise 2-3 sentence rationale explaining the match quality and key fa
       fs.mkdirSync(jobDir, { recursive: true });
     }
 
-    const logPath = path.join(jobDir, `score-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
-    fs.writeFileSync(logPath, JSON.stringify(logEntry, null, 2));
-    console.log(`✅ Job score logged to: ${logPath}`);
+    // Save JSON score
+    const jsonPath = path.join(jobDir, `score-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    fs.writeFileSync(jsonPath, JSON.stringify(logEntry, null, 2));
+    console.log(`✅ Job score logged to: ${jsonPath}`);
+
+    // Generate and save HTML report
+    try {
+      const jobData = this.loadJobData(jobScore.jobId);
+      const htmlReport = generateScoringReportHTML(jobData, jobScore);
+      const htmlPath = path.join(jobDir, `score-report-${new Date().toISOString().replace(/[:.]/g, '-')}.html`);
+      fs.writeFileSync(htmlPath, htmlReport);
+      console.log(`📊 Scoring report generated: ${htmlPath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to generate HTML report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
