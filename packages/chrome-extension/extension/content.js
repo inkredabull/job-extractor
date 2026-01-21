@@ -1195,7 +1195,7 @@ async function handleTrackFromForm() {
       alert('Job data and reminder saved successfully!');
 
       // Update the scoring section after successful tracking
-      await updateScoringSection(response.jobId);
+      await updateScoringSection(extractResponse.jobId);
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);
