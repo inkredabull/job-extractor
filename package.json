@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "build:core": "npm run build --workspace=@inkredabull/job-extractor-core",
-    "dev": "npm run dev --workspace=@inkredabull/job-extractor-core",
+    "dev": "ts-node packages/core/src/cli.ts",
     "test": "npm run test --workspaces",
     "test:watch": "npm run test:watch --workspace=@inkredabull/job-extractor-core",
     "lint": "npm run lint --workspaces",
