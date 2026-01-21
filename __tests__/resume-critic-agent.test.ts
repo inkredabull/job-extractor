@@ -1,5 +1,5 @@
-import { ResumeCriticAgent } from '../src/agents/resume-critic-agent';
-import { JobListing, ResumeCritique } from '../src/types';
+import { ResumeCriticAgent } from '../packages/core/src/agents/resume-critic-agent';
+import { JobListing, ResumeCritique } from '../packages/core/src/types';
 import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
 import * as path from 'path';

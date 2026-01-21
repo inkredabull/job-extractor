@@ -1,7 +1,7 @@
-import { JobScorerAgent } from '../src/agents/job-scorer-agent';
-import { ResumeCreatorAgent } from '../src/agents/resume-creator-agent';
-import { AgentConfig, JobListing, JobCriteria } from '../src/types';
-import { getAnthropicConfig, getAutoResumeConfig } from '../src/config';
+import { JobScorerAgent } from '../packages/core/src/agents/job-scorer-agent';
+import { ResumeCreatorAgent } from '../packages/core/src/agents/resume-creator-agent';
+import { AgentConfig, JobListing, JobCriteria } from '../packages/core/src/types';
+import { getAnthropicConfig, getAutoResumeConfig } from '../packages/core/src/config';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';

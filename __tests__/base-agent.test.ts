@@ -1,5 +1,5 @@
-import { BaseAgent } from '../src/agents/base-agent';
-import { AgentConfig, ExtractorResult } from '../src/types';
+import { BaseAgent } from '../packages/core/src/agents/base-agent';
+import { AgentConfig, ExtractorResult } from '../packages/core/src/types';
 import OpenAI from 'openai';
 import { ChatCompletion } from 'openai/resources/chat/completions';
 
