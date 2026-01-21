@@ -1245,9 +1245,11 @@ async function checkScoringReportExists(jobId) {
   if (!jobId) return false;
 
   try {
+    console.log(`Checking if report exists for job ${jobId}...`);
     const response = await fetch(`http://localhost:3000/report/${jobId}`, {
       method: 'HEAD' // Just check if it exists without fetching content
     });
+    console.log(`Report check response: ${response.status} ${response.statusText}`);
     return response.ok;
   } catch (error) {
     console.error('Error checking report existence:', error);
@@ -1263,6 +1265,7 @@ async function updateScoringSection(jobId) {
   const viewBtn = document.getElementById('view-report');
 
   if (!jobId) {
+    console.log('updateScoringSection: No job ID provided');
     statusText.textContent = 'Track a job to generate scoring report';
     statusDiv.style.background = '#f3f4f6';
     statusDiv.style.color = '#6b7280';
@@ -1271,9 +1274,11 @@ async function updateScoringSection(jobId) {
     return;
   }
 
+  console.log(`updateScoringSection: Checking report for job ${jobId}`);
   // Check if report exists
   statusText.textContent = '⏳ Checking for existing report...';
   const reportExists = await checkScoringReportExists(jobId);
+  console.log(`updateScoringSection: Report exists = ${reportExists}`);
 
   if (reportExists) {
     statusText.textContent = '✅ Scoring report available';
