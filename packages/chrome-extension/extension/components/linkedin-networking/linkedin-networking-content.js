@@ -373,11 +373,40 @@ function checkForLinkedInProfile() {
   console.log(`checkForLinkedInProfile: isProfilePage=${isProfilePage}, isCompanyPage=${isCompanyPage}, isSearchPage=${isSearchPage}`);
 
   if (isProfilePage && !isCompanyPage && !isSearchPage) {
-    console.log('LinkedIn profile page detected - waiting 5 seconds before looking for mutual connections...');
+    // Extract profile URL for the confirmation dialog
+    const profileUrl = url;
+    const profileName = getProfilePersonName();
+
+    // Check if we've already prompted for this profile in this session
+    if (promptedProfiles.has(profileUrl)) {
+      console.log('Already prompted for this profile in this session, skipping...');
+      return;
+    }
+
+    console.log('LinkedIn profile page detected - waiting 3 seconds before showing confirmation...');
     searchPageProcessed = false; // Reset for new profile
+
     setTimeout(() => {
-      findAndClickMutualConnections();
-    }, 5000);
+      // Mark this profile as prompted to avoid duplicate dialogs
+      promptedProfiles.add(profileUrl);
+
+      // Show confirmation dialog
+      const shouldExtract = confirm(
+        `Would you like to extract mutual connections for ${profileName}?\n\n` +
+        `This will:\n` +
+        `1. Navigate to the mutual connections page\n` +
+        `2. Extract the list of shared connections\n` +
+        `3. Display the results in the console\n\n` +
+        `Click OK to proceed or Cancel to skip.`
+      );
+
+      if (shouldExtract) {
+        console.log('User confirmed - proceeding with mutual connections extraction');
+        findAndClickMutualConnections();
+      } else {
+        console.log('User cancelled mutual connections extraction');
+      }
+    }, 3000);
   } else if (isSearchPage && url.includes('facetConnectionOf') && !searchPageProcessed) {
     // This is a mutual connections search page - just extract the data ONCE
     console.log('LinkedIn mutual connections search page detected - waiting 4 seconds before extracting...');
