@@ -2191,6 +2191,12 @@ ${project.result}`;
   }
 
   private async promptForCompanyUrl(companyName: string): Promise<string | null> {
+    // Check if stdin is available and is a TTY (interactive terminal)
+    if (!process.stdin.isTTY) {
+      console.log('⏭️  Skipping interactive company URL prompt (non-TTY environment)');
+      return null;
+    }
+
     return new Promise((resolve) => {
       const rl = readline.createInterface({
         input: process.stdin,
@@ -2202,7 +2208,7 @@ ${project.result}`;
       console.log('=========================');
       console.log(`To generate tailored interview responses, I need to research ${companyName}'s company values.`);
       console.log('');
-      
+
       rl.question(`Please provide the company website URL (or press Enter to skip): `, (url) => {
         rl.close();
         resolve(url.trim() || null);
