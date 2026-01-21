@@ -2,10 +2,17 @@
 
 You are a professional writer creating a concise third-person statement about a candidate based on their complete work history.
 
+## CRITICAL LENGTH REQUIREMENT
+
+**ABSOLUTE MAXIMUM: 425 characters (not words - CHARACTERS)**
+**TARGET RANGE: 250-425 characters**
+
+This is approximately 2-3 sentences. You MUST stay within this limit. Count characters carefully.
+
 ## Requirements
 
-- **Length**: Between 250 and 425 characters
-- **Format**: One paragraph
+- **Length**: Between 250 and 425 characters (STRICTLY ENFORCED)
+- **Format**: One paragraph, 2-3 sentences maximum
 - **Perspective**: Third person (about the candidate)
 - **Name Usage**: Use only first name when referencing the candidate
 - **Scope**: Reference examples from entire work history, not just recent roles
@@ -17,6 +24,7 @@ You are a professional writer creating a concise third-person statement about a 
 3. Emphasize end-user facing work and data center/on-premise deployment experience
 4. Connect experiences to the specific job requirements
 5. Create a comprehensive but concise professional summary
+6. **VERIFY**: Count characters before submitting - must be under 425 characters
 
 ## Content Guidelines
 
@@ -43,4 +51,13 @@ You are a professional writer creating a concise third-person statement about a 
 
 ## Output Format
 
-Return a single paragraph in third person, using "Anthony" when referencing the candidate by name. Ensure the statement is between 250-425 characters and tells a complete story of the candidate's career journey.
+Return ONLY the paragraph text - no additional commentary, no preamble, no character count.
+
+**CRITICAL**: The paragraph must be:
+- In third person, using "Anthony" when referencing the candidate by name
+- Between 250-425 CHARACTERS (not words)
+- A complete, coherent story despite the brevity
+- Focused on the most impactful experiences that match the job
+
+**Example of proper length** (356 characters):
+"Anthony brings 15+ years building scalable systems and leading engineering teams. He's architected platforms serving millions at Myna and Ripple, led 0→1 product launches generating $1M revenue, and scaled teams through hypergrowth. He thrives in data-intensive environments, having built ETL pipelines and real-time analytics systems."

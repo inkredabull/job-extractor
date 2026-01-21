@@ -854,7 +854,8 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
     // Include template version to invalidate cache when templates change
     // Updated: 2025-01-26 - New interview format with professional summary bullets, focus story, and "WHY company" section
     // Updated: 2025-01-26b - Enhanced WHY company section to include career goals alignment with job requirements
-    const templateVersion = 'v2b-interview-format-2025-01-26';
+    // Updated: 2025-01-21 - Enforced strict 250-425 character limit for 'general' type with truncation
+    const templateVersion = 'v2c-strict-length-2025-01-21';
     
     const combinedData = type + cvContent + stats.mtime.toISOString() + optionsStr + templateVersion;
     
@@ -1094,6 +1095,31 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
     // For other types, ensure single paragraph format if needed
     if (type === 'general') {
       cleaned = cleaned.replace(/\n\n+/g, ' ').replace(/\n/g, ' ');
+
+      // ENFORCE length constraint: 250-425 characters
+      const maxLength = 425;
+      const minLength = 250;
+
+      if (cleaned.length > maxLength) {
+        console.warn(`⚠️  Generated content exceeds maximum length (${cleaned.length} chars). Truncating to ${maxLength} chars.`);
+        // Find a good breaking point (end of sentence) near the max length
+        const truncateAt = cleaned.lastIndexOf('.', maxLength);
+        if (truncateAt > minLength && truncateAt < maxLength) {
+          cleaned = cleaned.substring(0, truncateAt + 1).trim();
+        } else {
+          // If no good sentence break, just hard truncate
+          cleaned = cleaned.substring(0, maxLength).trim();
+          // Add ellipsis if we cut off mid-sentence
+          if (!cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
+            cleaned += '...';
+          }
+        }
+        console.log(`✂️  Truncated to ${cleaned.length} characters`);
+      }
+
+      if (cleaned.length < minLength) {
+        console.warn(`⚠️  Generated content is shorter than minimum length (${cleaned.length} chars < ${minLength} chars)`);
+      }
     }
 
     return cleaned;
