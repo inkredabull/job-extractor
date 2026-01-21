@@ -860,27 +860,29 @@ program
   .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
   .action(async (jobId: string, options) => {
     try {
+      const startTime = Date.now();
+
       console.log('📄 Generating tailored resume...');
       console.log(`📊 Job ID: ${jobId}`);
-      
+
       // Automatically find CV file
       const cvFile = await findCvFile();
       console.log(`📋 CV File: ${cvFile}`);
       console.log('');
 
       const anthropicConfig = getAnthropicConfig();
-      
+
       // Validate mode option
       if (options.mode && !['leader', 'builder'].includes(options.mode)) {
         console.error('❌ Error: Mode must be either "leader" or "builder"');
         process.exit(1);
       }
-      
+
       const mode = (options.mode || 'leader') as 'leader' | 'builder';
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
 
       const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, anthropicConfig.maxRoles, mode);
-      
+
       // Show generate mode if enabled
       if (options.generate) {
         console.log('🤖 Job description generation enabled');
@@ -888,7 +890,7 @@ program
           console.log(`🌐 Using company URL: ${options.companyUrl}`);
         }
       }
-      
+
       const generateParam = options.generate ? (options.companyUrl || true) : false;
 
       // When --regen is used, force critique to false since we're just rebuilding PDF
@@ -903,11 +905,14 @@ program
         critiqueFlag,
         'cli'  // Indicate this is called from CLI
       );
-      
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
       if (result.success) {
         console.log('✅ Resume Generation Complete');
         console.log('=' .repeat(50));
         console.log(`📄 PDF Generated: ${result.pdfPath}`);
+        console.log(`⏱️  Duration: ${duration}s`);
 
         if (result.improvedWithCritique) {
           console.log('🎯 Resume automatically improved with critique feedback');
