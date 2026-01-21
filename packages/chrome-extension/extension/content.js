@@ -1,4 +1,6 @@
 // Job Extractor Assistant - Content Script
+// VERSION: 2026-01-21-19:30 - Debug scoring report check
+console.log('Content script loaded - VERSION: 2026-01-21-19:30');
 let gutterElement = null;
 let isGutterOpen = false;
 let extractedJobDescription = '';
@@ -1242,33 +1244,49 @@ async function handleViewReport() {
 
 // Check if scoring report exists for a job
 async function checkScoringReportExists(jobId) {
-  if (!jobId) return false;
+  console.log(`[checkScoringReportExists v2] Called with jobId: ${jobId}`);
+  if (!jobId) {
+    console.log('[checkScoringReportExists v2] No jobId provided, returning false');
+    return false;
+  }
 
   try {
-    console.log(`Checking if report exists for job ${jobId}...`);
-    // Use GET request instead of HEAD to avoid CORS issues
-    // Only fetch headers, not the full content
-    const response = await fetch(`http://localhost:3000/report/${jobId}`);
-    console.log(`Report check response: status=${response.status}, ok=${response.ok}, statusText=${response.statusText}`);
+    const url = `http://localhost:3000/report/${jobId}`;
+    console.log(`[checkScoringReportExists v2] Fetching: ${url}`);
 
-    // If response is OK, report exists
-    // If response is 404, report doesn't exist
-    return response.ok;
+    const response = await fetch(url);
+    console.log(`[checkScoringReportExists v2] Response received:`, {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      type: response.type,
+      url: response.url
+    });
+
+    const exists = response.ok;
+    console.log(`[checkScoringReportExists v2] Returning: ${exists}`);
+    return exists;
   } catch (error) {
-    console.error('Error checking report existence:', error);
+    console.error('[checkScoringReportExists v2] Error:', error);
+    console.error('[checkScoringReportExists v2] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return false;
   }
 }
 
 // Update scoring section UI based on job ID and report existence
 async function updateScoringSection(jobId) {
+  console.log('[updateScoringSection v2] Called with jobId:', jobId);
   const statusText = document.getElementById('scoring-status-text');
   const statusDiv = document.getElementById('scoring-status');
   const generateBtn = document.getElementById('generate-score');
   const viewBtn = document.getElementById('view-report');
 
   if (!jobId) {
-    console.log('updateScoringSection: No job ID provided');
+    console.log('[updateScoringSection v2] No job ID provided');
     statusText.textContent = 'Track a job to generate scoring report';
     statusDiv.style.background = '#f3f4f6';
     statusDiv.style.color = '#6b7280';
@@ -1277,11 +1295,12 @@ async function updateScoringSection(jobId) {
     return;
   }
 
-  console.log(`updateScoringSection: Checking report for job ${jobId}`);
+  console.log(`[updateScoringSection v2] Checking report for job ${jobId}`);
   // Check if report exists
   statusText.textContent = '⏳ Checking for existing report...';
+  console.log('[updateScoringSection v2] About to call checkScoringReportExists');
   const reportExists = await checkScoringReportExists(jobId);
-  console.log(`updateScoringSection: Report exists = ${reportExists}`);
+  console.log(`[updateScoringSection v2] Report exists = ${reportExists}`);
 
   if (reportExists) {
     statusText.textContent = '✅ Scoring report available';
