@@ -132,18 +132,23 @@ function createGutter() {
       <button id="close-gutter">×</button>
     </div>
     <div class="gutter-content">
+      <div class="job-id-section" style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 16px; border: 2px solid #3b82f6;">
+        <div class="form-field" style="margin: 0;">
+          <label for="job-id" style="font-size: 14px; font-weight: 600; color: #1e40af; display: block; margin-bottom: 6px;">🆔 Job ID</label>
+          <input type="text" id="job-id" class="job-input" placeholder="e.g., b3358ff6 (auto-filled after tracking)"
+                 style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.5px;"
+                 title="Unique identifier for this job - auto-generated when tracking or paste existing ID">
+          <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0;">Used for scoring, blurbs, and all job operations</p>
+        </div>
+      </div>
+
       <div class="llm-interface">
         <h4>AI Assistant</h4>
         <p>Ask a question to get AI-powered insights:</p>
-        
+
         <div class="input-section">
           <input type="text" id="llm-input" placeholder="Enter your question here...">
           <button id="submit-query" class="submit-btn">Submit</button>
-        </div>
-
-        <div class="form-field" style="margin-top: 10px;">
-          <label for="job-id" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Job ID:</label>
-          <input type="text" id="job-id" class="job-input" placeholder="e.g., 266070be (auto-filled or paste existing)" title="Enter or paste an 8-character job ID to generate a blurb">
         </div>
 
         <div class="form-field" style="margin-top: 10px;">
