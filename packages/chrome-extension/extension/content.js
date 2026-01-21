@@ -1246,10 +1246,13 @@ async function checkScoringReportExists(jobId) {
 
   try {
     console.log(`Checking if report exists for job ${jobId}...`);
-    const response = await fetch(`http://localhost:3000/report/${jobId}`, {
-      method: 'HEAD' // Just check if it exists without fetching content
-    });
-    console.log(`Report check response: ${response.status} ${response.statusText}`);
+    // Use GET request instead of HEAD to avoid CORS issues
+    // Only fetch headers, not the full content
+    const response = await fetch(`http://localhost:3000/report/${jobId}`);
+    console.log(`Report check response: status=${response.status}, ok=${response.ok}, statusText=${response.statusText}`);
+
+    // If response is OK, report exists
+    // If response is 404, report doesn't exist
     return response.ok;
   } catch (error) {
     console.error('Error checking report existence:', error);
