@@ -908,15 +908,16 @@ program
         console.log('✅ Resume Generation Complete');
         console.log('=' .repeat(50));
         console.log(`📄 PDF Generated: ${result.pdfPath}`);
-        
+
         if (result.improvedWithCritique) {
           console.log('🎯 Resume automatically improved with critique feedback');
           if (result.critiqueRating) {
             console.log(`⭐ Initial Rating: ${result.critiqueRating}/10`);
           }
         }
-        
-        if (result.tailoringChanges && result.tailoringChanges.length > 0) {
+
+        // Only show tailoring changes if not using --regen (since regen just uses cached content)
+        if (!options.regen && result.tailoringChanges && result.tailoringChanges.length > 0) {
           console.log('');
           console.log('🔧 Tailoring Changes Made:');
           result.tailoringChanges.forEach((change, index) => {
