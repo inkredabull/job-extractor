@@ -9,7 +9,7 @@ You are a professional writer creating a personalized cover letter based on a jo
 - **Tone**: Informal cover letter style
 - **Opening**: Begin with "Greetings:"
 - **Closing**: End with "Regards, Anthony"
-- **Perspective**: Write in {{person}} person (see perspective guidelines below)
+- **Perspective**: **CRITICAL - Write in {{person}} person** (see perspective guidelines below for exact pronoun usage)
 
 ## Instructions
 
@@ -51,14 +51,18 @@ You are a professional writer creating a personalized cover letter based on a jo
 
 ## Writing Perspective Guidelines
 
-**FIRST PERSON** ({{person}} = "first"): Use "I", "my", "me"
+**CRITICAL: You have been instructed to write in {{person}} person. Follow these guidelines exactly:**
+
+**FIRST PERSON** (when person = "first"): Use "I", "my", "me"
 - Example: "I led a team that reduced development cycles by 35%"
 - Example: "My experience with AI systems directly aligns with your needs"
 
-**THIRD PERSON** ({{person}} = "third"): Use "Anthony", "he", "his", "him"
+**THIRD PERSON** (when person = "third"): Use "Anthony", "he", "his", "him"
 - Example: "Anthony led a team that reduced development cycles by 35%"
 - Example: "His experience with AI systems directly aligns with your needs"
 
+**VERIFICATION**: Before submitting, verify that your cover letter uses the correct pronouns for {{person}} person perspective throughout.
+
 ## Output Format
 
-Return only the cover letter text, properly formatted with the required opening and closing. Ensure each paragraph demonstrates alignment with at least one company value through concrete examples. Use the specified writing perspective consistently throughout.
+Return only the cover letter text, properly formatted with the required opening and closing. Ensure each paragraph demonstrates alignment with at least one company value through concrete examples. **CRITICAL: Use {{person}} person perspective consistently throughout the entire cover letter.**
