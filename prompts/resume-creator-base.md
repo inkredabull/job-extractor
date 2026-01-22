@@ -38,10 +38,13 @@ Include a "SUMMARY" section, beginning with a professional summary in the form o
 
 {{summaryGuidance}}
 
-The summary must be between 225 and 350 characters in length.
+**CRITICAL: The summary must be between 500 and 650 characters in length.**
+This is approximately 3-4 sentences maximum. Count characters carefully.
+
 Don't use "I" statements; lead with past-tense verb in the first person instead.
-Include at least one time-based accomplishment
-Include at least one improvement metric
+Be concise and high-impact - every word must earn its place.
+Balance high-level positioning with specific, quantified achievements.
+Prefer active verbs and concrete metrics over abstract descriptions.
 
 ## Roles
 
