@@ -32,6 +32,7 @@
     "@inkredabull/macos-reminder": "file:../../../macos-reminder",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/js-yaml": "^4.0.9",
+    "@types/pdf-parse": "^1.1.5",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "commander": "^11.1.0",
@@ -40,6 +41,7 @@
     "googleapis": "^156.0.0",
     "js-yaml": "^4.1.0",
     "openai": "^4.24.0",
+    "pdf-parse": "^2.4.5",
     "puppeteer": "^21.11.0"
   },
   "devDependencies": {

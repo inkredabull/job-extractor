@@ -858,6 +858,7 @@ program
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
   .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
+  .option('--skip-judge', 'Skip the PDF judge validation (one-page enforcement)')
   .action(async (jobId: string, options) => {
     try {
       const startTime = Date.now();
@@ -903,7 +904,8 @@ program
         !!options.regen,
         generateParam,
         critiqueFlag,
-        'cli'  // Indicate this is called from CLI
+        'cli',  // Indicate this is called from CLI
+        !!options.skipJudge
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);

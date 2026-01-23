@@ -39,6 +39,7 @@
     "@anthropic-ai/sdk": "^0.55.0",
     "@browserbasehq/stagehand": "^2.4.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/pdf-parse": "^1.1.5",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "commander": "^11.1.0",
@@ -49,6 +50,7 @@
     "googleapis": "^156.0.0",
     "js-yaml": "^4.1.0",
     "openai": "^4.24.0",
+    "pdf-parse": "^2.4.5",
     "puppeteer": "^21.11.0"
   },
   "optionalDependencies": {

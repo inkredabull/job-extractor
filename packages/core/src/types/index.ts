@@ -345,3 +345,23 @@ export interface SectionCritiqueResult {
   detailedAnalysis?: string;
   error?: string;
 }
+
+export interface PDFValidationGuidance {
+  maxPages: number; // 1 for one-page requirement
+  requiredSections?: string[]; // e.g., ["Summary", "Experience", "Skills"]
+  characterLimits?: {
+    summary?: { min: number; max: number };
+  };
+  forbidden?: string[]; // e.g., ["references", "hobbies"]
+}
+
+export interface PDFJudgeResult {
+  success: boolean;
+  passes: boolean;
+  pageCount: number;
+  violations: string[];
+  suggestions: string[];
+  confidence: number; // 1-10 scale
+  timestamp: string;
+  error?: string;
+}

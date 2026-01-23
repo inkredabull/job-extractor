@@ -1,11 +1,12 @@
 import { ClaudeBaseAgent } from './claude-base-agent';
-import { JobListing, ResumeResult } from '../types';
+import { JobListing, ResumeResult, PDFValidationGuidance } from '../types';
 import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { execSync } from 'child_process';
 import { ResumeCriticAgent } from './resume-critic-agent';
+import { ResumePDFJudgeAgent } from './resume-pdf-judge-agent';
 
 export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private maxRoles: number;
@@ -26,7 +27,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     regenerate: boolean = true,
     generate: boolean | string = false,
     critique: boolean = true,
-    source: 'cli' | 'programmatic' = 'programmatic'
+    source: 'cli' | 'programmatic' = 'programmatic',
+    skipJudge: boolean = false
   ): Promise<ResumeResult> {
     try {
       // Load job data
@@ -93,8 +95,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
           
           // Regenerate with recommendations
           console.log(`🔄 Regenerating resume with critique recommendations...`);
-          const finalResult = await this.generateImprovedResume(jobId, cvFilePath, outputPath, jobData);
-          
+          const finalResult = await this.generateImprovedResume(jobId, cvFilePath, outputPath, jobData, skipJudge);
+
           if (finalResult.success) {
             console.log(`✅ Resume regenerated successfully with improvements`);
             return {
@@ -210,20 +212,88 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     };
   }
 
-  private async generateImprovedResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing): Promise<ResumeResult> {
+  private async generateImprovedResume(
+    jobId: string,
+    cvFilePath: string,
+    outputPath?: string,
+    jobData?: JobListing,
+    skipJudge: boolean = false
+  ): Promise<ResumeResult> {
     const job = jobData || this.loadJobData(jobId);
-    
+    const jobDir = resolveFromProjectRoot('logs', jobId);
+
     console.log(`🔄 Generating improved resume for job ${jobId} with critique recommendations`);
     const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
     const scopedCvContent = this.scopeCVContent(cvContent);
-    const tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
-    
+
+    let tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
+
     // Cache the tailored content
     this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
-    
+
     // Create PDF
-    const pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
-    
+    let pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
+
+    // Run PDF judge validation (unless skipped)
+    if (!skipJudge) {
+      const maxAttempts = 2;
+      const guidance: PDFValidationGuidance = {
+        maxPages: 1,
+        requiredSections: ['Summary', 'Experience', 'Skills', 'Technologies']
+      };
+
+      const judge = new ResumePDFJudgeAgent(jobDir);
+      let previousSuggestions: string[] = [];
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`\n⚖️  Running PDF judge validation (attempt ${attempt}/${maxAttempts})...`);
+
+        const judgeResult = await judge.validatePDF(pdfPath, guidance, attempt, previousSuggestions);
+
+        if (!judgeResult.success) {
+          console.warn(`⚠️  Judge validation failed: ${judgeResult.error}`);
+          break;
+        }
+
+        if (judgeResult.passes) {
+          console.log(`✅ PDF validation passed! (${judgeResult.pageCount} page${judgeResult.pageCount === 1 ? '' : 's'}, confidence: ${judgeResult.confidence}/10)`);
+          break;
+        }
+
+        // If this is the last attempt, warn but return the PDF anyway
+        if (attempt === maxAttempts) {
+          console.warn(`⚠️  PDF validation failed after ${maxAttempts} attempts. Returning best attempt.`);
+          console.warn(`   Violations: ${judgeResult.violations.join(', ')}`);
+          console.warn(`   Manual editing may be required (HITL).`);
+          break;
+        }
+
+        // Otherwise, regenerate with judge suggestions
+        console.log(`❌ PDF validation failed (${judgeResult.pageCount} pages):`);
+        judgeResult.violations.forEach(v => console.log(`   - ${v}`));
+        console.log(`\n💡 Applying ${judgeResult.suggestions.length} suggestions and regenerating...`);
+        judgeResult.suggestions.forEach(s => console.log(`   - ${s}`));
+
+        // Delete previous tailored files before regenerating
+        this.cleanupTailoredFiles(jobId);
+
+        // Regenerate with condensation suggestions
+        previousSuggestions = judgeResult.suggestions;
+        tailoredContent = await this.generateTailoredContent(
+          job,
+          scopedCvContent,
+          jobId,
+          judgeResult.suggestions
+        );
+
+        // Cache the new tailored content
+        this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
+
+        // Generate new PDF
+        pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
+      }
+    }
+
     return {
       success: true,
       pdfPath,
@@ -848,16 +918,21 @@ header-includes: |
     return header + markdownContent;
   }
 
-  private async generateTailoredContent(job: JobListing, cvContent: string, jobId?: string): Promise<{
+  private async generateTailoredContent(
+    job: JobListing,
+    cvContent: string,
+    jobId?: string,
+    judgeSuggestions?: string[]
+  ): Promise<{
     markdownContent: string;
     changes: string[];
   }> {
     // Load any existing recommendations
     const recommendations = this.loadRecommendations(jobId);
-    
+
     // Load company values if available
     const companyValues = this.loadCompanyValues(jobId);
-    
+
     // Build the recommendations section for the prompt
     let recommendationsSection = '';
     if (recommendations.length > 0) {
@@ -866,7 +941,18 @@ Please also incorporate these specific recommendations based on previous critiqu
 ${recommendations.map(rec => `- ${rec}`).join('\n')}
 `;
     }
-    
+
+    // Add judge suggestions if provided (for condensation)
+    if (judgeSuggestions && judgeSuggestions.length > 0) {
+      recommendationsSection += `
+
+CRITICAL CONDENSATION REQUIREMENTS (PDF exceeded page limit):
+${judgeSuggestions.map(s => `- ${s}`).join('\n')}
+
+These condensation requirements are MANDATORY. Apply them aggressively to meet the one-page limit.
+`;
+    }
+
     // Build the company values section for the prompt
     let companyValuesSection = '';
     if (companyValues) {
