@@ -1285,7 +1285,11 @@ Return only the synthesized job description text, no additional formatting or co
   }
 
   /**
-   * Create a reminder for the tracked job using macOS Reminders
+   * Create reminders for the tracked job using macOS Reminders
+   * Creates 3 reminders:
+   * 1. Main reminder: "{ROLE} @ {COMPANY}"
+   * 2. Apply reminder: "Apply to {ROLE} @ {COMPANY}"
+   * 3. Ping reminder: "Ping … about {ROLE} @ {COMPANY}"
    */
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
     try {
@@ -1298,38 +1302,96 @@ Return only the synthesized job description text, no additional formatting or co
       // Load config to get default settings
       const config = reminderService.getConfig();
 
-      // Prepare reminder data with priority override support
-      const reminderData = {
-        title: `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`,
-        notes: `Job Application Follow-up
+      // Common properties for all reminders
+      const position = jobData.title || 'Unknown Position';
+      const company = jobData.company || 'Unknown Company';
+      const dueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      const dueTime = config.due_date?.time || '23:59';
+      const priority = reminderPriority || config.default_priority;
+      const list = config.list_name;
+      const tags = config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'];
 
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
+      // Common notes content
+      const commonNotes = `Job Application Follow-up
+
+Position: ${position}
+Company: ${company}
 Location: ${jobData.location || 'Unknown Location'}
 URL: ${sourceUrl || 'No URL provided'}
 Job ID: ${jobId}
 
-Extracted via job-extractor
+Extracted via job-extractor`;
+
+      // 1. Create main reminder: "{ROLE} @ {COMPANY}"
+      const mainReminderData = {
+        title: `${position} at ${company}`,
+        notes: `${commonNotes}
 
 Next steps:
 - Check application status
 - Send follow-up email if needed
 - Research company updates
 - Prepare for potential interview`,
-        list: config.list_name,
-        priority: reminderPriority || config.default_priority,
-        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
-        dueDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
-        dueTime: config.due_date?.time || '23:59'
+        list,
+        priority,
+        tags,
+        dueDate,
+        dueTime
       };
 
-      const result = await reminderService.createReminder(reminderData);
+      const mainResult = await reminderService.createReminder(mainReminderData);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Unknown reminder creation error');
+      if (!mainResult.success) {
+        throw new Error(mainResult.error || 'Unknown reminder creation error');
       }
 
-      console.log(`✅ Created job reminder with priority ${reminderData.priority}: ${reminderData.title}`);
+      console.log(`✅ Created main job reminder with priority ${priority}: ${mainReminderData.title}`);
+
+      // 2. Create apply reminder: "Apply to {ROLE} @ {COMPANY}"
+      const applyReminderData = {
+        title: `Apply to ${position} at ${company}`,
+        notes: `${commonNotes}
+
+Action: Complete and submit job application`,
+        list,
+        priority,
+        tags,
+        dueDate,
+        dueTime
+      };
+
+      const applyResult = await reminderService.createReminder(applyReminderData);
+
+      if (!applyResult.success) {
+        console.warn(`⚠️  Failed to create apply reminder: ${applyResult.error}`);
+      } else {
+        console.log(`✅ Created apply reminder with priority ${priority}: ${applyReminderData.title}`);
+      }
+
+      // 3. Create ping reminder: "Ping … about {ROLE} @ {COMPANY}"
+      const pingReminderData = {
+        title: `Ping … about ${position} at ${company}`,
+        notes: `${commonNotes}
+
+Action: Reach out to contacts about this opportunity
+- Check LinkedIn for connections at ${company}
+- Send networking messages
+- Ask for referrals or insights`,
+        list,
+        priority,
+        tags,
+        dueDate,
+        dueTime
+      };
+
+      const pingResult = await reminderService.createReminder(pingReminderData);
+
+      if (!pingResult.success) {
+        console.warn(`⚠️  Failed to create ping reminder: ${pingResult.error}`);
+      } else {
+        console.log(`✅ Created ping reminder with priority ${priority}: ${pingReminderData.title}`);
+      }
+
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
       // Silently skip if the package is not available
@@ -1337,7 +1399,7 @@ Next steps:
         // Package not installed, skip reminder creation silently
         return;
       }
-      console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('⚠️  Failed to create job reminders:', error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
