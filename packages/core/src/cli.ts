@@ -853,7 +853,7 @@ program
   .description('Generate a tailored resume PDF for a specific job')
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
-  .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no new content generation)')
+  .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
@@ -895,7 +895,9 @@ program
       const generateParam = options.generate ? (options.companyUrl || true) : false;
 
       // When --regen is used, force critique to false since we're just rebuilding PDF
+      // Also skip judge validation when regenerating from existing markdown
       const critiqueFlag = options.regen ? false : !options.noCritique;
+      const skipJudgeFlag = options.regen ? true : !!options.skipJudge;
 
       const result = await creator.createResume(
         jobId,
@@ -905,7 +907,7 @@ program
         generateParam,
         critiqueFlag,
         'cli',  // Indicate this is called from CLI
-        !!options.skipJudge
+        skipJudgeFlag
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
