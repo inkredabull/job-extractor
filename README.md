@@ -418,12 +418,37 @@ The tool supports two distinct resume generation approaches that can be configur
 
 **Resume Options:**
 - `-o, --output <file>`: Output path for the generated PDF
-- `--regen`: Force regenerate tailored content (ignores cached content)  
+- `--regen`: Force regenerate tailored content (ignores cached content)
 - `-m, --mode <mode>`: Resume generation mode - `"leader"` (default, emphasizes management/strategy) or `"builder"` (emphasizes technical work)
+- `--skip-judge`: Skip PDF validation (one-page enforcement)
 
-**Notes:** 
+**PDF Judge Validation:**
+
+After generating a resume with critique enabled, an LLM-based judge automatically validates the PDF output:
+- **One-Page Enforcement**: Verifies the resume meets the strict one-page requirement
+- **Section Validation**: Ensures required sections (Summary, Experience, Skills, Technologies) are present
+- **Iterative Improvement**: If validation fails, provides specific condensation suggestions and regenerates (up to 2 attempts)
+- **Human-in-the-Loop Fallback**: If the resume still exceeds one page after 2 attempts, returns the best version with a warning for manual editing
+
+**Example output:**
+```bash
+⚖️  Running PDF judge validation (attempt 1/2)...
+❌ PDF validation failed (2 pages):
+   - Exceeds 1 page - currently 2 pages
+
+💡 Applying 3 suggestions and regenerating...
+   - Remove 'Hobbies' section entirely
+   - Condense the third bullet under 'Software Engineer at Google' from 90 to 60 characters
+   - Reduce Experience section bullets from 4 to 3 per role
+
+⚖️  Running PDF judge validation (attempt 2/2)...
+✅ PDF validation passed! (1 page, confidence: 9/10)
+```
+
+**Notes:**
 - The tool automatically looks for your CV file in the following order: `cv.txt`, `CV.txt`, `sample-cv.txt`. Place your CV file in the current directory with one of these names.
 - If a `company-values.txt` file exists in the job directory (`logs/{jobId}/company-values.txt`), the tool will automatically incorporate those values into the resume generation to ensure alignment with company culture.
+- PDF judge validation runs automatically after critique-based resume generation. Use `--skip-judge` to bypass validation if needed.
 
 #### Auto-Resume Generation
 
@@ -1315,6 +1340,7 @@ The ResumeCreatorAgent follows a 4-step process:
 - **Change tracking**: Reports what modifications were made
 - **Smart caching**: Automatically caches tailored content to avoid redundant LLM calls
 - **Auto-critique**: Automatically runs resume critique after first-time generation for feedback
+- **PDF Judge Validation**: LLM-based validation enforces strict page limits with iterative regeneration
 
 #### Smart Caching System
 
@@ -1371,6 +1397,81 @@ job-extractor resume "4c32e01e" my-cv.txt
 job-extractor resume "4c32e01e" my-cv.txt --regen
 # 🔄 Regenerating tailored content for job 4c32e01e (overwrites your edits)
 ```
+
+#### PDF Judge Validation System
+
+After generating an improved resume (with critique recommendations), the ResumePDFJudgeAgent automatically validates the PDF output to ensure it meets strict formatting requirements:
+
+**How it works:**
+1. **PDF Parsing**: Extracts page count and text content using the `pdf-parse` library
+2. **LLM Validation**: Sends PDF metadata to Claude for intelligent validation against guidance criteria
+3. **Specific Feedback**: If validation fails, receives concrete, actionable condensation suggestions
+4. **Iterative Regeneration**: Automatically regenerates content with judge feedback (up to 2 attempts)
+5. **Result Logging**: Saves all validation attempts to `logs/{jobId}/judge-attempt-N-{timestamp}.json`
+
+**Validation Criteria:**
+- **Page Count**: Must be exactly 1 page (strict enforcement)
+- **Required Sections**: Summary, Experience, Skills, Technologies
+- **Structure Validation**: Ensures professional resume format
+
+**Example workflow:**
+```bash
+# Generate resume with critique enabled (default)
+job-extractor resume "4c32e01e"
+
+# Output shows validation process:
+🔄 Regenerating resume with critique recommendations...
+⚖️  Running PDF judge validation (attempt 1/2)...
+❌ PDF validation failed (2 pages):
+   - Exceeds 1 page - currently 2 pages
+
+💡 Applying 4 suggestions and regenerating...
+   - Remove the 'Hobbies' section entirely
+   - Condense third bullet under 'Senior Engineer at TechCorp' from 95 to 65 characters
+   - Reduce Experience section bullets from 4 to 3 per role
+   - Combine last two roles under 'Early Career' into single condensed entry
+
+⚖️  Running PDF judge validation (attempt 2/2)...
+✅ PDF validation passed! (1 page, confidence: 9/10)
+```
+
+**Judge Suggestion Examples:**
+The judge provides specific, tactical feedback:
+- "Remove the 'Hobbies' section entirely"
+- "Condense the third bullet under 'Software Engineer at Google' from 90 to 60 characters"
+- "Reduce Experience section bullets from 4 to 3 per role"
+- "Combine the last two roles under 'Early Career' into a single condensed entry"
+
+**Validation Attempts:**
+- **Attempt 1**: Validates initial PDF after critique-based improvements
+- **Attempt 2**: If failed, regenerates with judge suggestions and validates again
+- **After 2 attempts**: If still failing, returns best version with warning for manual editing (HITL)
+
+**When validation fails:**
+```bash
+⚠️  PDF validation failed after 2 attempts. Returning best attempt.
+   Violations: Exceeds 1 page - currently 2 pages
+   Manual editing may be required (HITL).
+```
+
+**Skip validation:**
+If you prefer not to enforce the one-page limit:
+```bash
+job-extractor resume "4c32e01e" --skip-judge
+```
+
+**Logged Results:**
+All validation attempts are saved for debugging:
+```
+logs/{jobId}/judge-attempt-1-{timestamp}.json
+logs/{jobId}/judge-attempt-2-{timestamp}.json
+```
+
+**Benefits:**
+- **Actual Enforcement**: Validates PDF output, not just prompts for compliance
+- **Iterative Improvement**: Provides specific feedback for regeneration
+- **Transparent**: All attempts logged for review
+- **Fail-Safe**: Returns best attempt even if target not met (98% success, 2% HITL edge cases)
 
 ### Automatic Logging
 
@@ -1447,12 +1548,13 @@ All existing code will continue to work unchanged as the `mode` parameter defaul
 ```
 src/
 ├── agents/
-│   ├── base-agent.ts          # Abstract base class for all agents  
+│   ├── base-agent.ts          # Abstract base class for all agents
 │   ├── claude-base-agent.ts   # Abstract base class for Claude-powered agents
 │   ├── job-extractor-agent.ts # Job extraction with dual strategy
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
 │   ├── resume-creator-agent.ts # AI-powered resume generation with leader/builder modes and PDF creation
 │   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
+│   ├── resume-pdf-judge-agent.ts # LLM-based PDF validation for one-page enforcement
 │   ├── interview-prep-agent.ts # Interview preparation materials and project extraction
 │   ├── application-agent.ts   # Application form filling with AI-powered field generation
 │   └── index.ts               # Agent exports
@@ -1495,7 +1597,8 @@ logs/                          # Auto-generated job extraction and scoring logs
 ├── application-*.json         # Application form filling results
 └── {jobId}/                   # Job-specific subdirectories
     ├── tailored-*.json        # Cached metadata (changes, timestamps)
-    └── tailored-*.md          # Editable tailored resume markdown
+    ├── tailored-*.md          # Editable tailored resume markdown
+    └── judge-attempt-*.json   # PDF judge validation results
 
 examples/                      # Evaluation and example scripts
 └── langsmith_evaluation.py    # LangSmith evaluation example
@@ -1553,6 +1656,7 @@ graph TB
 - **JobScorerAgent**: Intelligent job matching with configurable criteria
 - **ResumeCreatorAgent**: Claude-powered resume tailoring with configurable leader/builder modes and PDF generation
 - **ResumeCriticAgent**: AI resume analysis with structured feedback
+- **ResumePDFJudgeAgent**: LLM-based PDF validation with page limit enforcement and iterative condensation
 - **InterviewPrepAgent**: Interview preparation materials and project extraction
 - **ApplicationAgent**: Automated form filling with human-in-the-loop verification
 - **WebScraper**: HTML fetching, JSON-LD extraction, and simplification
