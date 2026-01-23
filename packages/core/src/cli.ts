@@ -1669,12 +1669,13 @@ program
       console.log(`📌 Title: ${options.title}`);
       console.log(`📋 List: ${options.list}`);
       console.log(`⭐ Priority: ${options.priority}`);
-      
+
       if (options.notes) {
         console.log(`📄 Notes: ${options.notes.substring(0, 100)}${options.notes.length > 100 ? '...' : ''}`);
       }
 
       // Import MacOSReminderService dynamically
+      // @ts-ignore - Optional dependency, may not be available
       const { MacOSReminderService } = await import('@inkredabull/macos-reminder');
       
       const reminderService = new MacOSReminderService();

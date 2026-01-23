@@ -1,7 +1,6 @@
 import { BaseAgent } from './base-agent';
 import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
-import { MacOSReminderService } from '@inkredabull/macos-reminder';
 import { JobScorerAgent } from './job-scorer-agent';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import * as fs from 'fs';
@@ -1290,11 +1289,15 @@ Return only the synthesized job description text, no additional formatting or co
    */
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
     try {
+      // Dynamically import the MacOSReminderService to make it optional
+      // @ts-ignore - Optional dependency, may not be available
+      const { MacOSReminderService } = await import('@inkredabull/macos-reminder');
+
       const reminderService = new MacOSReminderService();
-      
+
       // Load config to get default settings
       const config = reminderService.getConfig();
-      
+
       // Prepare reminder data with priority override support
       const reminderData = {
         title: `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`,
@@ -1315,20 +1318,25 @@ Next steps:
 - Prepare for potential interview`,
         list: config.list_name,
         priority: reminderPriority || config.default_priority,
-        tags: config.tags ? config.tags.split(',').map(t => t.trim()) : ['#applying'],
+        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
         dueDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
         dueTime: config.due_date?.time || '23:59'
       };
-      
+
       const result = await reminderService.createReminder(reminderData);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Unknown reminder creation error');
       }
-      
+
       console.log(`✅ Created job reminder with priority ${reminderData.priority}: ${reminderData.title}`);
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
+      // Silently skip if the package is not available
+      if (error instanceof Error && error.message.includes('Cannot find module')) {
+        // Package not installed, skip reminder creation silently
+        return;
+      }
       console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
     }
   }
