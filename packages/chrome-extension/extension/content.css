@@ -79,6 +79,103 @@ html.job-extractor-gutter-open {
   background: #fafafa;
 }
 
+/* Universal Section Styles */
+.section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  margin: 0 0 8px 0;
+  color: #1a73e8;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-description {
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+  color: #666;
+  font-size: 13px;
+}
+
+.help-text {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+  font-style: italic;
+}
+
+/* Job ID Section */
+.job-id-section {
+  border: 2px solid #3b82f6;
+  background: #f0f9ff;
+}
+
+.job-id-input {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* AI Assistant Section */
+.ai-assistant-section .radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.radio-option input[type="radio"] {
+  width: auto;
+  margin: 0;
+  opacity: 1;
+  position: static;
+  appearance: auto;
+  -webkit-appearance: radio;
+  cursor: pointer;
+}
+
+.radio-option span {
+  font-size: 13px;
+  color: #333;
+}
+
+/* Job Scoring Section */
+.scoring-section .scoring-status {
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+}
+
+.scoring-section .button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Job Information Section */
+.job-info-section .form-field:last-of-type {
+  margin-bottom: 0;
+}
+
 /* Teal Tracking Section */
 .teal-tracking-section {
   background: white;
@@ -178,6 +275,68 @@ html.job-extractor-gutter-open {
   margin-top: 4px;
   font-size: 12px;
   opacity: 0.8;
+}
+
+/* Universal Action Button Styles */
+.action-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0.3px;
+  width: 100%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: translateY(0px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+.action-btn.blurb-btn {
+  background: #2563eb;
+  color: white;
+}
+
+.action-btn.blurb-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.action-btn.score-btn {
+  background: #10b981;
+  color: white;
+  flex: 1;
+}
+
+.action-btn.score-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.action-btn.report-btn {
+  background: #8b5cf6;
+  color: white;
+  flex: 1;
+}
+
+.action-btn.report-btn:hover:not(:disabled) {
+  background: #7c3aed;
 }
 
 /* Job Information Section */
@@ -363,14 +522,6 @@ html.job-extractor-gutter-open {
 }
 
 /* LLM Interface Styles */
-.llm-interface {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 .llm-interface h4 {
   margin: 0 0 8px 0;
   color: #1a73e8;

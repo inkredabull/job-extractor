@@ -132,49 +132,49 @@ function createGutter() {
       <button id="close-gutter">×</button>
     </div>
     <div class="gutter-content">
-      <div class="job-id-section" style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 16px; border: 2px solid #3b82f6;">
-        <div class="form-field" style="margin: 0;">
-          <label for="job-id" style="font-size: 14px; font-weight: 600; color: #1e40af; display: block; margin-bottom: 6px;">🆔 Job ID</label>
-          <input type="text" id="job-id" class="job-input" placeholder="e.g., b3358ff6 (auto-filled after tracking)"
-                 style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.5px;"
+      <!-- Job ID Section -->
+      <div class="section job-id-section">
+        <h4 class="section-header">🆔 Job ID</h4>
+        <p class="section-description">Unique identifier for job operations</p>
+        <div class="form-field">
+          <input type="text" id="job-id" class="job-input job-id-input" placeholder="e.g., b3358ff6 (auto-filled after tracking)"
                  title="Unique identifier for this job - auto-generated when tracking or paste existing ID">
-          <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0;">Used for scoring, blurbs, and all job operations</p>
+          <p class="help-text">Used for scoring, blurbs, and all job operations</p>
         </div>
       </div>
 
-      <div class="llm-interface">
-        <h4>AI Assistant</h4>
-        <p>Ask a question to get AI-powered insights:</p>
+      <!-- AI Assistant Section -->
+      <div class="section ai-assistant-section">
+        <h4 class="section-header">🤖 AI Assistant</h4>
+        <p class="section-description">Ask interview questions or generate custom blurbs</p>
 
         <div class="input-section">
           <input type="text" id="llm-input" placeholder="Enter your question here...">
           <button id="submit-query" class="submit-btn">Submit</button>
         </div>
 
-        <div class="form-field" style="margin-top: 10px;">
-          <label for="company-website" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Company Website (optional):</label>
+        <div class="form-field">
+          <label for="company-website">Company Website (optional):</label>
           <input type="text" id="company-website" class="job-input" placeholder="e.g., https://company.com" title="Used to research company values for blurb generation">
         </div>
 
-        <div class="form-field" style="margin-top: 10px;">
-          <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">Perspective:</label>
-          <div style="display: flex; gap: 16px;">
-            <label style="display: flex; align-items: center; cursor: pointer;">
-              <input type="radio" name="blurb-person" value="first" style="width: auto; margin-right: 6px; opacity: 1; position: static; appearance: auto; -webkit-appearance: radio;">
-              <span style="font-size: 13px;">First Person (I/my)</span>
+        <div class="form-field">
+          <label>Perspective:</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="blurb-person" value="first">
+              <span>First Person (I/my)</span>
             </label>
-            <label style="display: flex; align-items: center; cursor: pointer;">
-              <input type="radio" name="blurb-person" value="third" checked style="width: auto; margin-right: 6px; opacity: 1; position: static; appearance: auto; -webkit-appearance: radio;">
-              <span style="font-size: 13px;">Third Person (Anthony/his)</span>
+            <label class="radio-option">
+              <input type="radio" name="blurb-person" value="third" checked>
+              <span>Third Person (Anthony/his)</span>
             </label>
           </div>
         </div>
 
-        <div class="button-row" style="margin-top: 10px;">
-          <button id="generate-blurb" class="blurb-btn" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-            📝 Generate Blurb
-          </button>
-        </div>
+        <button id="generate-blurb" class="action-btn blurb-btn">
+          📝 Generate Blurb
+        </button>
 
         <div id="llm-response" class="response-section" style="display: none;">
           <div class="response-header">
@@ -183,39 +183,41 @@ function createGutter() {
           </div>
           <div class="response-content"></div>
         </div>
-        
+
         <div class="current-url">
           <strong>Current URL:</strong><br>
           <span id="current-url-display">${window.location.href}</span>
         </div>
-        
+
         <div id="page-questions" class="page-analysis" style="display: none;">
           <h5>Questions Found on Page:</h5>
           <ul id="questions-list"></ul>
         </div>
       </div>
 
-      <div class="scoring-report-section">
-        <h4>📊 Job Scoring Report</h4>
-        <p>AI-powered job compatibility analysis:</p>
+      <!-- Job Scoring Section -->
+      <div class="section scoring-section">
+        <h4 class="section-header">📊 Job Scoring Report</h4>
+        <p class="section-description">AI-powered job compatibility analysis</p>
 
-        <div id="scoring-status" class="scoring-status" style="padding: 12px; margin: 10px 0; border-radius: 6px; background: #f3f4f6; color: #6b7280; font-size: 13px;">
+        <div id="scoring-status" class="scoring-status">
           <span id="scoring-status-text">Track a job to generate scoring report</span>
         </div>
 
-        <div class="button-row" style="margin-top: 10px; display: flex; gap: 8px;">
-          <button id="generate-score" class="score-btn" style="flex: 1; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">
+        <div class="button-row">
+          <button id="generate-score" class="action-btn score-btn" style="display: none;">
             ✨ Generate Score
           </button>
-          <button id="view-report" class="report-btn" style="flex: 1; padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; display: none;">
+          <button id="view-report" class="action-btn report-btn" style="display: none;">
             📊 View Report
           </button>
         </div>
       </div>
 
-      <div class="job-information-section">
-        <h4>📄 Job Information</h4>
-        <p>Auto-extracted job details (editable):</p>
+      <!-- Job Information Section -->
+      <div class="section job-info-section">
+        <h4 class="section-header">📄 Job Information</h4>
+        <p class="section-description">Auto-extracted job details (editable)</p>
         
         <div class="form-field">
           <label for="job-title">Job Title:</label>
