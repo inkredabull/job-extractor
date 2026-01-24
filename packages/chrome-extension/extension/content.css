@@ -171,6 +171,51 @@ html.job-extractor-gutter-open {
   margin-top: 10px;
 }
 
+/* People I Know Section */
+.people-section .connections-status {
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.people-section .connections-status.ready {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.people-section .connections-status.loading {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.people-section .connections-status.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.people-section .connections-status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.action-btn.connections-btn {
+  background: #0a66c2;
+  color: white;
+}
+
+.action-btn.connections-btn:hover:not(:disabled) {
+  background: #004182;
+}
+
 /* Job Information Section */
 .job-info-section .form-field:last-of-type {
   margin-bottom: 0;

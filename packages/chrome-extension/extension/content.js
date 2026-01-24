@@ -214,16 +214,30 @@ function createGutter() {
         </div>
       </div>
 
+      <!-- People I Know Section -->
+      <div class="section people-section">
+        <h4 class="section-header">👥 People I Know at This Company</h4>
+        <p class="section-description">Find connections at this company on LinkedIn</p>
+
+        <div id="linkedin-connections-status" class="connections-status">
+          <span id="connections-status-text">Enter company name to search connections</span>
+        </div>
+
+        <button id="search-connections" class="action-btn connections-btn" disabled>
+          🔍 Search LinkedIn Connections
+        </button>
+      </div>
+
       <!-- Job Information Section -->
       <div class="section job-info-section">
         <h4 class="section-header">📄 Job Information</h4>
         <p class="section-description">Auto-extracted job details (editable)</p>
-        
+
         <div class="form-field">
           <label for="job-title">Job Title:</label>
           <input type="text" id="job-title" class="job-input" placeholder="Job title will be extracted automatically...">
         </div>
-        
+
         <div class="form-field">
           <label for="company-name">Company:</label>
           <input type="text" id="company-name" class="job-input" placeholder="Company name will be extracted automatically...">
@@ -307,6 +321,14 @@ function createGutter() {
 
   // Add generate blurb button functionality
   document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
+
+  // Add search connections button functionality
+  document.getElementById('search-connections').addEventListener('click', handleSearchConnections);
+
+  // Add company name field change listener to update connections section
+  document.getElementById('company-name').addEventListener('input', debounce((e) => {
+    updateConnectionsSection(e.target.value.trim());
+  }, 300));
 
   // Add job ID field change listener to update scoring section
   document.getElementById('job-id').addEventListener('input', debounce(async (e) => {
@@ -1453,6 +1475,118 @@ async function handleGenerateBlurb() {
     if (blurbBtn.textContent.includes('⏳')) {
       blurbBtn.textContent = '📝 Generate Blurb';
     }
+  }
+}
+
+// Update connections section based on company name
+function updateConnectionsSection(companyName) {
+  const statusDiv = document.getElementById('linkedin-connections-status');
+  const statusText = document.getElementById('connections-status-text');
+  const searchBtn = document.getElementById('search-connections');
+
+  if (!companyName || companyName.length === 0) {
+    statusText.textContent = 'Enter company name to search connections';
+    searchBtn.disabled = true;
+    statusDiv.className = 'connections-status';
+    return;
+  }
+
+  statusText.textContent = `Ready to search for connections at ${companyName}`;
+  searchBtn.disabled = false;
+  statusDiv.className = 'connections-status ready';
+}
+
+// Handle LinkedIn connections search
+async function handleSearchConnections() {
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('Job Extractor: Initiating LinkedIn connections search');
+
+  const companyNameField = document.getElementById('company-name');
+  const companyName = companyNameField ? companyNameField.value.trim() : '';
+
+  console.log('  → Company name:', companyName);
+
+  if (!companyName) {
+    alert('Please enter a company name first');
+    return;
+  }
+
+  const statusDiv = document.getElementById('linkedin-connections-status');
+  const statusText = document.getElementById('connections-status-text');
+  const searchBtn = document.getElementById('search-connections');
+
+  try {
+    // Show loading state
+    searchBtn.disabled = true;
+    searchBtn.textContent = '⏳ Looking up company...';
+    statusText.textContent = 'Searching for company on LinkedIn...';
+    statusDiv.className = 'connections-status loading';
+
+    console.log('  → Calling background script to look up LinkedIn company ID');
+
+    // Call background script to look up the company's LinkedIn ID
+    const response = await chrome.runtime.sendMessage({
+      action: 'lookupLinkedInCompany',
+      companyName: companyName
+    });
+
+    console.log('  → Background script response:', response);
+
+    if (response && response.success && response.companyId) {
+      const linkedInUrl = `https://www.linkedin.com/company/${response.companyId}/people/?facetNetwork=S%2CF`;
+
+      console.log('  → LinkedIn URL generated:', linkedInUrl);
+      console.log('  → Opening in new tab');
+
+      // Open LinkedIn in a new tab
+      window.open(linkedInUrl, '_blank');
+
+      statusText.textContent = `Opened LinkedIn connections for ${companyName}`;
+      statusDiv.className = 'connections-status success';
+
+      // Reset button
+      searchBtn.textContent = '🔍 Search LinkedIn Connections';
+      searchBtn.disabled = false;
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        statusText.textContent = `Ready to search for connections at ${companyName}`;
+        statusDiv.className = 'connections-status ready';
+      }, 3000);
+
+    } else {
+      const errorMsg = response.error || 'Could not find company on LinkedIn';
+      console.log('  → Error:', errorMsg);
+
+      statusText.textContent = errorMsg;
+      statusDiv.className = 'connections-status error';
+
+      searchBtn.textContent = '🔍 Search LinkedIn Connections';
+      searchBtn.disabled = false;
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        statusText.textContent = `Ready to search for connections at ${companyName}`;
+        statusDiv.className = 'connections-status ready';
+      }, 5000);
+    }
+
+    console.log('═══════════════════════════════════════════════════════════');
+
+  } catch (error) {
+    console.error('  → LinkedIn connections search failed:', error);
+    console.log('═══════════════════════════════════════════════════════════');
+
+    statusText.textContent = `Error: ${error.message}`;
+    statusDiv.className = 'connections-status error';
+
+    searchBtn.textContent = '🔍 Search LinkedIn Connections';
+    searchBtn.disabled = false;
+
+    setTimeout(() => {
+      statusText.textContent = `Ready to search for connections at ${companyName}`;
+      statusDiv.className = 'connections-status ready';
+    }, 5000);
   }
 }
 

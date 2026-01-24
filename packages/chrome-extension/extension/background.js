@@ -117,30 +117,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('Job Extractor:', request.message);
       sendResponse({success: true});
       break;
-      
+
     case 'callMCPServer':
       handleMCPServerCall(request, sendResponse);
       return true; // Keep message channel open for async response
-      
+
     case 'extractJob':
       handleExtractJob(request, sendResponse);
       return true; // Keep message channel open for async response
-      
+
     case 'trackInTeal':
       // Legacy - Teal tracking now handled by openTealAndFill
       sendResponse({success: false, error: 'Use openTealAndFill instead'});
       break;
-      
+
     case 'openTealAndFill':
       handleOpenTealAndFill(request, sendResponse);
       return true; // Keep message channel open for async response
-      
+
     case 'extractFromJson':
       handleExtractFromJson(request, sendResponse);
       return true; // Keep message channel open for async response
-      
+
     case 'createLinkedInPostReminder':
       handleCreateLinkedInPostReminder(request, sendResponse);
+      return true; // Keep message channel open for async response
+
+    case 'lookupLinkedInCompany':
+      handleLookupLinkedInCompany(request, sendResponse);
       return true; // Keep message channel open for async response
 
     case 'generateBlurb':
@@ -1134,6 +1138,87 @@ async function callUnifiedServerForLinkedInReminder(reminderData) {
     } else {
       throw error;
     }
+  }
+}
+
+// Handle LinkedIn company lookup
+async function handleLookupLinkedInCompany(request, sendResponse) {
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('Job Extractor Background: Looking up LinkedIn company');
+  console.log('  → Company name:', request.companyName);
+
+  try {
+    const companyName = request.companyName;
+
+    if (!companyName) {
+      console.log('  → Error: No company name provided');
+      console.log('═══════════════════════════════════════════════════════════');
+      sendResponse({
+        success: false,
+        error: 'Company name is required'
+      });
+      return;
+    }
+
+    // Use LinkedIn search to find the company
+    // We'll search for the company and try to extract the company ID from the results
+    console.log('  → Searching LinkedIn for company:', companyName);
+
+    const searchUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(companyName)}`;
+    console.log('  → Search URL:', searchUrl);
+
+    // Fetch the LinkedIn search page
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`LinkedIn search responded with status: ${response.status}`);
+    }
+
+    const html = await response.text();
+    console.log('  → Received HTML response, length:', html.length, 'chars');
+
+    // Try to extract company ID from the search results
+    // LinkedIn company URLs look like: /company/<company-id>/
+    const companyIdRegex = /\/company\/([^\/\?"]+)\//g;
+    const matches = [...html.matchAll(companyIdRegex)];
+
+    console.log('  → Found', matches.length, 'potential company IDs');
+
+    if (matches.length > 0) {
+      // Take the first match as the most relevant company
+      const companyId = matches[0][1];
+      console.log('  → Selected company ID:', companyId);
+      console.log('═══════════════════════════════════════════════════════════');
+
+      sendResponse({
+        success: true,
+        companyId: companyId,
+        companyName: companyName
+      });
+    } else {
+      console.log('  → No company ID found in search results');
+      console.log('═══════════════════════════════════════════════════════════');
+
+      sendResponse({
+        success: false,
+        error: `Could not find "${companyName}" on LinkedIn. Try searching manually first.`
+      });
+    }
+
+  } catch (error) {
+    console.error('  → LinkedIn company lookup failed:', error);
+    console.log('═══════════════════════════════════════════════════════════');
+
+    sendResponse({
+      success: false,
+      error: error.message || 'Failed to lookup company on LinkedIn'
+    });
   }
 }
 
