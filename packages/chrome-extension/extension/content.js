@@ -1738,33 +1738,51 @@ function populateQuestionInput(question) {
 // Generate CV-aware response using local MCP server
 async function generateCVAwareResponse(query) {
   try {
-    console.log('Job Extractor: Requesting CV-aware response for:', query);
-    
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Job Extractor Content: Initiating CV-aware response request');
+    console.log('  → Question:', query);
+    console.log('  → Question length:', query.length, 'chars');
+
     // Get current job description from textarea
     const jobDescriptionTextarea = document.getElementById('job-description');
     const jobDescription = jobDescriptionTextarea ? jobDescriptionTextarea.value.trim() : '';
-    
+
+    console.log('  → Job description textarea found:', !!jobDescriptionTextarea);
+    console.log('  → Job description length:', jobDescription.length, 'chars');
+    if (jobDescription.length > 0) {
+      console.log('  → Job description preview:', jobDescription.substring(0, 200) + '...');
+    } else {
+      console.log('  → WARNING: No job description available - response will NOT be tailored');
+    }
+
+    console.log('  → Sending message to background script');
+
     // Make request to local MCP server (through background script)
     const response = await chrome.runtime.sendMessage({
       action: 'callMCPServer',
       tool: 'answer_cv_question',
-      args: { 
+      args: {
         question: query,
         jobDescription: jobDescription
       }
     });
-    
-    console.log('Job Extractor: Background response:', response);
-    
+
+    console.log('  → Background script response received');
+    console.log('  → Response success:', response?.success);
+
     if (response && response.success && response.data) {
-      console.log('Job Extractor: CV-aware response received:', response.data);
+      console.log('  → CV-aware response length:', response.data.length, 'chars');
+      console.log('  → Response preview:', response.data.substring(0, 100) + '...');
+      console.log('═══════════════════════════════════════════════════════════');
       return response.data;
     }
-    
-    console.log('Job Extractor: No CV-aware response available, falling back to mock');
+
+    console.log('  → No CV-aware response available, falling back to mock');
+    console.log('═══════════════════════════════════════════════════════════');
     return null;
   } catch (error) {
-    console.warn('Job Extractor: Failed to get CV-aware response:', error);
+    console.warn('  → Failed to get CV-aware response:', error);
+    console.log('═══════════════════════════════════════════════════════════');
     return null;
   }
 }

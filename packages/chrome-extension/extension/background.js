@@ -159,29 +159,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Handle MCP server communication
 async function handleMCPServerCall(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Handling MCP server call for:', request.args.question);
-    
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Job Extractor Background: Handling MCP server call');
+    console.log('  → Question:', request.args.question);
+    console.log('  → Question length:', request.args.question.length, 'chars');
+
     // Extract job description if provided
     const jobDescription = request.args.jobDescription || '';
-    console.log('Job Extractor Background: Job description provided:', jobDescription ? 'Yes' : 'No');
-    
+    console.log('  → Job description provided:', jobDescription ? 'Yes' : 'No');
+    console.log('  → Job description length:', jobDescription.length, 'chars');
+    if (jobDescription.length > 0) {
+      console.log('  → Job description preview:', jobDescription.substring(0, 200) + '...');
+    }
+
     // Test if local unified server is running
     const unifiedServerRunning = await testUnifiedServerConnection();
-    
+
     if (unifiedServerRunning) {
-      console.log('Job Extractor Background: Unified server is running, using real CV data');
-      
+      console.log('  → Unified server is running, using real CV data');
+
       // Make request to local unified server
       const cvResponse = await callLocalUnifiedServer(request.args.question, jobDescription);
-      
+
+      console.log('  → Response received from unified server');
+      console.log('  → Response length:', cvResponse.length, 'chars');
+      console.log('═══════════════════════════════════════════════════════════');
+
       sendResponse({
         success: true,
         data: cvResponse
       });
     } else {
-      console.error('Job Extractor Background: Unified server is not running on localhost:3000');
-      console.error('Job Extractor Background: Please start unified server with: npm run unified-server');
-      
+      console.error('  → Unified server is not running on localhost:3000');
+      console.error('  → Please start unified server with: npm run unified-server');
+
       // Fallback to sample CV content for testing
       const sampleCV = `KEY ACCOMPLISHMENTS
 
@@ -194,22 +205,24 @@ STRENGTHS
 
 * Technical Leadership - Guides engineering teams through complex technical challenges
 * Problem Solving - Analyzes issues systematically and implements effective solutions
-* Communication - Translates technical concepts for both technical and non-technical stakeholders  
+* Communication - Translates technical concepts for both technical and non-technical stakeholders
 * Continuous Learning - Stays current with emerging technologies and industry best practices
 * Collaboration - Works effectively across departments to achieve shared business goals`;
 
       const cvResponse = generateCVResponse(request.args.question, sampleCV, jobDescription);
-      console.warn('Job Extractor Background: Using fallback sample CV data (MCP server not available)');
-      
+      console.warn('  → Using fallback sample CV data (unified server not available)');
+      console.log('═══════════════════════════════════════════════════════════');
+
       sendResponse({
         success: true,
         data: cvResponse,
         warning: 'Using sample CV data - unified server not running. Start with: npm run unified-server'
       });
     }
-    
+
   } catch (error) {
-    console.error('Job Extractor: MCP Server call failed:', error);
+    console.error('  → MCP Server call failed:', error);
+    console.log('═══════════════════════════════════════════════════════════');
     sendResponse({
       success: false,
       error: error.message
@@ -243,15 +256,21 @@ async function testUnifiedServerConnection() {
 // Call local unified server for CV questions
 async function callLocalUnifiedServer(question, jobDescription = '') {
   try {
-    console.log('Job Extractor Background: Calling unified server with question:', question);
+    console.log('  → Preparing request to unified server');
     const requestBody = { question: question };
-    
+
     // Include job description context if available
     if (jobDescription.trim()) {
       requestBody.jobDescription = jobDescription;
-      console.log('Job Extractor Background: Including job description context');
+      console.log('  → Including job description in request body');
+      console.log('  → Request body jobDescription length:', requestBody.jobDescription.length, 'chars');
+    } else {
+      console.log('  → No job description in request body');
     }
-    
+
+    console.log('  → POST to http://localhost:3000/cv-question');
+    console.log('  → Request body size:', JSON.stringify(requestBody).length, 'bytes');
+
     const response = await fetch('http://localhost:3000/cv-question', {
       method: 'POST',
       mode: 'cors',
@@ -261,21 +280,21 @@ async function callLocalUnifiedServer(question, jobDescription = '') {
       body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(30000) // 30 second timeout
     });
-    
-    console.log('Job Extractor Background: Unified server response status:', response.status);
-    
+
+    console.log('  → Unified server response status:', response.status);
+
     if (!response.ok) {
       throw new Error(`Unified server responded with status: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    console.log('Job Extractor Background: Unified server response data:', data);
+    console.log('  → Response parsed successfully');
     const result = data.response || data.answer || 'No response from unified server';
-    console.log('Job Extractor Background: Returning CV response, length:', result.length);
+    console.log('  → CV response length:', result.length, 'chars');
     return result;
-    
+
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call unified server:', error);
+    console.error('  → Failed to call unified server:', error);
     throw error;
   }
 }

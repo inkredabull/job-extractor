@@ -37,9 +37,15 @@ class CVResponseEngine {
   }
 
   async answerCVQuestion(question, jobDescription = '') {
+    console.log('  -> CVEngine.answerCVQuestion called');
+    console.log('  -> Question length:', question.length, 'chars');
+    console.log('  -> Job description length:', jobDescription ? jobDescription.length : 0, 'chars');
+
     if (this.useLLM && this.anthropic) {
+      console.log('  -> Using LLM for response');
       return this.answerWithLLM(question, jobDescription);
     } else {
+      console.log('  -> Using pattern matching for response');
       return this.answerWithPatternMatching(question, jobDescription);
     }
   }
@@ -47,11 +53,16 @@ class CVResponseEngine {
   async answerWithLLM(question, jobDescription = '') {
     try {
       const cvContent = this.loadCVContent();
-      
-      const contextPrompt = jobDescription 
-        ? `Context: This question relates to a specific job opportunity: "${jobDescription.substring(0, 500)}..."`
+      console.log('  -> CV content loaded:', cvContent.length, 'chars');
+
+      // Increase job description context from 500 to 2500 characters
+      const contextPrompt = jobDescription
+        ? `Context: This question relates to a specific job opportunity: "${jobDescription.substring(0, 2500)}${jobDescription.length > 2500 ? '...' : ''}"`
         : '';
-      
+
+      console.log('  -> Context prompt length:', contextPrompt.length, 'chars');
+      console.log('  -> Job description truncated:', jobDescription && jobDescription.length > 2500 ? 'Yes' : 'No');
+
       const prompt = `You are answering this interview question in first person using your CV below. Provide a compelling response that showcases your relevant experience.
 
 ${contextPrompt}
@@ -63,7 +74,7 @@ Question: ${question}
 
 Please provide a response that:
 1. Draws specific examples from the CV
-2. Highlights relevant achievements and quantifiable results  
+2. Highlights relevant achievements and quantifiable results
 3. Shows clear connections between past experience and the question
 4. Uses a professional, confident tone
 5. Is tailored to showcase the candidate's strengths
@@ -77,6 +88,9 @@ Format your response with:
 
 Keep under 250 words and answer in first person:`;
 
+      console.log('  -> Total prompt length:', prompt.length, 'chars');
+      console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 300)');
+
       const response = await this.anthropic.messages.create({
         model: 'claude-3-7-sonnet-20250219',
         max_tokens: 300,
@@ -89,22 +103,30 @@ Keep under 250 words and answer in first person:`;
         ]
       });
 
+      console.log('  -> Claude API response received');
+      console.log('  -> Response length:', response.content[0].text.length, 'chars');
+      console.log('  -> Tokens used:', response.usage?.input_tokens || 'N/A', 'input,', response.usage?.output_tokens || 'N/A', 'output');
+
       return {
         content: [{ text: response.content[0].text }]
       };
     } catch (error) {
-      console.error('LLM Error:', error);
+      console.error('  -> LLM Error:', error);
+      console.log('  -> Falling back to pattern matching');
       // Fallback to pattern matching
       return this.answerWithPatternMatching(question, jobDescription);
     }
   }
 
   answerWithPatternMatching(question, jobDescription = '') {
+    console.log('  -> Pattern matching mode');
     const cvData = this.parseCV();
     const questionType = this.classifyQuestion(question);
-    
-    const jobContext = jobDescription.trim() ? ` given this job opportunity: "${jobDescription.substring(0, 300)}..."` : '';
-    
+    console.log('  -> Question classified as:', questionType);
+
+    // Increase job description context from 300 to 1500 characters for pattern matching
+    const jobContext = jobDescription.trim() ? ` given this job opportunity: "${jobDescription.substring(0, 1500)}${jobDescription.length > 1500 ? '...' : ''}"` : '';
+
     const responses = {
       experience: () => this.generateExperienceResponse(cvData, jobContext),
       skills: () => this.generateSkillsResponse(cvData, jobContext),
@@ -112,8 +134,9 @@ Keep under 250 words and answer in first person:`;
       technical: () => this.generateTechnicalResponse(cvData, jobContext),
       default: () => this.generateDefaultResponse(cvData, question, jobContext)
     };
-    
+
     const responseText = responses[questionType]();
+    console.log('  -> Pattern matching response generated:', responseText.length, 'chars');
     return {
       content: [{ text: responseText }]
     };
@@ -329,41 +352,56 @@ function logChat(question, answer, metadata = {}) {
 
 // CV Question endpoint (from MCP server)
 app.post('/cv-question', async (req, res) => {
+  console.log('═══════════════════════════════════════════════════════════');
   console.log(`[${new Date().toISOString()}] CV question request`);
   try {
     const { question, jobDescription, sessionId, userAgent, referrer } = req.body;
     console.log('  -> Question:', question);
+    console.log('  -> Question length:', question?.length || 0, 'chars');
     console.log('  -> Job description provided:', jobDescription ? 'Yes' : 'No');
-    
+    console.log('  -> Job description length:', jobDescription?.length || 0, 'chars');
+
+    if (jobDescription && jobDescription.length > 0) {
+      console.log('  -> Job description preview:', jobDescription.substring(0, 200) + '...');
+    } else {
+      console.log('  -> WARNING: No job description - response will NOT be tailored');
+    }
+
     if (!question) {
       console.log('  -> ERROR: No question provided');
+      console.log('═══════════════════════════════════════════════════════════');
       return res.status(400).json({ error: 'Question parameter is required' });
     }
-    
-    console.log('  -> Processing CV question...');
+
+    console.log('  -> Calling CVEngine.answerCVQuestion...');
     const response = await cvEngine.answerCVQuestion(question, jobDescription);
     const answerText = response.content[0].text;
-    console.log('  -> CV response generated:', answerText.slice(0, 100) + '...');
-    
+    console.log('  -> CV response generated');
+    console.log('  -> Response length:', answerText.length, 'chars');
+    console.log('  -> Response preview:', answerText.slice(0, 100) + '...');
+
     // Log the chat interaction
     logChat(question, answerText, {
       sessionId: sessionId || 'web-session-' + Date.now(),
       userAgent,
       referrer,
       jobDescription: jobDescription ? 'provided' : 'none',
+      jobDescriptionLength: jobDescription?.length || 0,
       responseLength: answerText.length,
       source: 'ama-web-app'
     });
     
-    const jsonResponse = { 
-      success: true, 
-      response: answerText 
+    const jsonResponse = {
+      success: true,
+      response: answerText
     };
-    
+
     res.json(jsonResponse);
     console.log('  -> CV question response sent successfully');
+    console.log('═══════════════════════════════════════════════════════════');
   } catch (error) {
     console.error('  -> CV question error:', error);
+    console.log('═══════════════════════════════════════════════════════════');
     res.status(500).json({
       success: false,
       error: error.message

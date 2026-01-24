@@ -1285,7 +1285,7 @@ Return only the synthesized job description text, no additional formatting or co
   }
 
   /**
-   * Create a reminder for the tracked job using macOS Reminders
+   * Create multiple related reminders for the tracked job using macOS Reminders
    */
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
     try {
@@ -1298,10 +1298,13 @@ Return only the synthesized job description text, no additional formatting or co
       // Load config to get default settings
       const config = reminderService.getConfig();
 
-      // Prepare reminder data with priority override support
-      const reminderData = {
-        title: `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`,
-        notes: `Job Application Follow-up
+      const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      const jobTitle = `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`;
+
+      // Reminder 1: Main tracking reminder (medium priority)
+      const trackingReminder = {
+        title: jobTitle,
+        notes: `Job Application Tracking
 
 Position: ${jobData.title || 'Unknown Position'}
 Company: ${jobData.company || 'Unknown Company'}
@@ -1319,17 +1322,63 @@ Next steps:
         list: config.list_name,
         priority: reminderPriority || config.default_priority,
         tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
-        dueDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+        dueDate: today,
         dueTime: config.due_date?.time || '23:59'
       };
 
-      const result = await reminderService.createReminder(reminderData);
+      // Reminder 2: "Apply for" action reminder (high priority)
+      const applyReminder = {
+        title: `Apply for ${jobTitle}`,
+        notes: `Submit application for this position
 
-      if (!result.success) {
-        throw new Error(result.error || 'Unknown reminder creation error');
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+URL: ${sourceUrl || 'No URL provided'}
+Job ID: ${jobId}
+
+Action required: Complete and submit application`,
+        list: config.list_name,
+        priority: 1, // High priority (1 = highest in macOS)
+        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
+        dueDate: today,
+        dueTime: '09:00' // Morning reminder
+      };
+
+      // Reminder 3: "Ping" follow-up reminder (medium priority)
+      const pingReminder = {
+        title: `Ping about ${jobTitle}`,
+        notes: `Follow up on application status
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Suggested actions:
+- Check application portal for updates
+- Send follow-up email to recruiter
+- Connect with employees on LinkedIn`,
+        list: config.list_name,
+        priority: 5, // Medium priority
+        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
+        dueDate: today,
+        dueTime: '17:00' // Afternoon reminder
+      };
+
+      // Create all three reminders
+      const reminders = [trackingReminder, applyReminder, pingReminder];
+      let successCount = 0;
+
+      for (const reminder of reminders) {
+        const result = await reminderService.createReminder(reminder);
+        if (result.success) {
+          successCount++;
+          console.log(`✅ Created reminder: ${reminder.title}`);
+        } else {
+          console.warn(`⚠️  Failed to create reminder "${reminder.title}": ${result.error}`);
+        }
       }
 
-      console.log(`✅ Created job reminder with priority ${reminderData.priority}: ${reminderData.title}`);
+      console.log(`📝 Created ${successCount}/${reminders.length} reminders for ${jobTitle}`);
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
       // Silently skip if the package is not available
@@ -1337,7 +1386,7 @@ Next steps:
         // Package not installed, skip reminder creation silently
         return;
       }
-      console.warn('⚠️  Failed to create job reminder:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('⚠️  Failed to create job reminders:', error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
