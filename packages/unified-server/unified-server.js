@@ -305,7 +305,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+// Increase body size limit to handle large HTML payloads from Chrome extension
+// Job posting pages can be 1-5MB of HTML
+app.use(express.json({ limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
