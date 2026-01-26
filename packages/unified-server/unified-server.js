@@ -80,6 +80,10 @@ CRITICAL REQUIREMENTS:
 Response (200-350 chars, plain text only):`;
 
       console.log('  -> Total prompt length:', prompt.length, 'chars');
+      console.log('  -> Full prompt being sent to Claude:');
+      console.log('─'.repeat(80));
+      console.log(prompt);
+      console.log('─'.repeat(80));
       console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 150)');
 
       const response = await this.anthropic.messages.create({
