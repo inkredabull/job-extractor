@@ -13,7 +13,9 @@ const path = require('path');
 const http = require('http');
 const url = require('url');
 const Anthropic = require('@anthropic-ai/sdk');
-require('dotenv').config();
+
+// Load .env from project root (two levels up from packages/mcp-server)
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 class CVMCPServer {
   constructor(useLLM = false) {
