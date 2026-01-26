@@ -135,14 +135,25 @@ function createGutter() {
       <!-- Job ID Section -->
       <div class="section job-id-section">
         <h4 class="section-header">🆔 Job ID</h4>
-        <p class="section-description">Unique identifier for job operations</p>
         <div class="form-field">
           <input type="text" id="job-id" class="job-input job-id-input" placeholder="e.g., b3358ff6 (auto-filled after tracking)"
                  title="Unique identifier for this job - auto-generated when tracking or paste existing ID">
-          <p class="help-text">Used for scoring, blurbs, and all job operations</p>
         </div>
       </div>
 
+      <!-- People I Know Section -->
+      <div class="section people-section">
+        <h4 class="section-header">👥 People I Know at This Company</h4>
+        <p class="section-description">Find connections at this company on LinkedIn</p>
+
+        <div id="linkedin-connections-status" class="connections-status">
+          <span id="connections-status-text">Enter company name to search connections</span>
+        </div>
+
+        <button id="search-connections" class="action-btn connections-btn" disabled>
+          🔍 Search LinkedIn Connections
+        </button>
+      </div>
       <!-- AI Assistant Section -->
       <div class="section ai-assistant-section">
         <h4 class="section-header">🤖 AI Assistant</h4>
@@ -184,11 +195,6 @@ function createGutter() {
           <div class="response-content"></div>
         </div>
 
-        <div class="current-url">
-          <strong>Current URL:</strong><br>
-          <span id="current-url-display">${window.location.href}</span>
-        </div>
-
         <div id="page-questions" class="page-analysis" style="display: none;">
           <h5>Questions Found on Page:</h5>
           <ul id="questions-list"></ul>
@@ -214,19 +220,6 @@ function createGutter() {
         </div>
       </div>
 
-      <!-- People I Know Section -->
-      <div class="section people-section">
-        <h4 class="section-header">👥 People I Know at This Company</h4>
-        <p class="section-description">Find connections at this company on LinkedIn</p>
-
-        <div id="linkedin-connections-status" class="connections-status">
-          <span id="connections-status-text">Enter company name to search connections</span>
-        </div>
-
-        <button id="search-connections" class="action-btn connections-btn" disabled>
-          🔍 Search LinkedIn Connections
-        </button>
-      </div>
 
       <!-- Job Information Section -->
       <div class="section job-info-section">
