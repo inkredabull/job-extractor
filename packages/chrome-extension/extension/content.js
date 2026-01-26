@@ -360,11 +360,12 @@ function createGutter() {
     await updateScoringSection(jobId);
   }, 500)); // Debounce to avoid too many requests while typing
 
-  // NOTE: Automatic extraction and scoring removed to prevent unexpected token usage
-  // and reminder creation. Users must explicitly:
-  // 1. Toggle extraction mode to extract job data
-  // 2. Click "Track" button to create reminders and enable scoring
-  console.log('Job Extractor: Gutter loaded. Waiting for user action to extract or track job.');
+  // Run automatic LOCAL extraction on page load (free, no API calls, no reminders)
+  // Server extraction and tracking only happen when user explicitly requests them
+  setTimeout(() => {
+    console.log('Job Extractor: Running automatic local extraction (free)');
+    extractJobInformationLocal();
+  }, 100);
 
   // Analyze page content for questions
   analyzePageContent();
