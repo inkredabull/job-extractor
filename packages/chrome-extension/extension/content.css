@@ -950,3 +950,32 @@ html.job-extractor-gutter-open {
   color: #333;
   background-color: white;
 }
+
+/* Extraction Mode Select */
+.extraction-mode-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.extraction-mode-select:hover {
+  border-color: #1a73e8;
+}
+
+.extraction-mode-select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.extraction-mode-select option {
+  padding: 8px 12px;
+  color: #333;
+  background-color: white;
+}

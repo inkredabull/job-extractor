@@ -21,6 +21,31 @@ function debounce(func, wait) {
   };
 }
 
+// Load extraction mode preference from storage
+async function loadExtractionModePreference() {
+  try {
+    const result = await chrome.storage.local.get(['extractionMode']);
+    const mode = result.extractionMode || 'local'; // Default to local
+    const extractionModeSelect = document.getElementById('extraction-mode');
+    if (extractionModeSelect) {
+      extractionModeSelect.value = mode;
+      console.log('Job Extractor: Loaded extraction mode preference:', mode);
+    }
+  } catch (error) {
+    console.error('Job Extractor: Failed to load extraction mode preference:', error);
+  }
+}
+
+// Save extraction mode preference to storage
+async function saveExtractionModePreference(mode) {
+  try {
+    await chrome.storage.local.set({ extractionMode: mode });
+    console.log('Job Extractor: Saved extraction mode preference:', mode);
+  } catch (error) {
+    console.error('Job Extractor: Failed to save extraction mode preference:', error);
+  }
+}
+
 // Expose global toggle function to browser console immediately
 window.toggleJobExtractor = function(enabled) {
   if (typeof enabled === 'boolean') {
@@ -268,7 +293,16 @@ function createGutter() {
           </label>
         </div>
         -->
-        
+
+        <div class="form-field">
+          <label for="extraction-mode">Extraction Mode:</label>
+          <select id="extraction-mode" class="extraction-mode-select">
+            <option value="local" selected>⚡ Fast (Local RegEx) - Free</option>
+            <option value="server">🎯 Accurate (LLM) - Uses API tokens</option>
+          </select>
+          <p class="help-text">Local mode is instant and free. Server mode is more accurate but uses LLM API tokens.</p>
+        </div>
+
         <div class="form-field">
           <label for="reminder-priority">Priority:</label>
           <select id="reminder-priority" class="priority-select">
@@ -322,6 +356,14 @@ function createGutter() {
     updateConnectionsSection(e.target.value.trim());
   }, 300));
 
+  // Load and persist extraction mode preference
+  loadExtractionModePreference();
+  document.getElementById('extraction-mode').addEventListener('change', (e) => {
+    const mode = e.target.value;
+    console.log('Job Extractor: Extraction mode changed to:', mode);
+    saveExtractionModePreference(mode);
+  });
+
   // Add job ID field change listener to update scoring section
   document.getElementById('job-id').addEventListener('input', debounce(async (e) => {
     const jobId = e.target.value.trim();
@@ -347,96 +389,107 @@ function createGutter() {
 
 // Extract comprehensive job information from the current page
 async function extractJobInformation() {
-  console.log('🔍 Job Extractor: Starting robust job information extraction');
+  console.log('🔍 Job Extractor: Starting job information extraction');
   console.log('🔍 Current page URL:', window.location.href);
   console.log('🔍 Page title:', document.title);
 
-  try {
-    // Use robust CLI extraction instead of regex-based extraction
-    console.log('🔍 Job Extractor: Using robust CLI extraction logic');
+  // Check extraction mode setting
+  const extractionModeSelect = document.getElementById('extraction-mode');
+  const extractionMode = extractionModeSelect ? extractionModeSelect.value : 'local';
 
-    // Get the full page HTML for robust extraction
-    const pageHtml = document.documentElement.outerHTML;
-    console.log('🔍 Job Extractor: HTML size:', pageHtml.length, 'chars');
+  console.log('🔍 Job Extractor: Extraction mode:', extractionMode);
 
-    // Call background script to perform robust extraction
-    const response = await chrome.runtime.sendMessage({
-      action: 'extractJob',
-      url: window.location.href,
-      html: pageHtml
-    });
+  if (extractionMode === 'server') {
+    // Use server-side LLM extraction (costs API tokens but more accurate)
+    try {
+      console.log('🔍 Job Extractor: Using server-side LLM extraction');
 
-    if (response && response.success && response.jobData) {
-      console.log('🔍 Job Extractor: Robust extraction successful');
-      console.log('🔍 Job Extractor: Job data:', response.jobData);
+      // Get the full page HTML for robust extraction
+      const pageHtml = document.documentElement.outerHTML;
+      console.log('🔍 Job Extractor: HTML size:', pageHtml.length, 'chars');
 
-      // Populate fields with extracted data
-      const titleField = document.getElementById('job-title');
-      if (titleField && response.jobData.title) {
-        titleField.value = response.jobData.title;
-        titleField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      const companyField = document.getElementById('company-name');
-      if (companyField && response.jobData.company) {
-        companyField.value = response.jobData.company;
-        companyField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      const locationField = document.getElementById('job-location');
-      if (locationField && response.jobData.location) {
-        locationField.value = response.jobData.location;
-        locationField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      const descriptionField = document.getElementById('job-description');
-      if (descriptionField && response.jobData.description) {
-        descriptionField.value = response.jobData.description;
-        extractedJobDescription = response.jobData.description;
-      }
-
-      const minSalaryField = document.getElementById('min-salary');
-      const maxSalaryField = document.getElementById('max-salary');
-      if (response.jobData.salaryMin && minSalaryField) {
-        minSalaryField.value = response.jobData.salaryMin;
-        minSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (response.jobData.salaryMax && maxSalaryField) {
-        maxSalaryField.value = response.jobData.salaryMax;
-        maxSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      const urlField = document.getElementById('job-url');
-      if (urlField) urlField.value = window.location.href;
-
-      console.log('Job Extractor: Job information extracted and populated:', {
-        title: response.jobData.title,
-        company: response.jobData.company,
-        location: response.jobData.location,
-        salary: {
-          min: response.jobData.salaryMin,
-          max: response.jobData.salaryMax
-        },
+      // Call background script to perform robust extraction
+      const response = await chrome.runtime.sendMessage({
+        action: 'extractJob',
         url: window.location.href,
-        hasDescription: !!(response.jobData.description && response.jobData.description.length > 0)
+        html: pageHtml
       });
-    } else {
-      console.error('🔍 Job Extractor: Robust extraction failed, falling back to basic extraction');
 
-      // Fallback to basic extraction if robust extraction fails
-      extractJobInformationFallback();
+      if (response && response.success && response.jobData) {
+        console.log('🔍 Job Extractor: Server extraction successful');
+        console.log('🔍 Job Extractor: Job data:', response.jobData);
+        populateFieldsFromJobData(response.jobData);
+        return;
+      } else {
+        console.error('🔍 Job Extractor: Server extraction failed, falling back to local extraction');
+      }
+    } catch (error) {
+      console.error('🔍 Job Extractor: Error during server extraction:', error);
+      console.log('🔍 Job Extractor: Falling back to local extraction');
     }
-  } catch (error) {
-    console.error('🔍 Job Extractor: Error during robust extraction:', error);
-
-    // Fallback to basic extraction on error
-    extractJobInformationFallback();
   }
+
+  // Use local regex extraction (default, fast and free)
+  console.log('🔍 Job Extractor: Using local regex extraction');
+  extractJobInformationLocal();
 }
 
-// Fallback function using basic regex extraction (legacy)
-function extractJobInformationFallback() {
-  console.log('🔍 Job Extractor: Using fallback regex-based extraction');
+// Helper function to populate fields from job data
+function populateFieldsFromJobData(jobData) {
+  const titleField = document.getElementById('job-title');
+  if (titleField && jobData.title) {
+    titleField.value = jobData.title;
+    titleField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const companyField = document.getElementById('company-name');
+  if (companyField && jobData.company) {
+    companyField.value = jobData.company;
+    companyField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const locationField = document.getElementById('job-location');
+  if (locationField && jobData.location) {
+    locationField.value = jobData.location;
+    locationField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const descriptionField = document.getElementById('job-description');
+  if (descriptionField && jobData.description) {
+    descriptionField.value = jobData.description;
+    extractedJobDescription = jobData.description;
+  }
+
+  const minSalaryField = document.getElementById('min-salary');
+  const maxSalaryField = document.getElementById('max-salary');
+  if (jobData.salaryMin && minSalaryField) {
+    minSalaryField.value = jobData.salaryMin;
+    minSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (jobData.salaryMax && maxSalaryField) {
+    maxSalaryField.value = jobData.salaryMax;
+    maxSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const urlField = document.getElementById('job-url');
+  if (urlField) urlField.value = window.location.href;
+
+  console.log('Job Extractor: Job information populated:', {
+    title: jobData.title,
+    company: jobData.company,
+    location: jobData.location,
+    salary: {
+      min: jobData.salaryMin,
+      max: jobData.salaryMax
+    },
+    url: window.location.href,
+    hasDescription: !!(jobData.description && jobData.description.length > 0)
+  });
+}
+
+// Local regex-based extraction (fast and free)
+function extractJobInformationLocal() {
+  console.log('🔍 Job Extractor: Using local regex-based extraction');
 
   // Extract job title
   const jobTitle = extractJobTitle();
