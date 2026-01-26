@@ -2068,16 +2068,32 @@ async function generateCVAwareResponse(query) {
     console.log('  → Question:', query);
     console.log('  → Question length:', query.length, 'chars');
 
-    // Get current job description from textarea
-    const jobDescriptionTextarea = document.getElementById('job-description');
-    const jobDescription = jobDescriptionTextarea ? jobDescriptionTextarea.value.trim() : '';
+    // Get all job context fields
+    const jobTitle = document.getElementById('job-title')?.value?.trim() || '';
+    const companyName = document.getElementById('company-name')?.value?.trim() || '';
+    const jobLocation = document.getElementById('job-location')?.value?.trim() || '';
+    const jobDescription = document.getElementById('job-description')?.value?.trim() || '';
+    const companyUrl = document.getElementById('company-url')?.value?.trim() || '';
 
-    console.log('  → Job description textarea found:', !!jobDescriptionTextarea);
+    // Build comprehensive job context
+    let jobContext = '';
+    if (jobTitle || companyName) {
+      jobContext = `Role: ${jobTitle}${companyName ? ` at ${companyName}` : ''}`;
+      if (jobLocation) jobContext += `\nLocation: ${jobLocation}`;
+      if (companyUrl) jobContext += `\nCompany Website: ${companyUrl}`;
+      if (jobDescription) jobContext += `\n\nJob Description:\n${jobDescription}`;
+    } else if (jobDescription) {
+      jobContext = jobDescription;
+    }
+
+    console.log('  → Job title:', jobTitle || '(none)');
+    console.log('  → Company:', companyName || '(none)');
+    console.log('  → Company URL:', companyUrl || '(none)');
     console.log('  → Job description length:', jobDescription.length, 'chars');
-    if (jobDescription.length > 0) {
-      console.log('  → Job description preview:', jobDescription.substring(0, 200) + '...');
-    } else {
-      console.log('  → WARNING: No job description available - response will NOT be tailored');
+    console.log('  → Full context length:', jobContext.length, 'chars');
+
+    if (jobContext.length === 0) {
+      console.log('  → WARNING: No job context available - response will be generic');
     }
 
     console.log('  → Sending message to background script');
@@ -2088,7 +2104,7 @@ async function generateCVAwareResponse(query) {
       tool: 'answer_cv_question',
       args: {
         question: query,
-        jobDescription: jobDescription
+        jobDescription: jobContext
       }
     });
 

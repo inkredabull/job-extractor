@@ -281,24 +281,33 @@ class CVMCPServer {
       // Build context-aware prompt
       const jobContextSection = jobDescription.trim() ? `
 
-Job Description Context:
+Job Context:
 ${jobDescription}
 
-IMPORTANT: Frame your response considering the requirements and vocabulary from this job description. Use similar terminology and emphasize experiences that align with the role.` : '';
+CRITICAL: Your response MUST be specifically tailored to this role. Reference the company name, role title, and specific aspects of the job description. Explain WHY your background makes you excited about THIS PARTICULAR opportunity at THIS SPECIFIC company. Avoid generic responses.` : '';
 
-      const prompt = `You are responding to an interview question as the person whose CV/resume is provided below. Answer in first person voice as if you are this person being interviewed. Be specific and reference actual accomplishments from the CV when relevant.
+      const prompt = `You are responding to an interview question as the person whose CV/resume is provided below. Answer in first person voice as if you are this person being interviewed.
 
 CV/Resume:
 ${cvContent}${jobContextSection}
 
 Interview Question: ${question}
 
-IMPORTANT: Keep your response between 200-400 characters. Be concise, direct, and impactful. Focus on the most relevant accomplishment or experience that answers the question.`;
+Requirements for your response:
+1. Be SPECIFIC to this job and company - reference them by name
+2. Connect your actual accomplishments from the CV to the role requirements
+3. Show enthusiasm that is SPECIFIC to aspects of this opportunity (not generic)
+4. Keep response between 300-500 characters
+5. Be authentic and conversational, not corporate boilerplate
+6. If the question asks about excitement/interest, explain concrete reasons based on the job details
+
+BAD example (too generic): "My background in AI and marketplace development positions me well for this role."
+GOOD example (specific): "Leading the AI productivity initiative at [previous company] showed me the impact of well-designed AI systems. Google DeepMind's focus on fundamental AI research, especially in areas like AlphaFold, aligns perfectly with my interest in AI applications that solve real-world problems at scale."`;
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 150,
-        temperature: 0.7,
+        max_tokens: 250,
+        temperature: 0.8,
         messages: [
           {
             role: 'user',
