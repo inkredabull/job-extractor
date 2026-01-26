@@ -740,10 +740,11 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         type: 'json',
         data: jobData,
-        reminderPriority: reminderPriority
+        reminderPriority: reminderPriority,
+        createReminders: true  // Track button explicitly creates reminders
       }),
       signal: AbortSignal.timeout(30000) // 30 second timeout for JSON processing
     });

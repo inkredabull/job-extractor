@@ -415,7 +415,7 @@ app.post('/cv-question', async (req, res) => {
 app.post('/extract', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Extract request`);
   try {
-    const { url, type, data, html, reminderPriority } = req.body;
+    const { url, type, data, html, reminderPriority, createReminders } = req.body;
 
     // Handle different extraction types
     if (type === 'html') {
@@ -447,6 +447,10 @@ app.post('/extract', async (req, res) => {
           const args = ['ts-node', 'packages/core/src/cli.ts', 'extract', '--type', 'html'];
           if (reminderPriority) {
             args.push('--reminder-priority', reminderPriority.toString());
+          }
+          // Skip reminders unless explicitly requested (for preview/display extraction)
+          if (!createReminders) {
+            args.push('--no-reminders');
           }
           // Skip post-workflow for Chrome extension requests for immediate response
           args.push('--skip-post-workflow');
@@ -575,6 +579,10 @@ app.post('/extract', async (req, res) => {
           if (reminderPriority) {
             args.push('--reminder-priority', reminderPriority.toString());
           }
+          // Skip reminders unless explicitly requested (for preview/display extraction)
+          if (!createReminders) {
+            args.push('--no-reminders');
+          }
           // Skip post-workflow (scoring, resume generation) for Chrome extension requests
           // This allows immediate response to the extension
           args.push('--skip-post-workflow');
@@ -701,13 +709,22 @@ app.post('/extract', async (req, res) => {
       }
       
       console.log(`  -> Extracting job from URL: ${url}`);
-      
+
       // Change to the main project directory (two levels up from packages/unified-server)
       const projectDir = path.resolve(__dirname, '..', '..');
       process.chdir(projectDir);
-      
-      // Execute the extract command
-      const command = `npx ts-node packages/core/src/cli.ts extract "${url}"`;
+
+      // Build extract command with optional flags
+      let command = `npx ts-node packages/core/src/cli.ts extract "${url}"`;
+      if (reminderPriority) {
+        command += ` --reminder-priority ${reminderPriority}`;
+      }
+      // Skip reminders unless explicitly requested (for preview/display extraction)
+      if (!createReminders) {
+        command += ' --no-reminders';
+      }
+      command += ' --skip-post-workflow';
+
       console.log(`  -> Executing command: ${command}`);
       
       const output = execSync(command, { 

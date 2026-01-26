@@ -408,6 +408,7 @@ program
   .option('--no-score', 'Skip automatic scoring after extraction')
   .option('--force-extract', 'Extract job even if competition is too high')
   .option('--reminder-priority <priority>', 'Reminder priority for macOS reminders (1=High, 5=Medium, 9=Low)', '5')
+  .option('--no-reminders', 'Skip creating macOS reminders (useful for preview/display purposes)')
   .option('--skip-post-workflow', 'Skip post-extraction workflow (scoring, resume generation)')
   .action(async (input: string, options) => {
     try {
@@ -418,10 +419,11 @@ program
 
       const config = getConfig();
       const agent = new JobExtractorAgent(config);
-      
-      const result = await agent.extractFromInput(input, options.type, { 
+
+      const result = await agent.extractFromInput(input, options.type, {
         ignoreCompetition: options.forceExtract,
         reminderPriority: parseInt(options.reminderPriority) || 5,
+        skipReminders: options.noReminders,
         skipPostWorkflow: options.skipPostWorkflow
       });
 

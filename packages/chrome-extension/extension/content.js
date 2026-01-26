@@ -360,16 +360,11 @@ function createGutter() {
     await updateScoringSection(jobId);
   }, 500)); // Debounce to avoid too many requests while typing
 
-  // Extract job information automatically when gutter opens (with slight delay for DOM)
-  setTimeout(async () => {
-    extractJobInformation();
-
-    // Also check if there's already a job ID and update scoring section
-    const jobIdField = document.getElementById('job-id');
-    if (jobIdField && jobIdField.value.trim()) {
-      await updateScoringSection(jobIdField.value.trim());
-    }
-  }, 100);
+  // NOTE: Automatic extraction and scoring removed to prevent unexpected token usage
+  // and reminder creation. Users must explicitly:
+  // 1. Toggle extraction mode to extract job data
+  // 2. Click "Track" button to create reminders and enable scoring
+  console.log('Job Extractor: Gutter loaded. Waiting for user action to extract or track job.');
 
   // Analyze page content for questions
   analyzePageContent();

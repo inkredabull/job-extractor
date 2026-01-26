@@ -13,7 +13,7 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     switch (type) {
       case 'url':
         return this.extractFromUrl(input, options);
@@ -31,7 +31,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     try {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
@@ -44,7 +44,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Check applicant count first - early exit if too competitive (unless overridden)
       const applicantInfo = this.extractApplicantCount(html);
@@ -97,8 +97,12 @@ export class JobExtractorAgent extends BaseAgent {
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
-      // Create reminder for tracked job
-      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+      // Create reminder for tracked job (unless --no-reminders flag is set)
+      if (!options?.skipReminders) {
+        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+      } else {
+        console.log('⏭️  Skipping reminder creation (--no-reminders flag set)');
+      }
 
       // Run post-extraction workflow (score, resume, critique) unless skipped
       if (!options?.skipPostWorkflow) {
@@ -120,7 +124,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Parse the JSON input
       let jobData: any;
@@ -155,8 +159,12 @@ export class JobExtractorAgent extends BaseAgent {
       fs.writeFileSync(logFilePath, jsonOutput, 'utf-8');
       console.log(`✅ Job information logged to ${logFilePath}`);
 
-      // Create reminder for tracked job
-      await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+      // Create reminder for tracked job (unless --no-reminders flag is set)
+      if (!options?.skipReminders) {
+        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+      } else {
+        console.log('⏭️  Skipping reminder creation (--no-reminders flag set)');
+      }
 
       // Run post-extraction workflow (score, resume, critique) unless skipped
       if (!options?.skipPostWorkflow) {
@@ -178,7 +186,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
     try {
       // Read the JSON file
       const jsonContent = fs.readFileSync(filePath, 'utf-8');
