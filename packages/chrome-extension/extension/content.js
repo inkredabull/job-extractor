@@ -143,12 +143,11 @@ function createGutter() {
 
       <!-- People I Know Section -->
       <div class="section people-section">
-        <h4 class="section-header">👥 People I Know at This Company</h4>
+        <h4 class="section-header">
+          👥 People I Know at This Company
+          <span id="connections-status-icon" class="status-icon" title="Enter company name to search connections">⚪</span>
+        </h4>
         <p class="section-description">Find connections at this company on LinkedIn</p>
-
-        <div id="linkedin-connections-status" class="connections-status">
-          <span id="connections-status-text">Enter company name to search connections</span>
-        </div>
 
         <button id="search-connections" class="action-btn connections-btn" disabled>
           🔍 Search LinkedIn Connections
@@ -1473,20 +1472,21 @@ async function handleGenerateBlurb() {
 
 // Update connections section based on company name
 function updateConnectionsSection(companyName) {
-  const statusDiv = document.getElementById('linkedin-connections-status');
-  const statusText = document.getElementById('connections-status-text');
+  const statusIcon = document.getElementById('connections-status-icon');
   const searchBtn = document.getElementById('search-connections');
 
   if (!companyName || companyName.length === 0) {
-    statusText.textContent = 'Enter company name to search connections';
+    statusIcon.textContent = '⚪';
+    statusIcon.title = 'Enter company name to search connections';
+    statusIcon.className = 'status-icon';
     searchBtn.disabled = true;
-    statusDiv.className = 'connections-status';
     return;
   }
 
-  statusText.textContent = `Ready to search for connections at ${companyName}`;
+  statusIcon.textContent = '🟢';
+  statusIcon.title = `Ready to search for connections at ${companyName}`;
+  statusIcon.className = 'status-icon ready';
   searchBtn.disabled = false;
-  statusDiv.className = 'connections-status ready';
 }
 
 // Handle LinkedIn connections search
@@ -1504,16 +1504,16 @@ async function handleSearchConnections() {
     return;
   }
 
-  const statusDiv = document.getElementById('linkedin-connections-status');
-  const statusText = document.getElementById('connections-status-text');
+  const statusIcon = document.getElementById('connections-status-icon');
   const searchBtn = document.getElementById('search-connections');
 
   try {
     // Show loading state
     searchBtn.disabled = true;
     searchBtn.textContent = '⏳ Looking up company...';
-    statusText.textContent = 'Searching for company on LinkedIn...';
-    statusDiv.className = 'connections-status loading';
+    statusIcon.textContent = '🟡';
+    statusIcon.title = 'Searching for company on LinkedIn...';
+    statusIcon.className = 'status-icon loading';
 
     console.log('  → Calling background script to look up LinkedIn company ID');
 
@@ -1534,8 +1534,9 @@ async function handleSearchConnections() {
       // Open LinkedIn in a new tab
       window.open(linkedInUrl, '_blank');
 
-      statusText.textContent = `Opened LinkedIn connections for ${companyName}`;
-      statusDiv.className = 'connections-status success';
+      statusIcon.textContent = '✅';
+      statusIcon.title = `Opened LinkedIn connections for ${companyName}`;
+      statusIcon.className = 'status-icon success';
 
       // Reset button
       searchBtn.textContent = '🔍 Search LinkedIn Connections';
@@ -1543,24 +1544,27 @@ async function handleSearchConnections() {
 
       // Reset status after 3 seconds
       setTimeout(() => {
-        statusText.textContent = `Ready to search for connections at ${companyName}`;
-        statusDiv.className = 'connections-status ready';
+        statusIcon.textContent = '🟢';
+        statusIcon.title = `Ready to search for connections at ${companyName}`;
+        statusIcon.className = 'status-icon ready';
       }, 3000);
 
     } else {
       const errorMsg = response.error || 'Could not find company on LinkedIn';
       console.log('  → Error:', errorMsg);
 
-      statusText.textContent = errorMsg;
-      statusDiv.className = 'connections-status error';
+      statusIcon.textContent = '❌';
+      statusIcon.title = errorMsg;
+      statusIcon.className = 'status-icon error';
 
       searchBtn.textContent = '🔍 Search LinkedIn Connections';
       searchBtn.disabled = false;
 
       // Reset after 5 seconds
       setTimeout(() => {
-        statusText.textContent = `Ready to search for connections at ${companyName}`;
-        statusDiv.className = 'connections-status ready';
+        statusIcon.textContent = '🟢';
+        statusIcon.title = `Ready to search for connections at ${companyName}`;
+        statusIcon.className = 'status-icon ready';
       }, 5000);
     }
 
@@ -1570,15 +1574,17 @@ async function handleSearchConnections() {
     console.error('  → LinkedIn connections search failed:', error);
     console.log('═══════════════════════════════════════════════════════════');
 
-    statusText.textContent = `Error: ${error.message}`;
-    statusDiv.className = 'connections-status error';
+    statusIcon.textContent = '❌';
+    statusIcon.title = `Error: ${error.message}`;
+    statusIcon.className = 'status-icon error';
 
     searchBtn.textContent = '🔍 Search LinkedIn Connections';
     searchBtn.disabled = false;
 
     setTimeout(() => {
-      statusText.textContent = `Ready to search for connections at ${companyName}`;
-      statusDiv.className = 'connections-status ready';
+      statusIcon.textContent = '🟢';
+      statusIcon.title = `Ready to search for connections at ${companyName}`;
+      statusIcon.className = 'status-icon ready';
     }, 5000);
   }
 }
