@@ -787,6 +787,68 @@ app.post('/extract', async (req, res) => {
   }
 });
 
+// Load job from logs endpoint
+app.post('/load-job', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] Load job from logs request`);
+  try {
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    console.log(`  -> Loading job ${jobId} from logs`);
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+    const jobDir = path.join(projectDir, 'logs', jobId);
+
+    // Check if job directory exists
+    if (!fs.existsSync(jobDir)) {
+      console.log(`  -> ❌ Job directory not found: ${jobDir}`);
+      return res.status(404).json({
+        success: false,
+        error: `Job ${jobId} not found in logs`
+      });
+    }
+
+    // Find the job JSON file
+    const files = fs.readdirSync(jobDir);
+    const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
+
+    if (!jobFile) {
+      console.log(`  -> ❌ No job file found in directory`);
+      return res.status(404).json({
+        success: false,
+        error: `No job data file found for ${jobId}`
+      });
+    }
+
+    // Read and parse the job data
+    const jobFilePath = path.join(jobDir, jobFile);
+    const jobDataRaw = fs.readFileSync(jobFilePath, 'utf-8');
+    const jobData = JSON.parse(jobDataRaw);
+
+    console.log(`  -> ✅ Successfully loaded job data from ${jobFile}`);
+
+    res.json({
+      success: true,
+      jobData: jobData,
+      filePath: `logs/${jobId}/${jobFile}`
+    });
+
+  } catch (error) {
+    console.error('  -> Failed to load job from logs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Teal tracking endpoint (legacy - now handled by Chrome extension)
 app.post('/teal-track', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Teal track request (deprecated)`);

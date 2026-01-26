@@ -236,6 +236,15 @@ function createGutter() {
         <p class="section-description">Auto-extracted job details (editable)</p>
 
         <div class="form-field">
+          <label for="extraction-mode">Extraction Mode:</label>
+          <select id="extraction-mode" class="extraction-mode-select">
+            <option value="local" selected>⚡ Fast (Local RegEx) - Free</option>
+            <option value="server">🎯 Accurate (LLM) - Uses API tokens</option>
+          </select>
+          <p class="help-text">Local mode is instant and free. Server mode is more accurate but uses LLM API tokens.</p>
+        </div>
+
+        <div class="form-field">
           <label for="job-title">Job Title:</label>
           <input type="text" id="job-title" class="job-input" placeholder="Job title will be extracted automatically...">
         </div>
@@ -278,15 +287,6 @@ function createGutter() {
           </label>
         </div>
         -->
-
-        <div class="form-field">
-          <label for="extraction-mode">Extraction Mode:</label>
-          <select id="extraction-mode" class="extraction-mode-select">
-            <option value="local" selected>⚡ Fast (Local RegEx) - Free</option>
-            <option value="server">🎯 Accurate (LLM) - Uses API tokens</option>
-          </select>
-          <p class="help-text">Local mode is instant and free. Server mode is more accurate but uses LLM API tokens.</p>
-        </div>
 
         <div class="form-field">
           <label for="reminder-priority">Priority:</label>
@@ -430,6 +430,30 @@ async function extractJobInformation() {
   console.log('🔍 Current page URL:', window.location.href);
   console.log('🔍 Page title:', document.title);
 
+  // Check if job ID is already set - if so, load from logs instead of re-extracting
+  const jobIdField = document.getElementById('job-id');
+  const existingJobId = jobIdField?.value?.trim();
+
+  if (existingJobId) {
+    console.log('🔍 Job Extractor: Job ID already set, loading from logs:', existingJobId);
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'loadJobFromLogs',
+        jobId: existingJobId
+      });
+
+      if (response && response.success && response.jobData) {
+        console.log('🔍 Job Extractor: Loaded job data from logs');
+        populateFieldsFromJobData(response.jobData, existingJobId);
+        return;
+      } else {
+        console.warn('🔍 Job Extractor: Failed to load from logs, will re-extract');
+      }
+    } catch (error) {
+      console.error('🔍 Job Extractor: Error loading from logs:', error);
+    }
+  }
+
   // Check extraction mode setting
   const extractionModeSelect = document.getElementById('extraction-mode');
   const extractionMode = extractionModeSelect ? extractionModeSelect.value : 'local';
@@ -457,7 +481,8 @@ async function extractJobInformation() {
       if (response && response.success && response.jobData) {
         console.log('🔍 Job Extractor: Server extraction successful');
         console.log('🔍 Job Extractor: Job data:', response.jobData);
-        populateFieldsFromJobData(response.jobData);
+        console.log('🔍 Job Extractor: Job ID:', response.jobId);
+        populateFieldsFromJobData(response.jobData, response.jobId);
       } else {
         console.error('🔍 Job Extractor: Server extraction failed, falling back to local extraction');
         extractJobInformationLocal();
@@ -478,7 +503,15 @@ async function extractJobInformation() {
 }
 
 // Helper function to populate fields from job data
-function populateFieldsFromJobData(jobData) {
+function populateFieldsFromJobData(jobData, jobId) {
+  // Set job ID if provided
+  const jobIdField = document.getElementById('job-id');
+  if (jobIdField && jobId) {
+    jobIdField.value = jobId;
+    jobIdField.dispatchEvent(new Event('input', { bubbles: true }));
+    console.log('💾 Populated job ID field:', jobId);
+  }
+
   const titleField = document.getElementById('job-title');
   if (titleField && jobData.title) {
     titleField.value = jobData.title;

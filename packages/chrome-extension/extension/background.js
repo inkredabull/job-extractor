@@ -139,6 +139,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleExtractFromJson(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'loadJobFromLogs':
+      handleLoadJobFromLogs(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     case 'createLinkedInPostReminder':
       handleCreateLinkedInPostReminder(request, sendResponse);
       return true; // Keep message channel open for async response
@@ -588,6 +592,53 @@ async function handleExtractFromJson(request, sendResponse) {
     
   } catch (error) {
     console.error('Job Extractor Background: Extract from JSON failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Handle load job from logs request
+async function handleLoadJobFromLogs(request, sendResponse) {
+  try {
+    console.log('Job Extractor Background: Loading job from logs for ID:', request.jobId);
+
+    if (!request.jobId) {
+      sendResponse({
+        success: false,
+        error: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Call unified server to load job data from logs
+    const response = await fetch('http://localhost:3000/load-job', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId: request.jobId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load job from logs');
+    }
+
+    console.log('Job Extractor Background: Successfully loaded job from logs');
+    sendResponse({
+      success: true,
+      jobData: data.jobData
+    });
+
+  } catch (error) {
+    console.error('Job Extractor Background: Failed to load job from logs:', error);
     sendResponse({
       success: false,
       error: error.message
