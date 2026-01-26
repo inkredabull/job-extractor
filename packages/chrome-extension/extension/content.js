@@ -461,15 +461,14 @@ async function extractJobInformation() {
       // Disable form fields during extraction
       setFormFieldsDisabled(true);
 
-      // Get the full page HTML for robust extraction
-      const pageHtml = document.documentElement.outerHTML;
-      console.log('🔍 Job Extractor: HTML size:', pageHtml.length, 'chars');
-
-      // Call background script to perform robust extraction
+      // Call background script to perform robust extraction using URL
+      // Note: URL-based extraction works better than HTML-based for LinkedIn
+      // because the full page HTML (1MB+) is too large for effective LLM processing
+      console.log('🔍 Job Extractor: Using URL-based extraction for better results');
       const response = await chrome.runtime.sendMessage({
         action: 'extractJob',
-        url: window.location.href,
-        html: pageHtml
+        url: window.location.href
+        // Note: Not sending HTML, let server fetch it directly for better results
       });
 
       if (response && response.success && response.jobData) {
