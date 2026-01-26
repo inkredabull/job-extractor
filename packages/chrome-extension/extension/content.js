@@ -360,12 +360,13 @@ function createGutter() {
     await updateScoringSection(jobId);
   }, 500)); // Debounce to avoid too many requests while typing
 
-  // Run automatic LOCAL extraction on page load (free, no API calls, no reminders)
+  // Run automatic LOCAL extraction after page content loads (free, no API calls, no reminders)
   // Server extraction and tracking only happen when user explicitly requests them
+  // Wait 2 seconds to allow dynamic content to render
   setTimeout(() => {
     console.log('Job Extractor: Running automatic local extraction (free)');
     extractJobInformationLocal();
-  }, 100);
+  }, 2000);
 
   // Analyze page content for questions
   analyzePageContent();
