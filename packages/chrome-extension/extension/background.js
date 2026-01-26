@@ -483,17 +483,21 @@ function extractExperienceAreas(accomplishments) {
 async function handleExtractJob(request, sendResponse) {
   try {
     console.log('Job Extractor Background: Handling extract job request for URL:', request.url);
-    
+    if (request.html) {
+      console.log('Job Extractor Background: HTML content provided for extraction');
+    }
+
     // Make request to local unified server to execute extract command
-    const extractResponse = await callLocalUnifiedServerForExtract(request.url);
-    
+    // Pass HTML if provided for robust extraction, otherwise fall back to URL
+    const extractResponse = await callLocalUnifiedServerForExtract(request.url, request.html);
+
     sendResponse({
       success: true,
       jobId: extractResponse.jobId,
       filePath: extractResponse.filePath,
       jobData: extractResponse.jobData
     });
-    
+
   } catch (error) {
     console.error('Job Extractor Background: Extract job failed:', error);
     sendResponse({
@@ -504,42 +508,56 @@ async function handleExtractJob(request, sendResponse) {
 }
 
 // Call local unified server to execute extract command
-async function callLocalUnifiedServerForExtract(url) {
+async function callLocalUnifiedServerForExtract(url, html) {
   try {
     console.log('Job Extractor Background: Calling unified server for extraction');
-    
+
+    // Prepare request body - use HTML extraction if HTML provided, otherwise URL extraction
+    const requestBody = html ? {
+      type: 'html',
+      html: html,
+      url: url, // Still include URL for context/logging
+    } : {
+      url: url
+    };
+
+    console.log(`Job Extractor Background: Extraction type: ${html ? 'HTML' : 'URL'}`);
+    if (html) {
+      console.log(`Job Extractor Background: HTML content size: ${html.length} chars`);
+    }
+
     const response = await fetch('http://localhost:3000/extract', {
       method: 'POST',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ url: url }),
+      body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(60000) // 60 second timeout for extraction
     });
-    
+
     console.log('Job Extractor Background: Unified server response status:', response.status);
-    
+
     if (!response.ok) {
       throw new Error(`Unified server responded with status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     console.log('Job Extractor Background: Unified server response data:', data);
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Unified server extraction failed');
     }
-    
+
     return {
       jobId: data.jobId,
       filePath: data.filePath,
       jobData: data.jobData
     };
-    
+
   } catch (error) {
     console.error('Job Extractor Background: Failed to call unified server:', error);
-    
+
     // Provide a helpful error message
     if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
       throw new Error('Extraction timed out - job sites may take a while to process');

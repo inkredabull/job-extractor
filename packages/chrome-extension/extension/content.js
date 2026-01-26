@@ -346,19 +346,98 @@ function createGutter() {
 }
 
 // Extract comprehensive job information from the current page
-function extractJobInformation() {
-  console.log('🔍 Job Extractor: Starting comprehensive job information extraction');
+async function extractJobInformation() {
+  console.log('🔍 Job Extractor: Starting robust job information extraction');
   console.log('🔍 Current page URL:', window.location.href);
   console.log('🔍 Page title:', document.title);
-  
-  // Debug: Check what H1 elements exist
-  const h1Elements = document.querySelectorAll('h1');
-  console.log('🔍 Found H1 elements:', Array.from(h1Elements).map(el => el.textContent?.trim()));
-  
-  // Debug: Check what elements have "job" or "title" in their attributes
-  const jobElements = document.querySelectorAll('[class*="job"], [data-testid*="job"], [class*="title"]');
-  console.log('🔍 Found job-related elements:', jobElements.length);
-  
+
+  try {
+    // Use robust CLI extraction instead of regex-based extraction
+    console.log('🔍 Job Extractor: Using robust CLI extraction logic');
+
+    // Get the full page HTML for robust extraction
+    const pageHtml = document.documentElement.outerHTML;
+    console.log('🔍 Job Extractor: HTML size:', pageHtml.length, 'chars');
+
+    // Call background script to perform robust extraction
+    const response = await chrome.runtime.sendMessage({
+      action: 'extractJob',
+      url: window.location.href,
+      html: pageHtml
+    });
+
+    if (response && response.success && response.jobData) {
+      console.log('🔍 Job Extractor: Robust extraction successful');
+      console.log('🔍 Job Extractor: Job data:', response.jobData);
+
+      // Populate fields with extracted data
+      const titleField = document.getElementById('job-title');
+      if (titleField && response.jobData.title) {
+        titleField.value = response.jobData.title;
+        titleField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const companyField = document.getElementById('company-name');
+      if (companyField && response.jobData.company) {
+        companyField.value = response.jobData.company;
+        companyField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const locationField = document.getElementById('job-location');
+      if (locationField && response.jobData.location) {
+        locationField.value = response.jobData.location;
+        locationField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const descriptionField = document.getElementById('job-description');
+      if (descriptionField && response.jobData.description) {
+        descriptionField.value = response.jobData.description;
+        extractedJobDescription = response.jobData.description;
+      }
+
+      const minSalaryField = document.getElementById('min-salary');
+      const maxSalaryField = document.getElementById('max-salary');
+      if (response.jobData.salaryMin && minSalaryField) {
+        minSalaryField.value = response.jobData.salaryMin;
+        minSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (response.jobData.salaryMax && maxSalaryField) {
+        maxSalaryField.value = response.jobData.salaryMax;
+        maxSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const urlField = document.getElementById('job-url');
+      if (urlField) urlField.value = window.location.href;
+
+      console.log('Job Extractor: Job information extracted and populated:', {
+        title: response.jobData.title,
+        company: response.jobData.company,
+        location: response.jobData.location,
+        salary: {
+          min: response.jobData.salaryMin,
+          max: response.jobData.salaryMax
+        },
+        url: window.location.href,
+        hasDescription: !!(response.jobData.description && response.jobData.description.length > 0)
+      });
+    } else {
+      console.error('🔍 Job Extractor: Robust extraction failed, falling back to basic extraction');
+
+      // Fallback to basic extraction if robust extraction fails
+      extractJobInformationFallback();
+    }
+  } catch (error) {
+    console.error('🔍 Job Extractor: Error during robust extraction:', error);
+
+    // Fallback to basic extraction on error
+    extractJobInformationFallback();
+  }
+}
+
+// Fallback function using basic regex extraction (legacy)
+function extractJobInformationFallback() {
+  console.log('🔍 Job Extractor: Using fallback regex-based extraction');
+
   // Extract job title
   const jobTitle = extractJobTitle();
   const titleField = document.getElementById('job-title');
@@ -366,7 +445,7 @@ function extractJobInformation() {
     titleField.value = jobTitle;
     titleField.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  
+
   // Extract company name
   const companyName = extractCompanyName();
   const companyField = document.getElementById('company-name');
@@ -374,22 +453,21 @@ function extractJobInformation() {
     companyField.value = companyName;
     companyField.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  
+
   // Extract location
   const location = extractJobLocation();
   const locationField = document.getElementById('job-location');
   if (locationField) {
-    // Only set value if it's actually visible text
     const cleanedLocation = location && location.trim().length > 0 ? location : '';
     locationField.value = cleanedLocation;
     locationField.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  
+
   // Extract job description
   extractJobDescription();
   const descriptionField = document.getElementById('job-description');
   if (descriptionField) descriptionField.value = extractedJobDescription;
-  
+
   // Extract salary information
   const salaryInfo = extractSalaryRange();
   const minSalaryField = document.getElementById('min-salary');
@@ -402,35 +480,12 @@ function extractJobInformation() {
     maxSalaryField.value = salaryInfo.max;
     maxSalaryField.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  
+
   // Set the current URL
   const urlField = document.getElementById('job-url');
   if (urlField) urlField.value = window.location.href;
-  
-  console.log('Job Extractor: Job information extracted:', {
-    title: jobTitle,
-    company: companyName,
-    location: location,
-    salary: salaryInfo,
-    url: window.location.href,
-    hasDescription: extractedJobDescription.length > 0
-  });
-  
-  // Debug: Check if fields exist and were populated
-  console.log('Job Extractor: Field population check:', {
-    titleField: !!document.getElementById('job-title'),
-    titleValue: document.getElementById('job-title')?.value,
-    companyField: !!document.getElementById('company-name'),
-    companyValue: document.getElementById('company-name')?.value,
-    locationField: !!document.getElementById('job-location'),
-    locationValue: document.getElementById('job-location')?.value,
-    minSalaryField: !!document.getElementById('min-salary'),
-    minSalaryValue: document.getElementById('min-salary')?.value,
-    maxSalaryField: !!document.getElementById('max-salary'),
-    maxSalaryValue: document.getElementById('max-salary')?.value,
-    urlField: !!document.getElementById('job-url'),
-    urlValue: document.getElementById('job-url')?.value
-  });
+
+  console.log('Job Extractor: Basic extraction completed');
 }
 
 // Extract job title from the current page
@@ -1602,10 +1657,16 @@ async function handleExtractJob() {
   statusDiv.className = 'extract-status loading';
 
   try {
-    // Send message to background script to execute CLI command
+    // Get the full page HTML for robust extraction
+    const pageHtml = document.documentElement.outerHTML;
+    console.log('Job Extractor: Sending page HTML for robust extraction');
+    console.log('Job Extractor: HTML size:', pageHtml.length, 'chars');
+
+    // Send message to background script to execute CLI command with HTML
     const response = await chrome.runtime.sendMessage({
       action: 'extractJob',
-      url: window.location.href
+      url: window.location.href,
+      html: pageHtml  // Send full HTML for robust extraction
     });
     
     if (response.success) {

@@ -413,10 +413,138 @@ app.post('/cv-question', async (req, res) => {
 app.post('/extract', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Extract request`);
   try {
-    const { url, type, data, reminderPriority } = req.body;
-    
+    const { url, type, data, html, reminderPriority } = req.body;
+
     // Handle different extraction types
-    if (type === 'json') {
+    if (type === 'html') {
+      // Handle HTML extraction - use robust CLI extraction logic
+      if (!html) {
+        return res.status(400).json({
+          success: false,
+          error: 'HTML content is required for HTML extraction'
+        });
+      }
+
+      console.log(`  -> Processing HTML content (${html.length} chars)`);
+      console.log(`  -> Source URL:`, url || 'unknown');
+      console.log(`  -> Reminder priority:`, reminderPriority || 'default');
+
+      // Change to the main project directory
+      const projectDir = path.resolve(__dirname, '..', '..');
+      process.chdir(projectDir);
+
+      // Create a temporary HTML file with the page content
+      const tempHtmlFile = path.join(projectDir, 'temp-job-extract.html');
+      fs.writeFileSync(tempHtmlFile, html);
+
+      try {
+        // Execute the extract command using the temp HTML file
+        console.log(`  -> Executing extract with HTML file: ${tempHtmlFile}`);
+
+        const output = await new Promise((resolve, reject) => {
+          const args = ['ts-node', 'packages/core/src/cli.ts', 'extract', '--type', 'html'];
+          if (reminderPriority) {
+            args.push('--reminder-priority', reminderPriority.toString());
+          }
+          // Skip post-workflow for Chrome extension requests for immediate response
+          args.push('--skip-post-workflow');
+          args.push(tempHtmlFile);
+
+          console.log(`  -> Command: npx ${args.join(' ')}`);
+
+          const child = spawn('npx', args, {
+            cwd: projectDir,
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+
+          let stdout = '';
+          let stderr = '';
+
+          child.stdout.on('data', (data) => {
+            stdout += data.toString();
+          });
+
+          child.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+
+          child.on('close', (code) => {
+            if (code !== 0) {
+              console.log(`  -> Command stderr: ${stderr}`);
+              reject(new Error(stderr || `Command failed with code ${code}`));
+            } else {
+              resolve(stdout);
+            }
+          });
+        });
+
+        console.log(`  -> Command output: ${output}`);
+
+        // Parse the output to extract job ID
+        const jobIdMatch = output.match(/([a-f0-9]{8})\s*$/m);
+        const jobId = jobIdMatch ? jobIdMatch[1] : null;
+
+        if (!jobId) {
+          console.log(`  -> ❌ Failed to extract job ID from output`);
+          return res.status(500).json({
+            success: false,
+            error: 'Could not extract job ID from command output'
+          });
+        }
+
+        console.log(`  -> ✅ Job extracted successfully with ID: ${jobId}`);
+
+        // Try to read the job file to get processed job data
+        let jobData = null;
+        try {
+          const jobDir = path.join(projectDir, 'logs', jobId);
+          const files = fs.readdirSync(jobDir);
+          const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
+
+          if (jobFile) {
+            const jobFilePath = path.join(jobDir, jobFile);
+            const jobDataRaw = fs.readFileSync(jobFilePath, 'utf-8');
+            jobData = JSON.parse(jobDataRaw);
+            console.log(`  -> 📄 Job data saved to: logs/${jobId}/${jobFile}`);
+          }
+        } catch (error) {
+          console.log(`  -> ⚠️  Could not read processed job data: ${error.message}`);
+        }
+
+        res.json({
+          success: true,
+          jobId: jobId,
+          filePath: `logs/${jobId}/`,
+          jobData: jobData
+        });
+
+        console.log(`  -> 🎉 Response sent to Chrome extension`);
+
+        // Async background processing for Medium/High priority jobs
+        const priority = parseInt(reminderPriority) || 5;
+        if (priority <= 5) {
+          console.log(`  -> 🔄 Triggering async background scoring and resume generation for priority ${priority} job`);
+          setImmediate(async () => {
+            try {
+              await triggerAsyncJobProcessing(jobId, priority, projectDir);
+            } catch (error) {
+              console.log(`  -> ❌ Background processing failed for job ${jobId}: ${error.message}`);
+            }
+          });
+        } else {
+          console.log(`  -> ⏭️  Skipping background processing for Low priority (${priority}) job`);
+        }
+
+      } finally {
+        // Clean up temporary file
+        try {
+          fs.unlinkSync(tempHtmlFile);
+        } catch (cleanupError) {
+          console.log('  -> Could not clean up temp HTML file:', cleanupError.message);
+        }
+      }
+
+    } else if (type === 'json') {
       // Handle JSON extraction
       if (!data) {
         return res.status(400).json({
