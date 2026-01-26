@@ -391,6 +391,56 @@ function createGutter() {
   console.log('Job Extractor: Gutter created');
 }
 
+// Helper function to disable/enable form fields during extraction
+function setFormFieldsDisabled(disabled) {
+  const fieldIds = [
+    'job-title',
+    'company-name',
+    'job-location',
+    'min-salary',
+    'max-salary',
+    'job-url',
+    'job-description',
+    'extraction-mode',
+    'reminder-priority',
+    'track-job-info'
+  ];
+
+  fieldIds.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.disabled = disabled;
+      if (disabled) {
+        element.style.opacity = '0.6';
+        element.style.cursor = 'not-allowed';
+      } else {
+        element.style.opacity = '1';
+        element.style.cursor = '';
+      }
+    }
+  });
+
+  // Show/hide loading indicator
+  const extractionModeSelect = document.getElementById('extraction-mode');
+  if (extractionModeSelect && extractionModeSelect.parentElement) {
+    let loadingIndicator = document.getElementById('extraction-loading');
+
+    if (disabled && !loadingIndicator) {
+      // Create loading indicator
+      loadingIndicator = document.createElement('p');
+      loadingIndicator.id = 'extraction-loading';
+      loadingIndicator.className = 'help-text';
+      loadingIndicator.style.color = '#1a73e8';
+      loadingIndicator.style.fontWeight = '600';
+      loadingIndicator.innerHTML = '🔄 Extracting job data via LLM...';
+      extractionModeSelect.parentElement.appendChild(loadingIndicator);
+    } else if (!disabled && loadingIndicator) {
+      // Remove loading indicator
+      loadingIndicator.remove();
+    }
+  }
+}
+
 // Extract comprehensive job information from the current page
 async function extractJobInformation() {
   console.log('🔍 Job Extractor: Starting job information extraction');
@@ -408,6 +458,9 @@ async function extractJobInformation() {
     try {
       console.log('🔍 Job Extractor: Using server-side LLM extraction');
 
+      // Disable form fields during extraction
+      setFormFieldsDisabled(true);
+
       // Get the full page HTML for robust extraction
       const pageHtml = document.documentElement.outerHTML;
       console.log('🔍 Job Extractor: HTML size:', pageHtml.length, 'chars');
@@ -423,19 +476,23 @@ async function extractJobInformation() {
         console.log('🔍 Job Extractor: Server extraction successful');
         console.log('🔍 Job Extractor: Job data:', response.jobData);
         populateFieldsFromJobData(response.jobData);
-        return;
       } else {
         console.error('🔍 Job Extractor: Server extraction failed, falling back to local extraction');
+        extractJobInformationLocal();
       }
     } catch (error) {
       console.error('🔍 Job Extractor: Error during server extraction:', error);
       console.log('🔍 Job Extractor: Falling back to local extraction');
+      extractJobInformationLocal();
+    } finally {
+      // Re-enable form fields after extraction
+      setFormFieldsDisabled(false);
     }
+  } else {
+    // Use local regex extraction (default, fast and free)
+    console.log('🔍 Job Extractor: Using local regex extraction');
+    extractJobInformationLocal();
   }
-
-  // Use local regex extraction (default, fast and free)
-  console.log('🔍 Job Extractor: Using local regex extraction');
-  extractJobInformationLocal();
 }
 
 // Helper function to populate fields from job data
