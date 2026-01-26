@@ -40,12 +40,17 @@ class CVResponseEngine {
     console.log('  -> CVEngine.answerCVQuestion called');
     console.log('  -> Question length:', question.length, 'chars');
     console.log('  -> Job description length:', jobDescription ? jobDescription.length : 0, 'chars');
+    console.log('  -> LLM mode enabled:', this.useLLM ? 'Yes' : 'No');
+    console.log('  -> Anthropic client initialized:', this.anthropic ? 'Yes' : 'No');
+    console.log('  -> ANTHROPIC_API_KEY present:', process.env.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
     if (this.useLLM && this.anthropic) {
-      console.log('  -> Using LLM for response');
+      console.log('  -> Decision: Using LLM for response (Claude 3.7 Sonnet)');
       return this.answerWithLLM(question, jobDescription);
     } else {
-      console.log('  -> Using pattern matching for response');
+      const reason = !this.useLLM ? 'useLLM=false (server not started with --llm flag)' : 'Anthropic client not initialized (missing API key)';
+      console.log('  -> Decision: Using pattern matching for response');
+      console.log('  -> Reason:', reason);
       return this.answerWithPatternMatching(question, jobDescription);
     }
   }
@@ -121,11 +126,13 @@ Keep under 250 words and answer in first person:`;
   answerWithPatternMatching(question, jobDescription = '') {
     console.log('  -> Pattern matching mode');
     const cvData = this.parseCV();
+    console.log('  -> CV parsed - accomplishments:', cvData.accomplishments.length, ', strengths:', cvData.strengths.length);
     const questionType = this.classifyQuestion(question);
     console.log('  -> Question classified as:', questionType);
 
     // Increase job description context from 300 to 1500 characters for pattern matching
     const jobContext = jobDescription.trim() ? ` given this job opportunity: "${jobDescription.substring(0, 1500)}${jobDescription.length > 1500 ? '...' : ''}"` : '';
+    console.log('  -> Job context created:', jobContext ? 'Yes (' + jobContext.length + ' chars)' : 'No');
 
     const responses = {
       experience: () => this.generateExperienceResponse(cvData, jobContext),
@@ -137,6 +144,9 @@ Keep under 250 words and answer in first person:`;
 
     const responseText = responses[questionType]();
     console.log('  -> Pattern matching response generated:', responseText.length, 'chars');
+    console.log('  -> Response preview:', responseText.substring(0, 150) + '...');
+    console.log('  -> WARNING: Pattern matching responses are generic and do not consider job-specific context');
+    console.log('  -> TIP: For job-specific responses, ensure unified server is started with --llm flag and ANTHROPIC_API_KEY is set');
     return {
       content: [{ text: responseText }]
     };
@@ -237,35 +247,88 @@ STRENGTHS
 
   generateExperienceResponse(cvData, jobContext = '') {
     const topAccomplishments = cvData.accomplishments.slice(0, 3);
-    return `My experience includes ${topAccomplishments.join(', ').toLowerCase()}. These accomplishments demonstrate my ability to deliver measurable business impact across different organizations and technical challenges.`;
+    console.log('  -> Selecting top 3 accomplishments from', cvData.accomplishments.length, 'total');
+    console.log('  -> Selected:', topAccomplishments.map((a, i) => `\n      ${i+1}. ${a.substring(0, 80)}...`).join(''));
+
+    let response = `My experience includes ${topAccomplishments.join(', ').toLowerCase()}. These accomplishments demonstrate my ability to deliver measurable business impact across different organizations and technical challenges.`;
+
+    if (jobContext) {
+      response += ` This background is directly relevant to the opportunity described.`;
+      console.log('  -> Added job context reference to response');
+    }
+
+    return response;
   }
 
   generateSkillsResponse(cvData, jobContext = '') {
     const topStrengths = cvData.strengths.slice(0, 4);
-    return `My core strengths include ${topStrengths.join(', ').toLowerCase()}. I excel at combining technical leadership with strong communication and process optimization to drive results.`;
+    console.log('  -> Selecting top 4 strengths from', cvData.strengths.length, 'total');
+    console.log('  -> Selected:', topStrengths.map((s, i) => `\n      ${i+1}. ${s}`).join(''));
+
+    let response = `My core strengths include ${topStrengths.join(', ').toLowerCase()}. I excel at combining technical leadership with strong communication and process optimization to drive results.`;
+
+    if (jobContext) {
+      response += ` These strengths align well with the role requirements.`;
+      console.log('  -> Added job context reference to response');
+    }
+
+    return response;
   }
 
   generateLeadershipResponse(cvData, jobContext = '') {
     const leadershipKeywords = ['launched', 'drove', 'delivered', 'led', 'managed'];
     const leadershipAccomplishments = this.filterByKeywords(cvData.accomplishments, leadershipKeywords);
     const topLeadership = leadershipAccomplishments.length > 0 ? leadershipAccomplishments.slice(0, 2) : cvData.accomplishments.slice(0, 2);
-    
-    return `My leadership experience demonstrates strong results through ${topLeadership.join(' and ').toLowerCase()}. I believe in hands-on technical leadership while empowering teams to own their implementations and grow their skills.`;
+
+    console.log('  -> Filtering for leadership keywords:', leadershipKeywords.join(', '));
+    console.log('  -> Found', leadershipAccomplishments.length, 'leadership accomplishments from', cvData.accomplishments.length, 'total');
+    console.log('  -> Selected:', topLeadership.map((a, i) => `\n      ${i+1}. ${a.substring(0, 80)}...`).join(''));
+
+    let response = `My leadership experience demonstrates strong results through ${topLeadership.join(' and ').toLowerCase()}. I believe in hands-on technical leadership while empowering teams to own their implementations and grow their skills.`;
+
+    if (jobContext) {
+      response += ` This leadership approach would translate well to the described role.`;
+      console.log('  -> Added job context reference to response');
+    }
+
+    return response;
   }
 
   generateTechnicalResponse(cvData, jobContext = '') {
     const techKeywords = ['ai', 'data', 'platform', 'technical', 'system', 'application'];
     const techAccomplishments = this.filterByKeywords(cvData.accomplishments, techKeywords);
     const topTech = techAccomplishments.length > 0 ? techAccomplishments.slice(0, 3) : cvData.accomplishments.slice(0, 3);
-    
-    return `My technical background includes ${topTech.join(', ').toLowerCase()}. I combine deep technical expertise with business impact, focusing on scalable solutions that deliver measurable results.`;
+
+    console.log('  -> Filtering for technical keywords:', techKeywords.join(', '));
+    console.log('  -> Found', techAccomplishments.length, 'technical accomplishments from', cvData.accomplishments.length, 'total');
+    console.log('  -> Selected:', topTech.map((a, i) => `\n      ${i+1}. ${a.substring(0, 80)}...`).join(''));
+
+    let response = `My technical background includes ${topTech.join(', ').toLowerCase()}. I combine deep technical expertise with business impact, focusing on scalable solutions that deliver measurable results.`;
+
+    if (jobContext) {
+      response += ` This technical foundation is relevant to the role's requirements.`;
+      console.log('  -> Added job context reference to response');
+    }
+
+    return response;
   }
 
   generateDefaultResponse(cvData, question, jobContext = '') {
     const topAccomplishments = cvData.accomplishments.slice(0, 2);
     const topStrengths = cvData.strengths.slice(0, 3);
-    
-    return `My background includes ${topAccomplishments.join(' and ').toLowerCase()}. My core strengths are ${topStrengths.join(', ').toLowerCase()}. This experience positions me well to tackle complex challenges and deliver measurable business impact.`;
+
+    console.log('  -> Generating default response (no specific question type match)');
+    console.log('  -> Selected accomplishments:', topAccomplishments.map((a, i) => `\n      ${i+1}. ${a.substring(0, 80)}...`).join(''));
+    console.log('  -> Selected strengths:', topStrengths.map((s, i) => `\n      ${i+1}. ${s}`).join(''));
+
+    let response = `My background includes ${topAccomplishments.join(' and ').toLowerCase()}. My core strengths are ${topStrengths.join(', ').toLowerCase()}. This experience positions me well to tackle complex challenges and deliver measurable business impact.`;
+
+    if (jobContext) {
+      response += ` Based on the job opportunity, I believe my experience aligns well with the role requirements.`;
+      console.log('  -> Added job context reference to response');
+    }
+
+    return response;
   }
 
   formatBulletList(items) {
