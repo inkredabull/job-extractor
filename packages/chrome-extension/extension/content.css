@@ -40,9 +40,15 @@ html.job-extractor-gutter-open {
   color: white;
   padding: 16px 20px;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.header-top {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
 }
 
 .gutter-header h3 {
@@ -69,6 +75,49 @@ html.job-extractor-gutter-open {
 
 #close-gutter:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.header-job-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-job-id label {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.header-job-id .job-id-input {
+  flex: 1;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a73e8;
+  transition: all 0.2s ease;
+}
+
+.header-job-id .job-id-input::placeholder {
+  color: #9ca3af;
+  font-weight: normal;
+}
+
+.header-job-id .job-id-input:focus {
+  outline: none;
+  background: white;
+  border-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
 /* Gutter Content */
@@ -110,19 +159,6 @@ html.job-extractor-gutter-open {
   color: #6b7280;
   margin: 4px 0 0 0;
   font-style: italic;
-}
-
-/* Job ID Section */
-.job-id-section {
-  border: 2px solid #3b82f6;
-  background: #f0f9ff;
-}
-
-.job-id-input {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
 }
 
 /* AI Assistant Section */

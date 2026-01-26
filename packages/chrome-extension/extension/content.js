@@ -138,19 +138,17 @@ function createGutter() {
   gutterElement.id = 'job-extractor-gutter';
   gutterElement.innerHTML = `
     <div class="gutter-header">
-      <h3>🎯 Job Extractor Assistant</h3>
-      <button id="close-gutter">×</button>
+      <div class="header-top">
+        <h3>🎯 Job Extractor Assistant</h3>
+        <button id="close-gutter">×</button>
+      </div>
+      <div class="header-job-id">
+        <label for="job-id">🆔 Job ID:</label>
+        <input type="text" id="job-id" class="job-id-input" placeholder="e.g., b3358ff6"
+               title="Unique identifier for this job - auto-generated when tracking or paste existing ID">
+      </div>
     </div>
     <div class="gutter-content">
-      <!-- Job ID Section -->
-      <div class="section job-id-section">
-        <h4 class="section-header">🆔 Job ID</h4>
-        <div class="form-field">
-          <input type="text" id="job-id" class="job-input job-id-input" placeholder="e.g., b3358ff6 (auto-filled after tracking)"
-                 title="Unique identifier for this job - auto-generated when tracking or paste existing ID">
-        </div>
-      </div>
-
       <!-- People I Know Section -->
       <div class="section people-section">
         <h4 class="section-header">
