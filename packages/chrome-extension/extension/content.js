@@ -358,10 +358,14 @@ function createGutter() {
 
   // Load and persist extraction mode preference
   loadExtractionModePreference();
-  document.getElementById('extraction-mode').addEventListener('change', (e) => {
+  document.getElementById('extraction-mode').addEventListener('change', async (e) => {
     const mode = e.target.value;
     console.log('Job Extractor: Extraction mode changed to:', mode);
     saveExtractionModePreference(mode);
+
+    // Re-run extraction when mode changes
+    console.log('Job Extractor: Re-extracting job information with new mode');
+    await extractJobInformation();
   });
 
   // Add job ID field change listener to update scoring section
