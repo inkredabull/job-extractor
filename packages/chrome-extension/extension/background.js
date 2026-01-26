@@ -524,12 +524,16 @@ async function callLocalUnifiedServerForExtract(url, html) {
     console.log('Job Extractor Background: Calling unified server for extraction');
 
     // Prepare request body - use HTML extraction if HTML provided, otherwise URL extraction
+    // IMPORTANT: For LLM extraction mode (preview/display), we skip reminders and post-workflow
+    // Users will explicitly click "Track" button to trigger reminders + scoring
     const requestBody = html ? {
       type: 'html',
       html: html,
       url: url, // Still include URL for context/logging
+      createReminders: false // Don't create reminders during preview extraction
     } : {
-      url: url
+      url: url,
+      createReminders: false // Don't create reminders during preview extraction
     };
 
     console.log(`Job Extractor Background: Extraction type: ${html ? 'HTML' : 'URL'}`);
