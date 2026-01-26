@@ -62,12 +62,23 @@ class CVResponseEngine {
     try {
       const cvContent = this.loadCVContent();
       console.log('  -> CV content loaded:', cvContent.length, 'chars');
-      console.log('  -> Job description provided but IGNORED (CV-only mode)');
 
-      const prompt = `You are answering this interview question in first person using your CV below. Answer based ONLY on the CV content provided.
+      if (jobDescription.trim()) {
+        console.log('  -> Job description provided:', jobDescription.length, 'chars');
+      } else {
+        console.log('  -> No job description provided');
+      }
+
+      // Build context section with job information if available
+      let contextSection = '';
+      if (jobDescription.trim()) {
+        contextSection = `\n\nJob Context:\n${jobDescription}\n`;
+      }
+
+      const prompt = `You are answering this interview question in first person. Use your CV below and the job context (if provided) to craft a response that connects your experience to this specific opportunity.
 
 CV Information:
-${cvContent}
+${cvContent}${contextSection}
 
 Question: ${question}
 
@@ -76,7 +87,8 @@ CRITICAL REQUIREMENTS:
 2. Format: Plain text paragraph, NO markdown, NO bullet points, NO formatting
 3. Content: Draw specific examples from CV with quantifiable results
 4. Tone: Professional and confident
-5. DO NOT reference any specific company or job opportunity - answer generically based on CV
+5. If job context is provided, connect your CV experience to the specific role/company
+6. If no job context, answer generically based on CV
 
 Response (200-350 chars, plain text only):`;
 
