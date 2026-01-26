@@ -61,18 +61,9 @@ class CVResponseEngine {
     try {
       const cvContent = this.loadCVContent();
       console.log('  -> CV content loaded:', cvContent.length, 'chars');
+      console.log('  -> Job description provided but IGNORED (CV-only mode)');
 
-      // Increase job description context from 500 to 2500 characters
-      const contextPrompt = jobDescription
-        ? `Context: This question relates to a specific job opportunity: "${jobDescription.substring(0, 2500)}${jobDescription.length > 2500 ? '...' : ''}"`
-        : '';
-
-      console.log('  -> Context prompt length:', contextPrompt.length, 'chars');
-      console.log('  -> Job description truncated:', jobDescription && jobDescription.length > 2500 ? 'Yes' : 'No');
-
-      const prompt = `You are answering this interview question in first person using your CV below. Provide a compelling, concise response.
-
-${contextPrompt}
+      const prompt = `You are answering this interview question in first person using your CV below. Answer based ONLY on the CV content provided.
 
 CV Information:
 ${cvContent}
@@ -84,7 +75,7 @@ CRITICAL REQUIREMENTS:
 2. Format: Plain text paragraph, NO markdown, NO bullet points, NO formatting
 3. Content: Draw specific examples from CV with quantifiable results
 4. Tone: Professional and confident
-${jobDescription ? '5. Must reference the specific company/role from the job context' : ''}
+5. DO NOT reference any specific company or job opportunity - answer generically based on CV
 
 Response (200-350 chars, plain text only):`;
 
