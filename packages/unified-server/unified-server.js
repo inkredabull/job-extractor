@@ -176,24 +176,38 @@ ${'='.repeat(80)}
   }
 
   loadCVContent() {
+    // Project root is two levels up from packages/unified-server
+    const projectRoot = path.resolve(__dirname, '..', '..');
+
     const possiblePaths = [
+      path.join(projectRoot, 'cv.txt'),
+      path.join(projectRoot, 'CV.txt'),
+      path.join(projectRoot, 'sample-cv.txt'),
+      // Also check current directory as fallback
       'cv.txt',
       './cv.txt',
-      'CV.txt', 
+      'CV.txt',
       './CV.txt',
       'sample-cv.txt',
       './sample-cv.txt'
     ];
-    
+
+    console.log('  -> Looking for CV file in:', projectRoot);
+
     for (const cvPath of possiblePaths) {
       try {
         if (fs.existsSync(cvPath)) {
-          return fs.readFileSync(cvPath, 'utf-8');
+          const content = fs.readFileSync(cvPath, 'utf-8');
+          console.log('  -> CV file found:', cvPath);
+          console.log('  -> CV file size:', content.length, 'chars');
+          return content;
         }
       } catch (error) {
         continue;
       }
     }
+
+    console.warn('  -> WARNING: No CV file found, using fallback sample CV');
     
     // Return sample CV if none found
     return `KEY ACCOMPLISHMENTS
