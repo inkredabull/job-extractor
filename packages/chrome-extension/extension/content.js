@@ -21,28 +21,13 @@ function debounce(func, wait) {
   };
 }
 
-// Load extraction mode preference from storage
-async function loadExtractionModePreference() {
-  try {
-    const result = await chrome.storage.local.get(['extractionMode']);
-    const mode = result.extractionMode || 'local'; // Default to local
-    const extractionModeSelect = document.getElementById('extraction-mode');
-    if (extractionModeSelect) {
-      extractionModeSelect.value = mode;
-      console.log('Job Extractor: Loaded extraction mode preference:', mode);
-    }
-  } catch (error) {
-    console.error('Job Extractor: Failed to load extraction mode preference:', error);
-  }
-}
-
-// Save extraction mode preference to storage
-async function saveExtractionModePreference(mode) {
-  try {
-    await chrome.storage.local.set({ extractionMode: mode });
-    console.log('Job Extractor: Saved extraction mode preference:', mode);
-  } catch (error) {
-    console.error('Job Extractor: Failed to save extraction mode preference:', error);
+// Reset extraction mode to local (free) on page load
+// Always default to local mode to avoid unexpected token usage
+function resetExtractionModeToLocal() {
+  const extractionModeSelect = document.getElementById('extraction-mode');
+  if (extractionModeSelect) {
+    extractionModeSelect.value = 'local';
+    console.log('Job Extractor: Extraction mode reset to local (default)');
   }
 }
 
@@ -356,12 +341,13 @@ function createGutter() {
     updateConnectionsSection(e.target.value.trim());
   }, 300));
 
-  // Load and persist extraction mode preference
-  loadExtractionModePreference();
+  // Always reset to local mode on page load to avoid unexpected token usage
+  resetExtractionModeToLocal();
+
+  // Re-extract when user explicitly changes extraction mode
   document.getElementById('extraction-mode').addEventListener('change', async (e) => {
     const mode = e.target.value;
     console.log('Job Extractor: Extraction mode changed to:', mode);
-    saveExtractionModePreference(mode);
 
     // Re-run extraction when mode changes
     console.log('Job Extractor: Re-extracting job information with new mode');
