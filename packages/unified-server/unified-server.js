@@ -7,7 +7,9 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const Anthropic = require('@anthropic-ai/sdk');
-require('dotenv').config();
+
+// Load .env from project root (two levels up from packages/unified-server)
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 const app = express();
 const PORT = 3000; // Using port 3000 (was MCP server port)
