@@ -187,7 +187,8 @@ async function handleMCPServerCall(request, sendResponse) {
       console.log('  → Unified server is running, using real CV data');
 
       // Make request to local unified server
-      const cvResponse = await callLocalUnifiedServer(request.args.question, jobDescription);
+      const jobId = request.args.jobId || null;
+      const cvResponse = await callLocalUnifiedServer(request.args.question, jobDescription, jobId);
 
       console.log('  → Response received from unified server');
       console.log('  → Response length:', cvResponse.length, 'chars');
@@ -262,10 +263,16 @@ async function testUnifiedServerConnection() {
 }
 
 // Call local unified server for CV questions
-async function callLocalUnifiedServer(question, jobDescription = '') {
+async function callLocalUnifiedServer(question, jobDescription = '', jobId = null) {
   try {
     console.log('  → Preparing request to unified server');
     const requestBody = { question: question };
+
+    // Include job ID if available
+    if (jobId) {
+      requestBody.jobId = jobId;
+      console.log('  → Including job ID in request body:', jobId);
+    }
 
     // Include job description context if available
     if (jobDescription.trim()) {

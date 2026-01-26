@@ -38,17 +38,18 @@ class CVResponseEngine {
     }
   }
 
-  async answerCVQuestion(question, jobDescription = '') {
+  async answerCVQuestion(question, jobDescription = '', jobId = null) {
     console.log('  -> CVEngine.answerCVQuestion called');
     console.log('  -> Question length:', question.length, 'chars');
     console.log('  -> Job description length:', jobDescription ? jobDescription.length : 0, 'chars');
+    console.log('  -> Job ID:', jobId || 'not provided');
     console.log('  -> LLM mode enabled:', this.useLLM ? 'Yes' : 'No');
     console.log('  -> Anthropic client initialized:', this.anthropic ? 'Yes' : 'No');
     console.log('  -> ANTHROPIC_API_KEY present:', process.env.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
     if (this.useLLM && this.anthropic) {
       console.log('  -> Decision: Using LLM for response (Claude 3.7 Sonnet)');
-      return this.answerWithLLM(question, jobDescription);
+      return this.answerWithLLM(question, jobDescription, jobId);
     } else {
       const reason = !this.useLLM ? 'useLLM=false (server not started with --llm flag)' : 'Anthropic client not initialized (missing API key)';
       console.log('  -> Decision: Using pattern matching for response');
@@ -57,7 +58,7 @@ class CVResponseEngine {
     }
   }
 
-  async answerWithLLM(question, jobDescription = '') {
+  async answerWithLLM(question, jobDescription = '', jobId = null) {
     try {
       const cvContent = this.loadCVContent();
       console.log('  -> CV content loaded:', cvContent.length, 'chars');
@@ -80,10 +81,42 @@ CRITICAL REQUIREMENTS:
 Response (200-350 chars, plain text only):`;
 
       console.log('  -> Total prompt length:', prompt.length, 'chars');
-      console.log('  -> Full prompt being sent to Claude:');
-      console.log('─'.repeat(80));
-      console.log(prompt);
-      console.log('─'.repeat(80));
+
+      // Write prompt to filesystem if job ID is provided
+      if (jobId) {
+        try {
+          const projectDir = path.resolve(__dirname, '..', '..');
+          const jobDir = path.join(projectDir, 'logs', jobId);
+
+          // Create job directory if it doesn't exist
+          if (!fs.existsSync(jobDir)) {
+            fs.mkdirSync(jobDir, { recursive: true });
+          }
+
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const promptFile = path.join(jobDir, `cv-prompt-${timestamp}.txt`);
+
+          const promptContent = `CV Question Prompt
+Generated: ${new Date().toISOString()}
+Question: ${question}
+Job ID: ${jobId}
+
+${'='.repeat(80)}
+
+${prompt}
+
+${'='.repeat(80)}
+`;
+
+          fs.writeFileSync(promptFile, promptContent, 'utf-8');
+          console.log('  -> Prompt saved to:', `logs/${jobId}/cv-prompt-${timestamp}.txt`);
+        } catch (error) {
+          console.error('  -> Error saving prompt to filesystem:', error.message);
+        }
+      } else {
+        console.log('  -> Prompt NOT saved (no job ID provided)');
+      }
+
       console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 150)');
 
       const response = await this.anthropic.messages.create({
@@ -410,9 +443,10 @@ app.post('/cv-question', async (req, res) => {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`[${new Date().toISOString()}] CV question request`);
   try {
-    const { question, jobDescription, sessionId, userAgent, referrer } = req.body;
+    const { question, jobDescription, jobId, sessionId, userAgent, referrer } = req.body;
     console.log('  -> Question:', question);
     console.log('  -> Question length:', question?.length || 0, 'chars');
+    console.log('  -> Job ID:', jobId || 'not provided');
     console.log('  -> Job description provided:', jobDescription ? 'Yes' : 'No');
     console.log('  -> Job description length:', jobDescription?.length || 0, 'chars');
 
@@ -429,7 +463,7 @@ app.post('/cv-question', async (req, res) => {
     }
 
     console.log('  -> Calling CVEngine.answerCVQuestion...');
-    const response = await cvEngine.answerCVQuestion(question, jobDescription);
+    const response = await cvEngine.answerCVQuestion(question, jobDescription, jobId);
     const answerText = response.content[0].text;
     console.log('  -> CV response generated');
     console.log('  -> Response length:', answerText.length, 'chars');

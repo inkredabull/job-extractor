@@ -2069,6 +2069,7 @@ async function generateCVAwareResponse(query) {
     console.log('  → Question length:', query.length, 'chars');
 
     // Get all job context fields
+    const jobId = document.getElementById('job-id')?.value?.trim() || '';
     const jobTitle = document.getElementById('job-title')?.value?.trim() || '';
     const companyName = document.getElementById('company-name')?.value?.trim() || '';
     const jobLocation = document.getElementById('job-location')?.value?.trim() || '';
@@ -2086,6 +2087,7 @@ async function generateCVAwareResponse(query) {
       jobContext = jobDescription;
     }
 
+    console.log('  → Job ID:', jobId || '(none)');
     console.log('  → Job title:', jobTitle || '(none)');
     console.log('  → Company:', companyName || '(none)');
     console.log('  → Company URL:', companyUrl || '(none)');
@@ -2104,7 +2106,8 @@ async function generateCVAwareResponse(query) {
       tool: 'answer_cv_question',
       args: {
         question: query,
-        jobDescription: jobContext
+        jobDescription: jobContext,
+        jobId: jobId || null
       }
     });
 
