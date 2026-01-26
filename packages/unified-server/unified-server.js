@@ -70,7 +70,7 @@ class CVResponseEngine {
       console.log('  -> Context prompt length:', contextPrompt.length, 'chars');
       console.log('  -> Job description truncated:', jobDescription && jobDescription.length > 2500 ? 'Yes' : 'No');
 
-      const prompt = `You are answering this interview question in first person using your CV below. Provide a compelling response that showcases your relevant experience.
+      const prompt = `You are answering this interview question in first person using your CV below. Provide a compelling, concise response.
 
 ${contextPrompt}
 
@@ -79,29 +79,22 @@ ${cvContent}
 
 Question: ${question}
 
-Please provide a response that:
-1. Draws specific examples from the CV
-2. Highlights relevant achievements and quantifiable results
-3. Shows clear connections between past experience and the question
-4. Uses a professional, confident tone
-5. Is tailored to showcase the candidate's strengths
-6. Formats the response with proper paragraph breaks and bullet points for readability
-${jobDescription ? '7. Relates the experience to the specific job opportunity mentioned' : ''}
+CRITICAL REQUIREMENTS:
+1. Length: 200-350 characters ONLY (strict limit)
+2. Format: Plain text paragraph, NO markdown, NO bullet points, NO formatting
+3. Content: Draw specific examples from CV with quantifiable results
+4. Tone: Professional and confident
+${jobDescription ? '5. Must reference the specific company/role from the job context' : ''}
 
-Format your response with:
-- Short opening paragraph (2-3 sentences)
-- Bullet points for key achievements/examples
-- Brief closing statement
-
-Keep under 250 words and answer in first person:`;
+Response (200-350 chars, plain text only):`;
 
       console.log('  -> Total prompt length:', prompt.length, 'chars');
-      console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 300)');
+      console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 150)');
 
       const response = await this.anthropic.messages.create({
         model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 300,
-        temperature: 0.3,
+        max_tokens: 150,
+        temperature: 0.5,
         messages: [
           {
             role: 'user',
