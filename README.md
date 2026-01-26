@@ -11,8 +11,7 @@ This monorepo solves distinct job search problems through specialized components
 
 - **[Core CLI Tool](./packages/core/)** - Solves the problem of manual job analysis by automating extraction, scoring, resume tailoring, and interview prep using AI-powered agents
 - **[Chrome Extension](./packages/chrome-extension/)** - Solves the context-switching problem by enabling one-click job tracking and CV-aware interview assistance directly in your browser
-- **[MCP Server](./packages/mcp-server/)** - Solves the privacy problem by providing secure, local-only CV data access to AI tools without exposing personal information
-- **[Unified Server](./packages/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking with CLI automation in a single endpoint
+- **[Unified Server](./packages/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking, CLI automation, and CV-aware AI responses in a single endpoint
 - **[AMA App](./packages/ama-app/)** - Solves the interview preparation problem by providing an interactive interface for practicing answers with AI feedback
 
 ## 🚀 Quick Start
@@ -27,8 +26,11 @@ npm run build
 # Run core CLI tool
 npm run dev
 
-# Start unified server
+# Start unified server (for Chrome extension integration)
 npm run unified-server
+
+# Start unified server with AI responses (for CV-aware interview assistance)
+npm run unified-server:llm
 ```
 
 ---
@@ -41,7 +43,7 @@ npm run unified-server
 
 ## Technical details
 
-  Built as a comprehensive TypeScript ecosystem, the tool combines a CLI interface with a Chrome extension for seamless web integration. It leverages multiple AI models through Claude's API for intelligent content generation, includes a local MCP server for secure CV data access, and features dual extraction strategies for reliable job data parsing. The system generates Rich Text Format output for easy document integration, maintains conversation history for iterative improvements, and includes automated LinkedIn outreach capabilities—all orchestrated through Commander.js with modern web technologies.
+  Built as a comprehensive TypeScript ecosystem, the tool combines a CLI interface with a Chrome extension for seamless web integration. It leverages multiple AI models through Claude's and OpenAI's APIs for intelligent content generation, features dual extraction strategies for reliable job data parsing, and includes a unified server that consolidates job tracking, extraction, and CV-aware AI responses in a single service. The system generates Rich Text Format output for easy document integration, maintains conversation history for iterative improvements, and includes automated LinkedIn outreach capabilities—all orchestrated through Commander.js with modern web technologies.
 
 Table of Contents
 =================
@@ -1511,8 +1513,8 @@ logs/{job-id}/tailored-{cv-hash}-{timestamp}.md    # Editable resume content
 - `npm run test:watch` - Run tests in watch mode
 - `npm run lint` - Run ESLint
 - `npm run clean` - Clean the dist directory
-- `npm run mcp-server` - Start the local MCP server for CV data access
-- `npm run mcp-server:llm` - Start the MCP server with Claude 3.5 Sonnet for intelligent CV responses
+- `npm run unified-server` - Start the unified server for Chrome extension integration
+- `npm run unified-server:llm` - Start the unified server with Claude 3.5 Sonnet for CV-aware AI responses
 
 ### API Changes
 
@@ -1566,20 +1568,22 @@ src/
 ├── cli.ts                     # Command-line interface with logging
 └── index.ts                   # Main exports
 
-extension/                     # Chrome Extension for CV-aware assistance
+packages/chrome-extension/extension/  # Chrome Extension for CV-aware assistance
 ├── manifest.json              # Extension manifest (Manifest V3)
 ├── popup.html                 # Extension popup interface
 ├── popup.js                   # Popup functionality and controls
 ├── content.js                 # Content script with page analysis and AI integration
 ├── content.css                # Styling for extension UI components
-├── background.js              # Background service worker with CV parsing
+├── background.js              # Background service worker for message passing
 ├── icons/                     # Extension icons (SVG format)
 │   ├── icon16.svg
 │   ├── icon48.svg
 │   └── icon128.svg
 └── README.md                  # Extension usage and installation guide
 
-mcp-server.js                  # Model Context Protocol server for CV data access
+packages/unified-server/       # Unified server for all backend services
+├── unified-server.js          # Main server with job extraction and CV responses
+└── package.json               # Server package configuration
 
 __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
@@ -1663,21 +1667,30 @@ graph TB
 
 **2. Chrome Extension**
 - **Content Script**: Page analysis, question detection, and CV-aware responses
-- **Background Service Worker**: CV parsing and response generation with privacy controls
+- **Background Service Worker**: Message passing between extension and unified server
 - **Popup Interface**: Extension controls and status display
 - **Page Integration**: Seamless web page interaction without overlay issues
 
-**3. MCP Server**
-- **CV Data Access**: Secure, local-only CV information exposure
-- **Privacy-First Design**: No PII in git-committed code
-- **Tool-Based Interface**: `read_cv`, `search_cv_experience`, `answer_cv_question`
-- **12-Factor Compliance**: Configuration externalized from codebase
+**3. Unified Server**
+- **Job Extraction**: Handles job data extraction from URLs and HTML via Chrome extension
+- **CV-Aware AI Responses**: Built-in CVResponseEngine with Claude 3.5 Sonnet for intelligent, job-specific responses
+- **Privacy-First Design**: Local-only CV data access, no PII in git-committed code
+- **Single Service**: Consolidates all server functionality (extraction, scoring, AI responses) in one endpoint
 
 **4. Data Flow & Security**
 - **Local CV File**: Single source of truth (`cv.txt`) for all components
 - **No Remote CV Data**: All personal information stays local
-- **Secure Communication**: Extension ↔ MCP server communication
+- **Unified Server**: Single service for job extraction and CV-aware responses (port 3000)
 - **Git-Safe Codebase**: Zero PII committed to version control
+
+**Important Note on Server Architecture:**
+Only one server is needed: `npm run unified-server:llm`. This starts the unified server with all functionality:
+- Job extraction from URLs and HTML
+- CV-aware AI responses using Claude 3.5 Sonnet
+- Chrome extension integration
+- Secure local CV data access
+
+The unified server consolidates what was previously separate services into a single, efficient endpoint.
 
 ### Python Dependencies (Optional)
 

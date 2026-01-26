@@ -16,8 +16,6 @@
     "clean": "npm run clean --workspaces && rm -rf dist",
     "unified-server": "npm run start --workspace=@inkredabull/job-extractor-unified-server",
     "unified-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-unified-server",
-    "mcp-server": "npm run start --workspace=@inkredabull/job-extractor-mcp-server",
-    "mcp-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-mcp-server",
     "setup-gmail": "node scripts/setup-gmail-auth.js",
     "archive:jobs": "node scripts/archive-jobs.js"
   },
@@ -31,7 +29,7 @@
     "resume",
     "interview",
     "chrome-extension",
-    "mcp-server"
+    "unified-server"
   ],
   "author": "",
   "license": "MIT",
