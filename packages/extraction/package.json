@@ -1,0 +1,30 @@
+{
+  "name": "@inkredabull/job-extractor-extraction",
+  "version": "1.0.0",
+  "description": "Job extraction service with multiple strategies (JSON-LD, LLM, RegEx)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "job-extraction",
+    "web-scraping",
+    "llm",
+    "structured-data"
+  ],
+  "author": "inkredabull",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "openai": "^4.20.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11"
+  }
+}
