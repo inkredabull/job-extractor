@@ -1293,7 +1293,7 @@ Return only the synthesized job description text, no additional formatting or co
   }
 
   /**
-   * Create multiple related reminders for the tracked job using macOS Reminders
+   * Create a parent reminder with subtasks for the tracked job using macOS Reminders
    */
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
     try {
@@ -1309,8 +1309,38 @@ Return only the synthesized job description text, no additional formatting or co
       const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
       const jobTitle = `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`;
 
-      // Reminder 1: Main tracking reminder (medium priority)
-      const trackingReminder = {
+      // Subtask 1: "Apply for" action reminder
+      const applySubtask = {
+        title: `Apply for ${jobTitle}`,
+        notes: `Submit application for this position
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+URL: ${sourceUrl || 'No URL provided'}
+Job ID: ${jobId}
+
+Action required: Complete and submit application`,
+        dueTime: '09:00' // Morning reminder
+      };
+
+      // Subtask 2: "Ping" follow-up reminder
+      const pingSubtask = {
+        title: `Ping about ${jobTitle}`,
+        notes: `Follow up on application status
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Suggested actions:
+- Check application portal for updates
+- Send follow-up email to recruiter
+- Connect with employees on LinkedIn`,
+        dueTime: '17:00' // Afternoon reminder
+      };
+
+      // Parent reminder: Main tracking reminder with subtasks
+      const parentReminder = {
         title: jobTitle,
         notes: `Job Application Tracking
 
@@ -1331,62 +1361,20 @@ Next steps:
         priority: reminderPriority || config.default_priority,
         tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
         dueDate: today,
-        dueTime: config.due_date?.time || '23:59'
+        dueTime: config.due_date?.time || '23:59',
+        subtasks: [applySubtask, pingSubtask]
       };
 
-      // Reminder 2: "Apply for" action reminder (inherits priority from parent)
-      const applyReminder = {
-        title: `Apply for ${jobTitle}`,
-        notes: `Submit application for this position
+      // Create the parent reminder with subtasks
+      const result = await reminderService.createReminder(parentReminder);
 
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-URL: ${sourceUrl || 'No URL provided'}
-Job ID: ${jobId}
-
-Action required: Complete and submit application`,
-        list: config.list_name,
-        priority: reminderPriority || config.default_priority,
-        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
-        dueDate: today,
-        dueTime: '09:00' // Morning reminder
-      };
-
-      // Reminder 3: "Ping" follow-up reminder (inherits priority from parent)
-      const pingReminder = {
-        title: `Ping about ${jobTitle}`,
-        notes: `Follow up on application status
-
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-Job ID: ${jobId}
-
-Suggested actions:
-- Check application portal for updates
-- Send follow-up email to recruiter
-- Connect with employees on LinkedIn`,
-        list: config.list_name,
-        priority: reminderPriority || config.default_priority,
-        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
-        dueDate: today,
-        dueTime: '17:00' // Afternoon reminder
-      };
-
-      // Create all three reminders
-      const reminders = [trackingReminder, applyReminder, pingReminder];
-      let successCount = 0;
-
-      for (const reminder of reminders) {
-        const result = await reminderService.createReminder(reminder);
-        if (result.success) {
-          successCount++;
-          console.log(`✅ Created reminder: ${reminder.title}`);
-        } else {
-          console.warn(`⚠️  Failed to create reminder "${reminder.title}": ${result.error}`);
-        }
+      if (result.success) {
+        console.log(`✅ Created reminder with subtasks: ${parentReminder.title}`);
+        console.log(`   └─ Subtask 1: Apply for ${jobTitle}`);
+        console.log(`   └─ Subtask 2: Ping about ${jobTitle}`);
+      } else {
+        console.warn(`⚠️  Failed to create reminder "${parentReminder.title}": ${result.error}`);
       }
-
-      console.log(`📝 Created ${successCount}/${reminders.length} reminders for ${jobTitle}`);
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
       // Silently skip if the package is not available
