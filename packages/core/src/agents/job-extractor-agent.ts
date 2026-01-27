@@ -1334,7 +1334,7 @@ Next steps:
         dueTime: config.due_date?.time || '23:59'
       };
 
-      // Reminder 2: "Apply for" action reminder (high priority)
+      // Reminder 2: "Apply for" action reminder (inherits priority from parent)
       const applyReminder = {
         title: `Apply for ${jobTitle}`,
         notes: `Submit application for this position
@@ -1346,13 +1346,13 @@ Job ID: ${jobId}
 
 Action required: Complete and submit application`,
         list: config.list_name,
-        priority: 1, // High priority (1 = highest in macOS)
+        priority: reminderPriority || config.default_priority,
         tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
         dueDate: today,
         dueTime: '09:00' // Morning reminder
       };
 
-      // Reminder 3: "Ping" follow-up reminder (medium priority)
+      // Reminder 3: "Ping" follow-up reminder (inherits priority from parent)
       const pingReminder = {
         title: `Ping about ${jobTitle}`,
         notes: `Follow up on application status
@@ -1366,7 +1366,7 @@ Suggested actions:
 - Send follow-up email to recruiter
 - Connect with employees on LinkedIn`,
         list: config.list_name,
-        priority: 5, // Medium priority
+        priority: reminderPriority || config.default_priority,
         tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
         dueDate: today,
         dueTime: '17:00' // Afternoon reminder
