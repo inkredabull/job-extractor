@@ -82,19 +82,14 @@ const CONFIG = {
     }
   },
 
-  // AI Provider settings
+  // AI Provider settings - Using OpenRouter for unified access
   AI: {
+    ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
     MODELS: {
-      CLAUDE: 'claude-3-7-sonnet-20250219',
-      GEMINI: 'gemini-1.5-flash-preview-0514',
-      OPENAI: 'gpt-4o-mini'
+      CLAUDE: 'anthropic/claude-3.7-sonnet',
+      GEMINI: 'google/gemini-1.5-flash',
+      OPENAI: 'openai/gpt-4o-mini'
     },
-    ENDPOINTS: {
-      CLAUDE: 'https://api.anthropic.com/v1/messages',
-      GEMINI_BASE: 'https://us-central1-aiplatform.googleapis.com',
-      OPENAI: 'https://api.openai.com/v1/chat/completions'
-    },
-    PROJECT_ID: 'vertex-ai-demo-413000',
     MAX_TOKENS: {
       ACHIEVEMENT: 150,
       RESUME: 2048,
@@ -856,178 +851,57 @@ class AIProviderBase {
 }
 //#endregion AIProviderBase
 
-//#region ClaudeProvider
+//#region OpenRouterProvider
 /**
- * Claude AI provider
+ * OpenRouter unified AI provider
+ * Access to Claude, Gemini, OpenAI, and 200+ models through single API
  */
-class ClaudeProvider extends AIProviderBase {
+class OpenRouterProvider extends AIProviderBase {
   /**
-   * Create a Claude provider
-   * @param {string} apiKey - API key
+   * Create an OpenRouter provider
+   * @param {string} apiKey - OpenRouter API key
    */
   constructor(apiKey) {
-    super(apiKey, CONFIG.AI.MODELS.CLAUDE, 'claude');
+    super(apiKey, '', 'openrouter');
   }
 
   /**
-   * Get Claude API endpoint
+   * Get OpenRouter API endpoint
    * @returns {string} Endpoint URL
    */
   getEndpoint() {
-    return CONFIG.AI.ENDPOINTS.CLAUDE;
+    return CONFIG.AI.ENDPOINT;
   }
 
   /**
-   * Generate Claude request payload
+   * Generate OpenRouter request payload
    * @param {string} prompt - Prompt text
    * @param {number} maxTokens - Maximum output tokens
+   * @param {string} modelName - Model identifier (e.g., 'anthropic/claude-3.7-sonnet')
    * @returns {Object} Request payload
    */
-  generatePayload(prompt, maxTokens) {
+  generatePayload(prompt, maxTokens, modelName) {
     return {
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }]
+      model: modelName,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens
     };
   }
 
   /**
-   * Generate Claude authentication headers
+   * Generate OpenRouter authentication headers
    * @returns {Object} Headers object
    */
   generateAuthHeader() {
     return {
-      'x-api-key': this.apiKey,
-      'anthropic-version': '2023-06-01'
+      'Authorization': `Bearer ${this.apiKey}`,
+      'HTTP-Referer': 'https://sheets.google.com',  // For OpenRouter rankings
+      'X-Title': 'Resume Achievement Generator'      // For OpenRouter rankings
     };
   }
 
   /**
-   * Parse Claude response
-   * @param {Object} response - HTTP response
-   * @returns {string} Extracted text
-   */
-  parseResponse(response) {
-    const json = JSON.parse(response.getContentText());
-    return String(json.content[0].text).trim();
-  }
-}
-//#endregion ClaudeProvider
-
-//#region GeminiProvider
-/**
- * Gemini (Vertex AI) provider
- */
-class GeminiProvider extends AIProviderBase {
-  /**
-   * Create a Gemini provider
-   * @param {string} apiKey - API key (OAuth token)
-   */
-  constructor(apiKey) {
-    super(apiKey, CONFIG.AI.MODELS.GEMINI, 'gemini');
-    this.projectID = CONFIG.AI.PROJECT_ID;
-  }
-
-  /**
-   * Get Gemini API endpoint
-   * @returns {string} Endpoint URL
-   */
-  getEndpoint() {
-    return `${CONFIG.AI.ENDPOINTS.GEMINI_BASE}/v1/projects/${this.projectID}/locations/us-central1/publishers/google/models/${this.model}:generateContent`;
-  }
-
-  /**
-   * Generate Gemini request payload
-   * @param {string} prompt - Prompt text
-   * @param {number} maxTokens - Maximum output tokens
-   * @returns {Object} Request payload
-   */
-  generatePayload(prompt, maxTokens) {
-    return {
-      contents: {
-        role: 'USER',
-        parts: { text: prompt }
-      },
-      generation_config: {
-        temperature: 0.3,
-        topP: 0.75,
-        topK: 3,
-        candidateCount: 1,
-        maxOutputTokens: maxTokens
-      }
-    };
-  }
-
-  /**
-   * Generate Gemini authentication headers
-   * @returns {Object} Headers object
-   */
-  generateAuthHeader() {
-    return {
-      'Authorization': `Bearer ${this.apiKey}`
-    };
-  }
-
-  /**
-   * Parse Gemini response
-   * @param {Object} response - HTTP response
-   * @returns {string} Extracted text
-   */
-  parseResponse(response) {
-    const json = JSON.parse(response.getContentText());
-    return String(json.candidates[0].content.parts[0].text).trim();
-  }
-}
-//#endregion GeminiProvider
-
-//#region OpenAIProvider
-/**
- * OpenAI provider
- */
-class OpenAIProvider extends AIProviderBase {
-  /**
-   * Create an OpenAI provider
-   * @param {string} apiKey - API key
-   */
-  constructor(apiKey) {
-    super(apiKey, CONFIG.AI.MODELS.OPENAI, 'openai');
-  }
-
-  /**
-   * Get OpenAI API endpoint
-   * @returns {string} Endpoint URL
-   */
-  getEndpoint() {
-    return CONFIG.AI.ENDPOINTS.OPENAI;
-  }
-
-  /**
-   * Generate OpenAI request payload
-   * @param {string} prompt - Prompt text
-   * @param {number} maxTokens - Maximum output tokens (not used for o1 models)
-   * @returns {Object} Request payload
-   */
-  generatePayload(prompt, maxTokens) {
-    return {
-      model: this.model,
-      messages: [
-        { role: 'user', content: prompt }
-      ]
-    };
-  }
-
-  /**
-   * Generate OpenAI authentication headers
-   * @returns {Object} Headers object
-   */
-  generateAuthHeader() {
-    return {
-      'Authorization': `Bearer ${this.apiKey}`
-    };
-  }
-
-  /**
-   * Parse OpenAI response
+   * Parse OpenRouter response
    * @param {Object} response - HTTP response
    * @returns {string} Extracted text
    */
@@ -1035,12 +909,49 @@ class OpenAIProvider extends AIProviderBase {
     const json = JSON.parse(response.getContentText());
     return String(json.choices[0].message.content).trim();
   }
+
+  /**
+   * Query OpenRouter with specific model
+   * @param {string} prompt - Prompt text
+   * @param {number} maxTokens - Maximum output tokens
+   * @param {string} modelName - Model identifier
+   * @returns {string} AI response
+   */
+  queryWithModel(prompt, maxTokens, modelName) {
+    try {
+      const payload = this.generatePayload(prompt, maxTokens, modelName);
+      const headers = this.generateAuthHeader();
+      const options = {
+        method: 'post',
+        headers: headers,
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true,
+        contentType: 'application/json'
+      };
+
+      const url = this.getEndpoint();
+      const response = UrlFetchApp.fetch(url, options);
+
+      if (response.getResponseCode() === 200) {
+        const result = this.parseResponse(response);
+        Logger.log(`OpenRouter response (${modelName}): ${result.length} chars`);
+        return result;
+      } else {
+        const errorText = response.getContentText();
+        Logger.error(`OpenRouter query failed: ${errorText}`);
+        throw new Error(errorText);
+      }
+    } catch (error) {
+      Logger.error(`OpenRouter query failed: ${error.message}`, error);
+      throw error;
+    }
+  }
 }
-//#endregion OpenAIProvider
+//#endregion OpenRouterProvider
 
 //#region AIService
 /**
- * AI Service facade that manages multiple providers
+ * AI Service using OpenRouter for unified model access
  */
 class AIService {
   /**
@@ -1049,66 +960,56 @@ class AIService {
    */
   constructor(configService) {
     this.configService = configService;
-    this.providers = this.initializeProviders();
-    this.defaultProvider = 'claude';
+    this.provider = this.initializeProvider();
+    this.defaultModel = 'claude';
+    this.modelMap = {
+      'claude': CONFIG.AI.MODELS.CLAUDE,
+      'gemini': CONFIG.AI.MODELS.GEMINI,
+      'openai': CONFIG.AI.MODELS.OPENAI
+    };
   }
 
   /**
-   * Initialize all AI providers
-   * @returns {Object} Provider instances keyed by name
+   * Initialize OpenRouter provider
+   * @returns {OpenRouterProvider} OpenRouter provider instance
    */
-  initializeProviders() {
-    const providers = {};
-
+  initializeProvider() {
     try {
-      providers.claude = new ClaudeProvider(this.configService.getAPIKey('CLAUDE'));
+      const apiKey = this.configService.getAPIKey('OPENROUTER');
+      return new OpenRouterProvider(apiKey);
     } catch (error) {
-      Logger.warn(`Claude provider initialization failed: ${error.message}`);
+      Logger.error(`OpenRouter provider initialization failed: ${error.message}`);
+      throw new Error('Failed to initialize OpenRouter. Run setupAPIKeys() first.');
     }
-
-    try {
-      // For Gemini, use OAuth token
-      const token = ScriptApp.getOAuthToken();
-      providers.gemini = new GeminiProvider(token);
-    } catch (error) {
-      Logger.warn(`Gemini provider initialization failed: ${error.message}`);
-    }
-
-    try {
-      providers.openai = new OpenAIProvider(this.configService.getAPIKey('OPENAI'));
-    } catch (error) {
-      Logger.warn(`OpenAI provider initialization failed: ${error.message}`);
-    }
-
-    return providers;
   }
 
   /**
-   * Query an AI provider
+   * Query an AI model via OpenRouter
    * @param {string} prompt - Prompt text
    * @param {Object} options - Query options {provider: string, maxTokens: number}
    * @returns {string} AI response
    */
   query(prompt, options = {}) {
-    const { provider = this.defaultProvider, maxTokens = 1000 } = options;
+    const { provider = this.defaultModel, maxTokens = 1000 } = options;
 
-    if (!this.providers[provider]) {
-      throw new Error(`Provider "${provider}" not available`);
+    const modelName = this.modelMap[provider];
+    if (!modelName) {
+      throw new Error(`Model "${provider}" not available. Valid options: claude, gemini, openai`);
     }
 
-    Logger.log(`Querying ${provider} with maxTokens: ${maxTokens}`);
-    return this.providers[provider].query(prompt, maxTokens);
+    Logger.log(`Querying ${modelName} via OpenRouter with maxTokens: ${maxTokens}`);
+    return this.provider.queryWithModel(prompt, maxTokens, modelName);
   }
 
   /**
-   * Set default provider
-   * @param {string} provider - Provider name ('claude', 'gemini', 'openai')
+   * Set default model
+   * @param {string} provider - Model name ('claude', 'gemini', 'openai')
    */
   setDefaultProvider(provider) {
-    if (!this.providers[provider]) {
-      throw new Error(`Provider "${provider}" not available`);
+    if (!this.modelMap[provider]) {
+      throw new Error(`Model "${provider}" not available`);
     }
-    this.defaultProvider = provider;
+    this.defaultModel = provider;
   }
 }
 //#endregion AIService
@@ -2998,40 +2899,47 @@ function include(filename) {
 // #region Security & Setup
 
 /**
- * One-time setup function for API keys
+ * One-time setup function for OpenRouter API key
  * Run this manually to configure API credentials
+ *
+ * Get your OpenRouter API key at: https://openrouter.ai/keys
+ * This single key provides access to Claude, GPT-4, Gemini, and 200+ models
  */
 function setupAPIKeys() {
   try {
     const ui = SpreadsheetApp.getUi();
 
-    // Claude API Key
-    const claudeResponse = ui.prompt(
-      'Setup: Claude API Key',
-      'Enter your Anthropic Claude API key:',
+    // Show info message
+    ui.alert(
+      'OpenRouter Setup',
+      'This script uses OpenRouter for unified AI model access.\n\n' +
+      '✓ One API key for all models (Claude, GPT-4, Gemini, etc.)\n' +
+      '✓ Simple pay-as-you-go pricing\n' +
+      '✓ No vendor lock-in\n\n' +
+      'Get your API key at: https://openrouter.ai/keys',
+      ui.ButtonSet.OK
+    );
+
+    // OpenRouter API Key
+    const openrouterResponse = ui.prompt(
+      'Setup: OpenRouter API Key',
+      'Enter your OpenRouter API key:',
       ui.ButtonSet.OK_CANCEL
     );
 
-    if (claudeResponse.getSelectedButton() === ui.Button.OK) {
-      const claudeKey = claudeResponse.getResponseText();
-      PropertiesService.getScriptProperties().setProperty('CLAUDE_API_KEY', claudeKey);
-      Logger.log('Claude API key saved');
+    if (openrouterResponse.getSelectedButton() === ui.Button.OK) {
+      const openrouterKey = openrouterResponse.getResponseText();
+      PropertiesService.getScriptProperties().setProperty('OPENROUTER_API_KEY', openrouterKey);
+      Logger.log('OpenRouter API key saved');
+
+      ui.alert(
+        'Setup Complete',
+        'OpenRouter API key has been saved successfully!\n\nYou can now use all AI features.',
+        ui.ButtonSet.OK
+      );
+    } else {
+      ui.alert('Setup Cancelled', 'No API key was saved.', ui.ButtonSet.OK);
     }
-
-    // OpenAI API Key
-    const openaiResponse = ui.prompt(
-      'Setup: OpenAI API Key',
-      'Enter your OpenAI API key:',
-      ui.ButtonSet.OK_CANCEL
-    );
-
-    if (openaiResponse.getSelectedButton() === ui.Button.OK) {
-      const openaiKey = openaiResponse.getResponseText();
-      PropertiesService.getScriptProperties().setProperty('OPENAI_API_KEY', openaiKey);
-      Logger.log('OpenAI API key saved');
-    }
-
-    ui.alert('Setup Complete', 'API keys have been saved successfully!', ui.ButtonSet.OK);
   } catch (error) {
     Logger.error('Error in setupAPIKeys', error);
     SpreadsheetApp.getUi().alert(`Error during setup: ${error.message}`);
