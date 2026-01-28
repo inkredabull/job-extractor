@@ -1339,6 +1339,42 @@ Suggested actions:
         dueTime: '17:00' // Afternoon reminder
       };
 
+      // Subtask 3: "Prep for" interview preparation reminder
+      const prepSubtask = {
+        title: `Prep for ${jobTitle}`,
+        notes: `Prepare for interview
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Preparation tasks:
+- Research company background and recent news
+- Review job description and requirements
+- Prepare answers to common interview questions
+- Prepare questions to ask the interviewer
+- Review your resume and relevant experiences`,
+        dueTime: '10:00' // Morning reminder
+      };
+
+      // Subtask 4: "Follow-up / further outreach" networking reminder
+      const followUpSubtask = {
+        title: `Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`,
+        notes: `Additional networking and outreach
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Outreach activities:
+- Connect with hiring manager on LinkedIn
+- Reach out to employees in similar roles
+- Engage with company content on social media
+- Send thank you notes after interviews
+- Follow up on pending responses`,
+        dueTime: '14:00' // Early afternoon reminder
+      };
+
       // Parent reminder: Main tracking reminder with subtasks
       const parentReminder = {
         title: jobTitle,
@@ -1362,7 +1398,7 @@ Next steps:
         tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
         dueDate: today,
         dueTime: config.due_date?.time || '23:59',
-        subtasks: [applySubtask, pingSubtask]
+        subtasks: [applySubtask, pingSubtask, prepSubtask, followUpSubtask]
       };
 
       // Create the parent reminder with subtasks
@@ -1372,6 +1408,8 @@ Next steps:
         console.log(`✅ Created reminder with subtasks: ${parentReminder.title}`);
         console.log(`   └─ Subtask 1: Apply for ${jobTitle}`);
         console.log(`   └─ Subtask 2: Ping about ${jobTitle}`);
+        console.log(`   └─ Subtask 3: Prep for ${jobTitle}`);
+        console.log(`   └─ Subtask 4: Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`);
       } else {
         console.warn(`⚠️  Failed to create reminder "${parentReminder.title}": ${result.error}`);
       }
