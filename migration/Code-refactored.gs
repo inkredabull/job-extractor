@@ -2661,8 +2661,18 @@ function chooseModel() {
     const services = initializeServices();
     const models = services.ai.modelMap;
 
+    // Ensure all models have fallback values
+    const claudeModel = models.claude || CONFIG.AI.FALLBACK_MODELS.CLAUDE;
+    const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
+    const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
+    const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
+
     // Format model names for display
     const formatModelName = (modelId) => {
+      if (!modelId) {
+        return 'Unknown Model';
+      }
       // Extract provider and model name
       const parts = modelId.split('/');
       const provider = parts[0];
@@ -2675,11 +2685,11 @@ function chooseModel() {
         .substring(0, 40); // Truncate if too long
     };
 
-    const claudeDisplay = formatModelName(models.claude);
-    const geminiDisplay = formatModelName(models.gemini);
-    const openaiDisplay = formatModelName(models.openai);
-    const mistralDisplay = formatModelName(models.mistral);
-    const deepseekDisplay = formatModelName(models.deepseek);
+    const claudeDisplay = formatModelName(claudeModel);
+    const geminiDisplay = formatModelName(geminiModel);
+    const openaiDisplay = formatModelName(openaiModel);
+    const mistralDisplay = formatModelName(mistralModel);
+    const deepseekDisplay = formatModelName(deepseekModel);
 
     const html = `
 <!DOCTYPE html>
@@ -2764,11 +2774,11 @@ function chooseModel() {
     <p class="description">Select a model to generate achievement from the current row:</p>
 
     <div class="model-info">
-      🤖 Claude: ${models.claude}<br>
-      🔮 Gemini: ${models.gemini}<br>
-      💬 OpenAI: ${models.openai}<br>
-      ⚡ Mistral: ${models.mistral}<br>
-      🧠 DeepSeek: ${models.deepseek}
+      🤖 Claude: ${claudeModel}<br>
+      🔮 Gemini: ${geminiModel}<br>
+      💬 OpenAI: ${openaiModel}<br>
+      ⚡ Mistral: ${mistralModel}<br>
+      🧠 DeepSeek: ${deepseekModel}
     </div>
 
     <select id="modelSelect">
@@ -2849,8 +2859,18 @@ function compareModels() {
     const services = initializeServices();
     const models = services.ai.modelMap;
 
+    // Ensure all models have fallback values
+    const claudeModel = models.claude || CONFIG.AI.FALLBACK_MODELS.CLAUDE;
+    const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
+    const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
+    const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
+
     // Format model names for display
     const formatModelName = (modelId) => {
+      if (!modelId) {
+        return 'Unknown Model';
+      }
       const parts = modelId.split('/');
       const model = parts[1] || modelId;
       return model
@@ -2859,11 +2879,11 @@ function compareModels() {
         .substring(0, 50);
     };
 
-    const claudeDisplay = formatModelName(models.claude);
-    const geminiDisplay = formatModelName(models.gemini);
-    const openaiDisplay = formatModelName(models.openai);
-    const mistralDisplay = formatModelName(models.mistral);
-    const deepseekDisplay = formatModelName(models.deepseek);
+    const claudeDisplay = formatModelName(claudeModel);
+    const geminiDisplay = formatModelName(geminiModel);
+    const openaiDisplay = formatModelName(openaiModel);
+    const mistralDisplay = formatModelName(mistralModel);
+    const deepseekDisplay = formatModelName(deepseekModel);
 
     const html = `
 <!DOCTYPE html>
@@ -3073,7 +3093,7 @@ function compareModels() {
     <div class="results" id="results" style="display: none;">
       <div class="result-card" id="resultClaude">
         <h4>🤖 ${claudeDisplay}</h4>
-        <div class="model-label">${models.claude}</div>
+        <div class="model-label">${claudeModel}</div>
         <div class="result-content" id="contentClaude">
           <div class="loading">Generating...</div>
         </div>
@@ -3084,7 +3104,7 @@ function compareModels() {
 
       <div class="result-card" id="resultGemini">
         <h4>🔮 ${geminiDisplay}</h4>
-        <div class="model-label">${models.gemini}</div>
+        <div class="model-label">${geminiModel}</div>
         <div class="result-content" id="contentGemini">
           <div class="loading">Generating...</div>
         </div>
@@ -3095,7 +3115,7 @@ function compareModels() {
 
       <div class="result-card" id="resultOpenAI">
         <h4>💬 ${openaiDisplay}</h4>
-        <div class="model-label">${models.openai}</div>
+        <div class="model-label">${openaiModel}</div>
         <div class="result-content" id="contentOpenAI">
           <div class="loading">Generating...</div>
         </div>
@@ -3106,7 +3126,7 @@ function compareModels() {
 
       <div class="result-card" id="resultMistral">
         <h4>⚡ ${mistralDisplay}</h4>
-        <div class="model-label">${models.mistral}</div>
+        <div class="model-label">${mistralModel}</div>
         <div class="result-content" id="contentMistral">
           <div class="loading">Generating...</div>
         </div>
@@ -3117,7 +3137,7 @@ function compareModels() {
 
       <div class="result-card" id="resultDeepSeek">
         <h4>🧠 ${deepseekDisplay}</h4>
-        <div class="model-label">${models.deepseek}</div>
+        <div class="model-label">${deepseekModel}</div>
         <div class="result-content" id="contentDeepSeek">
           <div class="loading">Generating...</div>
         </div>
@@ -3539,13 +3559,20 @@ function viewCurrentModels() {
     const services = initializeServices();
     const models = services.ai.modelMap;
 
+    // Ensure all models have fallback values
+    const claudeModel = models.claude || CONFIG.AI.FALLBACK_MODELS.CLAUDE;
+    const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
+    const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
+    const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
+
     const ui = SpreadsheetApp.getUi();
     const message = `Current AI Models:\n\n` +
-                   `🤖 Claude: ${models.claude}\n` +
-                   `🔮 Gemini: ${models.gemini}\n` +
-                   `💬 OpenAI: ${models.openai}\n` +
-                   `⚡ Mistral: ${models.mistral}\n` +
-                   `🧠 DeepSeek: ${models.deepseek}\n\n` +
+                   `🤖 Claude: ${claudeModel}\n` +
+                   `🔮 Gemini: ${geminiModel}\n` +
+                   `💬 OpenAI: ${openaiModel}\n` +
+                   `⚡ Mistral: ${mistralModel}\n` +
+                   `🧠 DeepSeek: ${deepseekModel}\n\n` +
                    `These models are refreshed daily from OpenRouter.\n` +
                    `Use "Refresh Models" to force an update.`;
 
