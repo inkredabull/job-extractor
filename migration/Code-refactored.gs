@@ -2930,6 +2930,47 @@ function compareModels() {
       border-top: 1px solid #eee;
       font-weight: 600;
     }
+    .metadata {
+      font-size: 11px;
+      color: #666;
+      margin-top: 10px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .metadata-row {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .metadata-label {
+      font-weight: 600;
+      color: #555;
+    }
+    .metadata-value {
+      color: #333;
+    }
+    .latency {
+      color: #28a745;
+      font-weight: 600;
+    }
+    .latency.slow {
+      color: #ffc107;
+    }
+    .latency.very-slow {
+      color: #dc3545;
+    }
+    .prompt-link {
+      color: #1a73e8;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .prompt-link:hover {
+      text-decoration: underline;
+    }
     .choose-btn {
       width: 100%;
       padding: 8px;
@@ -3003,6 +3044,7 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countClaude"></div>
+        <div class="metadata" id="metadataClaude" style="display: none;"></div>
         <button class="choose-btn" id="chooseClaude" onclick="chooseModel('claude')">✓ Choose This</button>
       </div>
 
@@ -3013,6 +3055,7 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countGemini"></div>
+        <div class="metadata" id="metadataGemini" style="display: none;"></div>
         <button class="choose-btn" id="chooseGemini" onclick="chooseModel('gemini')">✓ Choose This</button>
       </div>
 
@@ -3023,6 +3066,7 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countOpenAI"></div>
+        <div class="metadata" id="metadataOpenAI" style="display: none;"></div>
         <button class="choose-btn" id="chooseOpenAI" onclick="chooseModel('openai')">✓ Choose This</button>
       </div>
     </div>
@@ -3030,12 +3074,12 @@ function compareModels() {
 
   <script>
     const MODELS = [
-      { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude' },
-      { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini' },
-      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI' }
+      { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude', metadataId: 'metadataClaude' },
+      { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini', metadataId: 'metadataGemini' },
+      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI', metadataId: 'metadataOpenAI' }
     ];
 
-    // Global storage for model results
+    // Global storage for model results (full result objects)
     let modelResults = {};
 
     function runComparison() {
@@ -3052,6 +3096,7 @@ function compareModels() {
       MODELS.forEach(model => {
         document.getElementById(model.contentId).innerHTML = '<div class="loading">Generating...</div>';
         document.getElementById(model.countId).textContent = '';
+        document.getElementById(model.metadataId).style.display = 'none';
         document.getElementById(model.cardId).classList.remove('winner');
         document.getElementById(model.buttonId).style.display = 'none'; // Hide button
 
@@ -3101,8 +3146,8 @@ function compareModels() {
         return;
       }
 
-      const content = modelResults[modelKey];
-      if (!content) {
+      const resultObj = modelResults[modelKey];
+      if (!resultObj || !resultObj.text) {
         alert('No result available for this model');
         return;
       }
@@ -3124,18 +3169,85 @@ function compareModels() {
           button.textContent = '✓ Choose This';
           alert('Error applying: ' + error.message);
         })
-        .setActiveCellValue(content);
+        .setActiveCellValue(resultObj.text);
     }
 
-    function displayResult(contentId, countId, text, modelKey) {
-      document.getElementById(contentId).textContent = text;
-      document.getElementById(countId).textContent = 'Characters: ' + text.length;
+    function displayResult(contentId, countId, resultObj, modelKey) {
+      // resultObj = { text, latencyMs, prompt, config }
+      document.getElementById(contentId).textContent = resultObj.text;
+      document.getElementById(countId).textContent = 'Characters: ' + resultObj.text.length;
 
-      // Show the choose button for this model
+      // Display metadata
       const model = MODELS.find(m => m.key === modelKey);
       if (model) {
+        const metadataEl = document.getElementById(model.metadataId);
+
+        // Determine latency class (fast/slow/very-slow)
+        let latencyClass = 'latency';
+        if (resultObj.latencyMs > 5000) latencyClass = 'latency very-slow';
+        else if (resultObj.latencyMs > 2000) latencyClass = 'latency slow';
+
+        const latencySec = (resultObj.latencyMs / 1000).toFixed(2);
+
+        metadataEl.innerHTML = \`
+          <div class="metadata-row">
+            <span class="metadata-label">⚡ Latency:</span>
+            <span class="\${latencyClass}">\${latencySec}s</span>
+          </div>
+          <div class="metadata-row">
+            <span class="metadata-label">Model ID:</span>
+            <span class="metadata-value">\${resultObj.config.model}</span>
+          </div>
+          <div class="metadata-row">
+            <span class="metadata-label">Max Tokens:</span>
+            <span class="metadata-value">\${resultObj.config.maxTokens}</span>
+          </div>
+          <div class="metadata-row">
+            <span class="metadata-label">Audience:</span>
+            <span class="metadata-value">\${resultObj.config.targetAudience}</span>
+          </div>
+          <div class="metadata-row">
+            <span class="metadata-label">Prompt:</span>
+            <a class="prompt-link" onclick="showPrompt('\${modelKey}')">View Full Prompt</a>
+          </div>
+        \`;
+        metadataEl.style.display = 'block';
+
+        // Show the choose button
         document.getElementById(model.buttonId).style.display = 'block';
       }
+    }
+
+    function showPrompt(modelKey) {
+      const resultObj = modelResults[modelKey];
+      if (!resultObj || !resultObj.prompt) {
+        alert('Prompt not available');
+        return;
+      }
+
+      const promptWindow = window.open('', 'Prompt', 'width=800,height=600,scrollbars=yes');
+      promptWindow.document.write(\`
+        <html>
+        <head>
+          <title>Prompt for \${modelKey}</title>
+          <style>
+            body {
+              font-family: monospace;
+              padding: 20px;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+            }
+            h3 { font-family: Arial, sans-serif; }
+          </style>
+        </head>
+        <body>
+          <h3>Full Prompt for \${modelKey.toUpperCase()}</h3>
+          <hr>
+          \${resultObj.prompt}
+        </body>
+        </html>
+      \`);
+      promptWindow.document.close();
     }
 
     function finishComparison(results) {
@@ -3145,9 +3257,10 @@ function compareModels() {
       let shortestKey = null;
 
       Object.keys(results).forEach(key => {
-        const length = results[key].length;
+        const text = results[key].text || results[key]; // Handle both object and string
+        const length = text.length;
         if (length >= 40 && length < shortestLength) {
-          shortest = results[key];
+          shortest = text;
           shortestLength = length;
           shortestKey = key;
         }
@@ -3220,10 +3333,12 @@ function fetchWithModel(modelName) {
 /**
  * Generate achievement without writing to cell (for comparison)
  * @param {string} modelName - Name of model ('claude', 'gemini', 'openai')
- * @returns {string} Generated achievement
+ * @returns {Object} Result object with text, latency, prompt, and config
  */
 function generateAchievementWithModel(modelName) {
   try {
+    const startTime = new Date().getTime();
+
     const services = initializeServices();
     const sheet = services.sheet.getSheet(CONFIG.SHEETS.STORY_BANK);
     const { rowIndex, row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
@@ -3252,13 +3367,32 @@ function generateAchievementWithModel(modelName) {
     const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)];
 
     const prompt = services.achievement.buildPrompt(challenge, actions, result, client, targetAudience);
+
+    // Configuration used for this request
+    const config = {
+      provider: modelName,
+      model: services.ai.modelMap[modelName],
+      maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT,
+      targetAudience: targetAudience,
+      columnHeader: columnHeader
+    };
+
     const response = services.ai.query(prompt, {
       provider: modelName,
       maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT
     });
 
-    Logger.log(`Generated achievement using ${modelName}: ${response.length} chars`);
-    return response;
+    const endTime = new Date().getTime();
+    const latencyMs = endTime - startTime;
+
+    Logger.log(`Generated achievement using ${modelName}: ${response.length} chars in ${latencyMs}ms`);
+
+    return {
+      text: response,
+      latencyMs: latencyMs,
+      prompt: prompt,
+      config: config
+    };
   } catch (error) {
     Logger.error(`Error in generateAchievementWithModel with ${modelName}`, error);
     throw new Error(`Failed to generate with ${modelName}: ${error.message}`);
