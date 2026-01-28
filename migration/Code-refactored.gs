@@ -2630,7 +2630,7 @@ function compareModels() {
       background: #f5f5f5;
     }
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
     }
     h3 {
@@ -2638,41 +2638,29 @@ function compareModels() {
       color: #1a73e8;
       text-align: center;
     }
+    .description {
+      text-align: center;
+      color: #666;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
     .controls {
       background: white;
-      padding: 15px;
+      padding: 20px;
       border-radius: 8px;
       margin-bottom: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .model-selector {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .model-selector label {
-      font-weight: 600;
-      min-width: 80px;
-    }
-    .model-selector select {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
+      text-align: center;
     }
     button {
-      width: 100%;
-      padding: 12px;
+      padding: 14px 40px;
       background-color: #1a73e8;
       color: white;
       border: none;
       border-radius: 4px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 10px;
     }
     button:hover {
       background-color: #1557b0;
@@ -2683,39 +2671,50 @@ function compareModels() {
     }
     .results {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
     }
     .result-card {
       background: white;
       border-radius: 8px;
       padding: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      min-height: 200px;
+      min-height: 250px;
+      display: flex;
+      flex-direction: column;
     }
     .result-card h4 {
-      margin-top: 0;
+      margin: 0 0 10px 0;
       color: #1a73e8;
       border-bottom: 2px solid #1a73e8;
       padding-bottom: 8px;
+      font-size: 15px;
+    }
+    .model-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 15px;
     }
     .result-content {
-      margin-top: 15px;
+      flex: 1;
       line-height: 1.6;
       color: #333;
       font-size: 14px;
+      overflow-wrap: break-word;
     }
     .loading {
       text-align: center;
-      color: #666;
+      color: #999;
       font-style: italic;
+      padding: 40px 0;
     }
     .char-count {
       font-size: 12px;
       color: #666;
-      margin-top: 10px;
+      margin-top: 15px;
       padding-top: 10px;
       border-top: 1px solid #eee;
+      font-weight: 600;
     }
     .winner {
       background: #d4edda;
@@ -2731,8 +2730,9 @@ function compareModels() {
       color: white;
       padding: 2px 8px;
       border-radius: 12px;
-      font-size: 11px;
+      font-size: 10px;
       margin-left: 8px;
+      font-weight: normal;
     }
     .status {
       margin-top: 15px;
@@ -2750,117 +2750,104 @@ function compareModels() {
 </head>
 <body>
   <div class="container">
-    <h3>🔍 Model Comparison: Side-by-Side</h3>
+    <h3>🔍 Compare All AI Models</h3>
+    <p class="description">Generate achievements from all models in parallel and compare results</p>
 
     <div class="controls">
-      <div class="model-selector">
-        <label for="model1">Model 1:</label>
-        <select id="model1">
-          <option value="claude" selected>Claude 3.7 Sonnet</option>
-          <option value="gemini">Gemini 1.5 Flash</option>
-          <option value="openai">OpenAI GPT-4o Mini</option>
-        </select>
-      </div>
-
-      <div class="model-selector">
-        <label for="model2">Model 2:</label>
-        <select id="model2">
-          <option value="gemini" selected>Gemini 1.5 Flash</option>
-          <option value="claude">Claude 3.7 Sonnet</option>
-          <option value="openai">OpenAI GPT-4o Mini</option>
-        </select>
-      </div>
-
-      <button id="compareBtn" onclick="runComparison()">🚀 Compare Models</button>
+      <button id="compareBtn" onclick="runComparison()">🚀 Generate All Models</button>
       <div id="status" class="status"></div>
     </div>
 
     <div class="results" id="results" style="display: none;">
-      <div class="result-card" id="result1">
-        <h4 id="model1Name">Model 1</h4>
-        <div class="result-content" id="content1">
+      <div class="result-card" id="resultClaude">
+        <h4>Claude 3.7 Sonnet</h4>
+        <div class="model-label">Anthropic's most capable model</div>
+        <div class="result-content" id="contentClaude">
           <div class="loading">Generating...</div>
         </div>
-        <div class="char-count" id="count1"></div>
+        <div class="char-count" id="countClaude"></div>
       </div>
 
-      <div class="result-card" id="result2">
-        <h4 id="model2Name">Model 2</h4>
-        <div class="result-content" id="content2">
+      <div class="result-card" id="resultGemini">
+        <h4>Gemini 1.5 Flash</h4>
+        <div class="model-label">Google's fast multimodal model</div>
+        <div class="result-content" id="contentGemini">
           <div class="loading">Generating...</div>
         </div>
-        <div class="char-count" id="count2"></div>
+        <div class="char-count" id="countGemini"></div>
+      </div>
+
+      <div class="result-card" id="resultOpenAI">
+        <h4>OpenAI GPT-4o Mini</h4>
+        <div class="model-label">OpenAI's efficient model</div>
+        <div class="result-content" id="contentOpenAI">
+          <div class="loading">Generating...</div>
+        </div>
+        <div class="char-count" id="countOpenAI"></div>
       </div>
     </div>
   </div>
 
   <script>
+    const MODELS = [
+      { key: 'claude', name: 'Claude 3.7 Sonnet', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude' },
+      { key: 'gemini', name: 'Gemini 1.5 Flash', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini' },
+      { key: 'openai', name: 'OpenAI GPT-4o Mini', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI' }
+    ];
+
     function runComparison() {
-      const model1 = document.getElementById('model1').value;
-      const model2 = document.getElementById('model2').value;
       const button = document.getElementById('compareBtn');
       const status = document.getElementById('status');
       const results = document.getElementById('results');
 
-      if (model1 === model2) {
-        showStatus('Please select two different models', 'error');
-        return;
-      }
-
       button.disabled = true;
-      button.textContent = '⏳ Comparing...';
+      button.textContent = '⏳ Generating all models...';
       status.style.display = 'none';
       results.style.display = 'grid';
 
-      // Reset results
-      document.getElementById('model1Name').textContent = getModelDisplayName(model1);
-      document.getElementById('model2Name').textContent = getModelDisplayName(model2);
-      document.getElementById('content1').innerHTML = '<div class="loading">Generating...</div>';
-      document.getElementById('content2').innerHTML = '<div class="loading">Generating...</div>';
-      document.getElementById('count1').textContent = '';
-      document.getElementById('count2').textContent = '';
-      document.getElementById('result1').classList.remove('winner');
-      document.getElementById('result2').classList.remove('winner');
+      // Reset all results
+      MODELS.forEach(model => {
+        document.getElementById(model.contentId).innerHTML = '<div class="loading">Generating...</div>';
+        document.getElementById(model.countId).textContent = '';
+        document.getElementById(model.cardId).classList.remove('winner');
 
-      // Generate both in parallel
-      let results1, results2;
+        // Remove any existing winner badges
+        const header = document.getElementById(model.cardId).querySelector('h4');
+        const badge = header.querySelector('.winner-badge');
+        if (badge) badge.remove();
+      });
+
+      // Store results as they come in
+      const modelResults = {};
       let completed = 0;
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          results1 = result;
-          displayResult('content1', 'count1', result);
-          completed++;
-          if (completed === 2) {
-            finishComparison(results1, results2);
-            button.disabled = false;
-            button.textContent = '🚀 Compare Models';
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('content1').innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
-          button.disabled = false;
-          button.textContent = '🚀 Compare Models';
-        })
-        .generateAchievementWithModel(model1);
+      // Generate all models in parallel
+      MODELS.forEach(model => {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            modelResults[model.key] = result;
+            displayResult(model.contentId, model.countId, result);
+            completed++;
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          results2 = result;
-          displayResult('content2', 'count2', result);
-          completed++;
-          if (completed === 2) {
-            finishComparison(results1, results2);
-            button.disabled = false;
-            button.textContent = '🚀 Compare Models';
-          }
-        })
-        .withFailureHandler(function(error) {
-          document.getElementById('content2').innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
-          button.disabled = false;
-          button.textContent = '🚀 Compare Models';
-        })
-        .generateAchievementWithModel(model2);
+            if (completed === MODELS.length) {
+              finishComparison(modelResults);
+              button.disabled = false;
+              button.textContent = '🚀 Generate All Models';
+            } else {
+              button.textContent = \`⏳ Generating... (\${completed}/\${MODELS.length})\`;
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById(model.contentId).innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
+            completed++;
+
+            if (completed === MODELS.length) {
+              button.disabled = false;
+              button.textContent = '🚀 Generate All Models';
+            }
+          })
+          .generateAchievementWithModel(model.key);
+      });
     }
 
     function displayResult(contentId, countId, text) {
@@ -2868,24 +2855,32 @@ function compareModels() {
       document.getElementById(countId).textContent = 'Characters: ' + text.length;
     }
 
-    function finishComparison(result1, result2) {
-      // Simple heuristic: prefer shorter, more concise results
-      if (result1.length < result2.length && result1.length >= 40) {
-        document.getElementById('result1').classList.add('winner');
-        document.getElementById('model1Name').innerHTML += '<span class="winner-badge">More Concise</span>';
-      } else if (result2.length < result1.length && result2.length >= 40) {
-        document.getElementById('result2').classList.add('winner');
-        document.getElementById('model2Name').innerHTML += '<span class="winner-badge">More Concise</span>';
-      }
-    }
+    function finishComparison(results) {
+      // Find the shortest valid result (>= 40 chars)
+      let shortest = null;
+      let shortestLength = Infinity;
+      let shortestKey = null;
 
-    function getModelDisplayName(modelKey) {
-      const names = {
-        'claude': 'Claude 3.7 Sonnet',
-        'gemini': 'Gemini 1.5 Flash',
-        'openai': 'OpenAI GPT-4o Mini'
-      };
-      return names[modelKey] || modelKey;
+      Object.keys(results).forEach(key => {
+        const length = results[key].length;
+        if (length >= 40 && length < shortestLength) {
+          shortest = results[key];
+          shortestLength = length;
+          shortestKey = key;
+        }
+      });
+
+      // Highlight the winner
+      if (shortestKey) {
+        const winnerModel = MODELS.find(m => m.key === shortestKey);
+        if (winnerModel) {
+          const card = document.getElementById(winnerModel.cardId);
+          card.classList.add('winner');
+
+          const header = card.querySelector('h4');
+          header.innerHTML += '<span class="winner-badge">Most Concise</span>';
+        }
+      }
     }
 
     function showStatus(message, type) {
@@ -2899,10 +2894,10 @@ function compareModels() {
 `;
 
     const htmlOutput = HtmlService.createHtmlOutput(html)
-      .setWidth(950)
-      .setHeight(600);
+      .setWidth(1250)
+      .setHeight(650);
 
-    SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Compare AI Models');
+    SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Compare All AI Models');
   } catch (error) {
     Logger.error('Error in compareModels', error);
     DialogService.showAlert(`Error showing comparison: ${error.message}`);
