@@ -90,7 +90,9 @@ const CONFIG = {
     FALLBACK_MODELS: {
       CLAUDE: 'anthropic/claude-3.7-sonnet',
       GEMINI: 'google/gemini-1.5-flash',
-      OPENAI: 'openai/gpt-4o-mini'
+      OPENAI: 'openai/gpt-4o-mini',
+      MISTRAL: 'mistralai/mistral-large-2407',
+      DEEPSEEK: 'deepseek/deepseek-chat'
     },
     // Model discovery settings
     DISCOVERY: {
@@ -214,9 +216,10 @@ Must pass all 6 criteria above`,
 
 Return TRUE only if all 6 = YES. Otherwise return FALSE. Return only TRUE or FALSE.`,
 
-    ACHIEVEMENT_SIMPLIFIED: `Given the following CHALLENGE, ACTIONS, and RESULT, summarize into a single achievement which:
+    ACHIEVEMENT_SIMPLIFIED: `
+Given the following CHALLENGE, ACTIONS, and RESULT, summarize into a single achievement which:
 
-* follows the format of: "<Action verb in active voice> <what was done> <with whom (specific peer/leader/function/team)> to <achieve result - preferably quantifiable (e.g. revenue generated, hours saved, % more throughput, etc.)>."
+* follows the format of: "ACTION_VERB_IN_ACTIVE_VOICE WHAT_WAS_DONE WITH_WHOM_LIKE_PEER_LEADER_FUNCTION_TEAM to ACHEIVED_PREFERABLY_QUANTIFIABLE_RESULT."
 * is approximately maxOuputSizeInChars characters`,
 
     BEST_EFFORT: `If any of the Challenge, Actions, or Result contains the following, make a best effort to incorporate it/them in the summary:
@@ -893,7 +896,9 @@ class ModelDiscoveryService {
     const providers = {
       'anthropic': null,
       'google': null,
-      'openai': null
+      'openai': null,
+      'mistralai': null,
+      'deepseek': null
     };
 
     models.forEach(model => {
@@ -908,7 +913,8 @@ class ModelDiscoveryService {
       // Filter criteria
       const contextLength = model.context_length || 0;
       const isChat = model.id.includes('chat') || model.id.includes('sonnet') ||
-                     model.id.includes('flash') || model.id.includes('gpt');
+                     model.id.includes('flash') || model.id.includes('gpt') ||
+                     model.id.includes('mistral') || model.id.includes('deepseek');
 
       // Must meet minimum context requirement
       if (contextLength < CONFIG.AI.DISCOVERY.MIN_CONTEXT) {
@@ -943,7 +949,9 @@ class ModelDiscoveryService {
     const result = {
       CLAUDE: providers['anthropic']?.id || CONFIG.AI.FALLBACK_MODELS.CLAUDE,
       GEMINI: providers['google']?.id || CONFIG.AI.FALLBACK_MODELS.GEMINI,
-      OPENAI: providers['openai']?.id || CONFIG.AI.FALLBACK_MODELS.OPENAI
+      OPENAI: providers['openai']?.id || CONFIG.AI.FALLBACK_MODELS.OPENAI,
+      MISTRAL: providers['mistralai']?.id || CONFIG.AI.FALLBACK_MODELS.MISTRAL,
+      DEEPSEEK: providers['deepseek']?.id || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK
     };
 
     Logger.log('Selected models:', JSON.stringify(result));
@@ -970,7 +978,8 @@ class ModelDiscoveryService {
     // Prefer known flagship models
     const isFlagship = (id) => {
       return id.includes('sonnet') || id.includes('opus') ||
-             id.includes('gpt-4') || id.includes('flash');
+             id.includes('gpt-4') || id.includes('flash') ||
+             id.includes('large') || id.includes('v3');
     };
 
     if (isFlagship(model1) && !isFlagship(model2)) return true;
@@ -1081,7 +1090,7 @@ class AIProviderBase {
 //#region OpenRouterProvider
 /**
  * OpenRouter unified AI provider
- * Access to Claude, Gemini, OpenAI, and 200+ models through single API
+ * Access to Claude, Gemini, OpenAI, Mistral, DeepSeek, and 200+ models through single API
  */
 class OpenRouterProvider extends AIProviderBase {
   /**
@@ -1200,7 +1209,7 @@ class AIService {
 
   /**
    * Discover and cache latest models from OpenRouter
-   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id'}
+   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id', mistral: 'id', deepseek: 'id'}
    */
   discoverModels() {
     try {
@@ -1208,14 +1217,18 @@ class AIService {
       return {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
-        'openai': discovered.OPENAI
+        'openai': discovered.OPENAI,
+        'mistral': discovered.MISTRAL,
+        'deepseek': discovered.DEEPSEEK
       };
     } catch (error) {
       Logger.warn('Model discovery failed, using fallbacks:', error.message);
       return {
         'claude': CONFIG.AI.FALLBACK_MODELS.CLAUDE,
         'gemini': CONFIG.AI.FALLBACK_MODELS.GEMINI,
-        'openai': CONFIG.AI.FALLBACK_MODELS.OPENAI
+        'openai': CONFIG.AI.FALLBACK_MODELS.OPENAI,
+        'mistral': CONFIG.AI.FALLBACK_MODELS.MISTRAL,
+        'deepseek': CONFIG.AI.FALLBACK_MODELS.DEEPSEEK
       };
     }
   }
@@ -1230,7 +1243,9 @@ class AIService {
       this.modelMap = {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
-        'openai': discovered.OPENAI
+        'openai': discovered.OPENAI,
+        'mistral': discovered.MISTRAL,
+        'deepseek': discovered.DEEPSEEK
       };
       Logger.log('Models refreshed:', JSON.stringify(this.modelMap));
       return this.modelMap;
@@ -1501,7 +1516,8 @@ ${carBlock}`;
    * @private
    */
   _formatCAR(challenge, actions, result) {
-    return `CHALLENGE:
+    return `
+CHALLENGE:
 
 ${challenge}
 
@@ -2662,6 +2678,8 @@ function chooseModel() {
     const claudeDisplay = formatModelName(models.claude);
     const geminiDisplay = formatModelName(models.gemini);
     const openaiDisplay = formatModelName(models.openai);
+    const mistralDisplay = formatModelName(models.mistral);
+    const deepseekDisplay = formatModelName(models.deepseek);
 
     const html = `
 <!DOCTYPE html>
@@ -2748,7 +2766,9 @@ function chooseModel() {
     <div class="model-info">
       🤖 Claude: ${models.claude}<br>
       🔮 Gemini: ${models.gemini}<br>
-      💬 OpenAI: ${models.openai}
+      💬 OpenAI: ${models.openai}<br>
+      ⚡ Mistral: ${models.mistral}<br>
+      🧠 DeepSeek: ${models.deepseek}
     </div>
 
     <select id="modelSelect">
@@ -2756,6 +2776,8 @@ function chooseModel() {
       <option value="claude">🤖 ${claudeDisplay} (Recommended)</option>
       <option value="gemini">🔮 ${geminiDisplay} (Fast)</option>
       <option value="openai">💬 ${openaiDisplay} (Concise)</option>
+      <option value="mistral">⚡ ${mistralDisplay} (Fastest)</option>
+      <option value="deepseek">🧠 ${deepseekDisplay} (Value)</option>
     </select>
 
     <button id="generateBtn" onclick="generateWithModel()">Generate Achievement</button>
@@ -2840,6 +2862,8 @@ function compareModels() {
     const claudeDisplay = formatModelName(models.claude);
     const geminiDisplay = formatModelName(models.gemini);
     const openaiDisplay = formatModelName(models.openai);
+    const mistralDisplay = formatModelName(models.mistral);
+    const deepseekDisplay = formatModelName(models.deepseek);
 
     const html = `
 <!DOCTYPE html>
@@ -2895,7 +2919,7 @@ function compareModels() {
     }
     .results {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 15px;
     }
     .result-card {
@@ -3079,6 +3103,28 @@ function compareModels() {
         <div class="metadata" id="metadataOpenAI" style="display: none;"></div>
         <button class="choose-btn" id="chooseOpenAI" onclick="chooseModel('openai')">✓ Choose This</button>
       </div>
+
+      <div class="result-card" id="resultMistral">
+        <h4>⚡ ${mistralDisplay}</h4>
+        <div class="model-label">${models.mistral}</div>
+        <div class="result-content" id="contentMistral">
+          <div class="loading">Generating...</div>
+        </div>
+        <div class="char-count" id="countMistral"></div>
+        <div class="metadata" id="metadataMistral" style="display: none;"></div>
+        <button class="choose-btn" id="chooseMistral" onclick="chooseModel('mistral')">✓ Choose This</button>
+      </div>
+
+      <div class="result-card" id="resultDeepSeek">
+        <h4>🧠 ${deepseekDisplay}</h4>
+        <div class="model-label">${models.deepseek}</div>
+        <div class="result-content" id="contentDeepSeek">
+          <div class="loading">Generating...</div>
+        </div>
+        <div class="char-count" id="countDeepSeek"></div>
+        <div class="metadata" id="metadataDeepSeek" style="display: none;"></div>
+        <button class="choose-btn" id="chooseDeepSeek" onclick="chooseModel('deepseek')">✓ Choose This</button>
+      </div>
     </div>
   </div>
 
@@ -3086,7 +3132,9 @@ function compareModels() {
     const MODELS = [
       { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude', metadataId: 'metadataClaude' },
       { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini', metadataId: 'metadataGemini' },
-      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI', metadataId: 'metadataOpenAI' }
+      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI', metadataId: 'metadataOpenAI' },
+      { key: 'mistral', name: '${mistralDisplay}', contentId: 'contentMistral', countId: 'countMistral', cardId: 'resultMistral', buttonId: 'chooseMistral', metadataId: 'metadataMistral' },
+      { key: 'deepseek', name: '${deepseekDisplay}', contentId: 'contentDeepSeek', countId: 'countDeepSeek', cardId: 'resultDeepSeek', buttonId: 'chooseDeepSeek', metadataId: 'metadataDeepSeek' }
     ];
 
     // Global storage for model results (full result objects)
@@ -3495,7 +3543,9 @@ function viewCurrentModels() {
     const message = `Current AI Models:\n\n` +
                    `🤖 Claude: ${models.claude}\n` +
                    `🔮 Gemini: ${models.gemini}\n` +
-                   `💬 OpenAI: ${models.openai}\n\n` +
+                   `💬 OpenAI: ${models.openai}\n` +
+                   `⚡ Mistral: ${models.mistral}\n` +
+                   `🧠 DeepSeek: ${models.deepseek}\n\n` +
                    `These models are refreshed daily from OpenRouter.\n` +
                    `Use "Refresh Models" to force an update.`;
 
