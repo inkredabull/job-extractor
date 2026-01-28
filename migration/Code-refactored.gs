@@ -99,7 +99,9 @@ const CONFIG = {
       MIN_CONTEXT: 32000           // Minimum context window (tokens)
     },
     MAX_TOKENS: {
-      ACHIEVEMENT: 150,
+      ACHIEVEMENT_CV: 80,        // CV format: longer, more comprehensive
+      ACHIEVEMENT_LINKEDIN: 50,  // LinkedIn format: shorter, more concise
+      ACHIEVEMENT: 80,           // Default (fallback to CV)
       RESUME: 2048,
       CATEGORIZATION: 15,
       ARCHETYPE: 20
@@ -1439,13 +1441,21 @@ class AchievementService {
    */
   generateAchievement(challenge, actions, result, client = false, targetAudience = 'cv') {
     const prompt = this._buildPrompt(challenge, actions, result, client, targetAudience);
-    Logger.log(prompt)
+
+    // Select appropriate max_tokens based on target audience
+    const maxTokens = targetAudience === 'linkedin'
+      ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
+      : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    Logger.log(`Generating achievement for ${targetAudience} with maxTokens: ${maxTokens}`);
+    Logger.log(prompt);
+
     let output = this.aiService.query(prompt, {
-      maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT,
+      maxTokens: maxTokens,
       provider: 'claude'
     });
-    Logger.log("OUTPUT")
-    return output
+    Logger.log("OUTPUT:", output.length, "chars");
+    return output;
   }
 
   /**
@@ -3307,20 +3317,43 @@ function compareModels() {
 function fetchWithModel(modelName) {
   try {
     const services = initializeServices();
+    const sheet = services.sheet.getSheet(CONFIG.SHEETS.STORY_BANK);
     const { rowIndex, row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
+
+    // Get the active cell to determine target audience from column header
+    const currentCell = services.sheet.getActiveCell();
+    const columnIndex = currentCell.getColumn();
+    const columnHeader = headers[columnIndex - 1]; // Convert 1-indexed to 0-indexed
+
+    // Determine target audience based on column header
+    let targetAudience = 'cv'; // default
+    if (columnHeader) {
+      const headerLower = columnHeader.toLowerCase();
+      if (headerLower.includes('linkedin')) {
+        targetAudience = 'linkedin';
+      } else if (headerLower.includes('cv')) {
+        targetAudience = 'cv';
+      }
+    }
+
+    // Select appropriate max_tokens based on target audience
+    const maxTokens = targetAudience === 'linkedin'
+      ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
+      : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    Logger.log(`fetchWithModel: column="${columnHeader}" -> audience=${targetAudience}, maxTokens=${maxTokens}`);
 
     const challenge = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CHALLENGE)];
     const actions = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.ACTIONS)];
     const result = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.RESULT)];
     const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)];
 
-    const prompt = services.achievement.buildPrompt(challenge, actions, result, client, 'cv');
+    const prompt = services.achievement.buildPrompt(challenge, actions, result, client, targetAudience);
     const response = services.ai.query(prompt, {
       provider: modelName,
-      maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT
+      maxTokens: maxTokens
     });
 
-    const currentCell = services.sheet.getActiveCell();
     currentCell.setValue(response);
 
     Logger.log(`Generated achievement using ${modelName}: ${response.length} chars`);
