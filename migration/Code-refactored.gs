@@ -108,6 +108,8 @@ const CONFIG = {
       CATEGORIZATION: 15,
       ARCHETYPE: 20
     },
+    // Reasoning models (DeepSeek) need 3-4x more tokens for internal thinking
+    REASONING_MULTIPLIER: 3,
     TEAL_BULLET_POINT_MIN_LENGTH: 140,
     TEAL_BULLET_POINT_MAX_LENGTH: 190,
     SHORT_SCALE: 2.2,
@@ -220,7 +222,8 @@ Return TRUE only if all 6 = YES. Otherwise return FALSE. Return only TRUE or FAL
 Given the following CHALLENGE, ACTIONS, and RESULT, summarize into a single achievement which:
 
 * follows the format of: "ACTION_VERB_IN_ACTIVE_VOICE WHAT_WAS_DONE WITH_WHOM_LIKE_PEER_LEADER_FUNCTION_TEAM to ACHEIVED_PREFERABLY_QUANTIFIABLE_RESULT."
-* is approximately maxOuputSizeInChars characters`,
+* is approximately maxOuputSizeInChars characters
+* attempts to incorporate any technologies mentioned in ACTIONS`,
 
     BEST_EFFORT: `If any of the Challenge, Actions, or Result contains the following, make a best effort to incorporate it/them in the summary:
 
@@ -1153,14 +1156,25 @@ class OpenRouterProvider extends AIProviderBase {
       throw new Error('Invalid response: no choices array');
     }
 
-    const content = json.choices[0].message?.content;
+    const message = json.choices[0].message;
+    const content = message?.content || '';
+    const reasoning = message?.reasoning || '';
 
-    if (content === null || content === undefined) {
-      Logger.error('No content in message:', JSON.stringify(json.choices[0]));
-      throw new Error('Invalid response: no content in message');
+    // For reasoning models (like DeepSeek), content might be empty while reasoning has the text
+    // Prefer content if available, otherwise use reasoning
+    let text = content;
+
+    if (!text || text.trim().length === 0) {
+      if (reasoning && reasoning.trim().length > 0) {
+        Logger.log('Using reasoning field instead of content (reasoning model detected)');
+        text = reasoning;
+      } else {
+        Logger.error('Both content and reasoning are empty:', JSON.stringify(message));
+        throw new Error('Invalid response: both content and reasoning are empty');
+      }
     }
 
-    return String(content).trim();
+    return String(text).trim();
   }
 
   /**
@@ -3429,9 +3443,19 @@ function fetchWithModel(modelName) {
     }
 
     // Select appropriate max_tokens based on target audience
-    const maxTokens = targetAudience === 'linkedin'
+    let maxTokens = targetAudience === 'linkedin'
       ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
       : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    // Reasoning models (DeepSeek) need more tokens for internal thinking process
+    const modelId = services.ai.modelMap[modelName];
+    const isReasoningModel = modelId && modelId.includes('deepseek');
+
+    if (isReasoningModel) {
+      const originalTokens = maxTokens;
+      maxTokens = maxTokens * CONFIG.AI.REASONING_MULTIPLIER;
+      Logger.log(`Reasoning model detected (${modelId}): increased maxTokens from ${originalTokens} to ${maxTokens}`);
+    }
 
     Logger.log(`fetchWithModel: column="${columnHeader}" -> audience=${targetAudience}, maxTokens=${maxTokens}`);
 
@@ -3494,9 +3518,19 @@ function generateAchievementWithModel(modelName) {
     const prompt = services.achievement.buildPrompt(challenge, actions, result, client, targetAudience);
 
     // Select appropriate max_tokens based on target audience
-    const maxTokens = targetAudience === 'linkedin'
+    let maxTokens = targetAudience === 'linkedin'
       ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
       : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    // Reasoning models (DeepSeek) need more tokens for internal thinking process
+    const modelId = services.ai.modelMap[modelName];
+    const isReasoningModel = modelId && modelId.includes('deepseek');
+
+    if (isReasoningModel) {
+      const originalTokens = maxTokens;
+      maxTokens = maxTokens * CONFIG.AI.REASONING_MULTIPLIER;
+      Logger.log(`Reasoning model detected (${modelId}): increased maxTokens from ${originalTokens} to ${maxTokens}`);
+    }
 
     Logger.log(`generateAchievementWithModel: using maxTokens=${maxTokens} for audience=${targetAudience}`);
 
