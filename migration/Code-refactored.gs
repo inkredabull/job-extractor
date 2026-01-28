@@ -91,7 +91,8 @@ const CONFIG = {
       CLAUDE: 'anthropic/claude-3.7-sonnet',
       GEMINI: 'google/gemini-1.5-flash',
       OPENAI: 'openai/gpt-4o-mini',
-      MISTRAL: 'mistralai/mistral-large-2407'
+      MISTRAL: 'mistralai/mistral-large-2407',
+      COHERE: 'cohere/command-r-plus'
     },
     // Model discovery settings
     DISCOVERY: {
@@ -897,7 +898,8 @@ class ModelDiscoveryService {
       'anthropic': null,
       'google': null,
       'openai': null,
-      'mistralai': null
+      'mistralai': null,
+      'cohere': null
     };
 
     models.forEach(model => {
@@ -913,7 +915,7 @@ class ModelDiscoveryService {
       const contextLength = model.context_length || 0;
       const isChat = model.id.includes('chat') || model.id.includes('sonnet') ||
                      model.id.includes('flash') || model.id.includes('gpt') ||
-                     model.id.includes('mistral');
+                     model.id.includes('mistral') || model.id.includes('command');
 
       // Must meet minimum context requirement
       if (contextLength < CONFIG.AI.DISCOVERY.MIN_CONTEXT) {
@@ -949,7 +951,8 @@ class ModelDiscoveryService {
       CLAUDE: providers['anthropic']?.id || CONFIG.AI.FALLBACK_MODELS.CLAUDE,
       GEMINI: providers['google']?.id || CONFIG.AI.FALLBACK_MODELS.GEMINI,
       OPENAI: providers['openai']?.id || CONFIG.AI.FALLBACK_MODELS.OPENAI,
-      MISTRAL: providers['mistralai']?.id || CONFIG.AI.FALLBACK_MODELS.MISTRAL
+      MISTRAL: providers['mistralai']?.id || CONFIG.AI.FALLBACK_MODELS.MISTRAL,
+      COHERE: providers['cohere']?.id || CONFIG.AI.FALLBACK_MODELS.COHERE
     };
 
     Logger.log('Selected models:', JSON.stringify(result));
@@ -1088,7 +1091,7 @@ class AIProviderBase {
 //#region OpenRouterProvider
 /**
  * OpenRouter unified AI provider
- * Access to Claude, Gemini, OpenAI, Mistral, and 200+ models through single API
+ * Access to Claude, Gemini, OpenAI, Mistral, Cohere, and 200+ models through single API
  */
 class OpenRouterProvider extends AIProviderBase {
   /**
@@ -1243,7 +1246,7 @@ class AIService {
 
   /**
    * Discover and cache latest models from OpenRouter
-   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id', mistral: 'id'}
+   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id', mistral: 'id', cohere: 'id'}
    */
   discoverModels() {
     try {
@@ -1252,7 +1255,8 @@ class AIService {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
         'openai': discovered.OPENAI,
-        'mistral': discovered.MISTRAL
+        'mistral': discovered.MISTRAL,
+        'cohere': discovered.COHERE
       };
     } catch (error) {
       Logger.warn('Model discovery failed, using fallbacks:', error.message);
@@ -1260,7 +1264,8 @@ class AIService {
         'claude': CONFIG.AI.FALLBACK_MODELS.CLAUDE,
         'gemini': CONFIG.AI.FALLBACK_MODELS.GEMINI,
         'openai': CONFIG.AI.FALLBACK_MODELS.OPENAI,
-        'mistral': CONFIG.AI.FALLBACK_MODELS.MISTRAL
+        'mistral': CONFIG.AI.FALLBACK_MODELS.MISTRAL,
+        'cohere': CONFIG.AI.FALLBACK_MODELS.COHERE
       };
     }
   }
@@ -1276,7 +1281,8 @@ class AIService {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
         'openai': discovered.OPENAI,
-        'mistral': discovered.MISTRAL
+        'mistral': discovered.MISTRAL,
+        'cohere': discovered.COHERE
       };
       Logger.log('Models refreshed:', JSON.stringify(this.modelMap));
       return this.modelMap;
@@ -2697,6 +2703,7 @@ function chooseModel() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const cohereModel = models.cohere || CONFIG.AI.FALLBACK_MODELS.COHERE;
 
     // Format model names for display
     const formatModelName = (modelId) => {
@@ -2719,6 +2726,7 @@ function chooseModel() {
     const geminiDisplay = formatModelName(geminiModel);
     const openaiDisplay = formatModelName(openaiModel);
     const mistralDisplay = formatModelName(mistralModel);
+    const cohereDisplay = formatModelName(cohereModel);
 
     const html = `
 <!DOCTYPE html>
@@ -2806,7 +2814,8 @@ function chooseModel() {
       🤖 Claude: ${claudeModel}<br>
       🔮 Gemini: ${geminiModel}<br>
       💬 OpenAI: ${openaiModel}<br>
-      ⚡ Mistral: ${mistralModel}
+      ⚡ Mistral: ${mistralModel}<br>
+      🔷 Cohere: ${cohereModel}
     </div>
 
     <select id="modelSelect">
@@ -2815,6 +2824,7 @@ function chooseModel() {
       <option value="gemini">🔮 ${geminiDisplay} (Fast)</option>
       <option value="openai">💬 ${openaiDisplay} (Concise)</option>
       <option value="mistral">⚡ ${mistralDisplay} (Fastest)</option>
+      <option value="cohere">🔷 ${cohereDisplay} (Summarization)</option>
     </select>
 
     <button id="generateBtn" onclick="generateWithModel()">Generate Achievement</button>
@@ -2891,6 +2901,7 @@ function compareModels() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const cohereModel = models.cohere || CONFIG.AI.FALLBACK_MODELS.COHERE;
 
     // Format model names for display
     const formatModelName = (modelId) => {
@@ -2909,6 +2920,7 @@ function compareModels() {
     const geminiDisplay = formatModelName(geminiModel);
     const openaiDisplay = formatModelName(openaiModel);
     const mistralDisplay = formatModelName(mistralModel);
+    const cohereDisplay = formatModelName(cohereModel);
 
     const html = `
 <!DOCTYPE html>
@@ -2964,7 +2976,7 @@ function compareModels() {
     }
     .results {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 15px;
     }
     .result-card {
@@ -3155,6 +3167,17 @@ function compareModels() {
         <div class="metadata" id="metadataMistral" style="display: none;"></div>
         <button class="choose-btn" id="chooseMistral" onclick="chooseModel('mistral')">✓ Choose This</button>
       </div>
+
+      <div class="result-card" id="resultCohere">
+        <h4>🔷 ${cohereDisplay}</h4>
+        <div class="model-label">${cohereModel}</div>
+        <div class="result-content" id="contentCohere">
+          <div class="loading">Generating...</div>
+        </div>
+        <div class="char-count" id="countCohere"></div>
+        <div class="metadata" id="metadataCohere" style="display: none;"></div>
+        <button class="choose-btn" id="chooseCohere" onclick="chooseModel('cohere')">✓ Choose This</button>
+      </div>
     </div>
   </div>
 
@@ -3163,7 +3186,8 @@ function compareModels() {
       { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude', metadataId: 'metadataClaude' },
       { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini', metadataId: 'metadataGemini' },
       { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI', metadataId: 'metadataOpenAI' },
-      { key: 'mistral', name: '${mistralDisplay}', contentId: 'contentMistral', countId: 'countMistral', cardId: 'resultMistral', buttonId: 'chooseMistral', metadataId: 'metadataMistral' }
+      { key: 'mistral', name: '${mistralDisplay}', contentId: 'contentMistral', countId: 'countMistral', cardId: 'resultMistral', buttonId: 'chooseMistral', metadataId: 'metadataMistral' },
+      { key: 'cohere', name: '${cohereDisplay}', contentId: 'contentCohere', countId: 'countCohere', cardId: 'resultCohere', buttonId: 'chooseCohere', metadataId: 'metadataCohere' }
     ];
 
     // Global storage for model results (full result objects)
@@ -3607,13 +3631,15 @@ function viewCurrentModels() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
+    const cohereModel = models.cohere || CONFIG.AI.FALLBACK_MODELS.COHERE;
 
     const ui = SpreadsheetApp.getUi();
     const message = `Current AI Models:\n\n` +
                    `🤖 Claude: ${claudeModel}\n` +
                    `🔮 Gemini: ${geminiModel}\n` +
                    `💬 OpenAI: ${openaiModel}\n` +
-                   `⚡ Mistral: ${mistralModel}\n\n` +
+                   `⚡ Mistral: ${mistralModel}\n` +
+                   `🔷 Cohere: ${cohereModel}\n\n` +
                    `These models are refreshed daily from OpenRouter.\n` +
                    `Use "Refresh Models" to force an update.`;
 
@@ -3651,7 +3677,8 @@ function refreshModelsMenu() {
                    `🤖 Claude: ${newModels.claude}\n` +
                    `🔮 Gemini: ${newModels.gemini}\n` +
                    `💬 OpenAI: ${newModels.openai}\n` +
-                   `⚡ Mistral: ${newModels.mistral}`;
+                   `⚡ Mistral: ${newModels.mistral}\n` +
+                   `🔷 Cohere: ${newModels.cohere}`;
 
     ui.alert('Models Updated', message, ui.ButtonSet.OK);
   } catch (error) {
