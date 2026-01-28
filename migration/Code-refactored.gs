@@ -108,8 +108,9 @@ const CONFIG = {
       CATEGORIZATION: 15,
       ARCHETYPE: 20
     },
-    // Reasoning models (DeepSeek) need 3-4x more tokens for internal thinking
-    REASONING_MULTIPLIER: 3,
+    // Reasoning models (DeepSeek) need much more tokens: reasoning + final answer
+    // With 3x, model uses all tokens for reasoning and produces no final answer
+    REASONING_MULTIPLIER: 6,
     TEAL_BULLET_POINT_MIN_LENGTH: 140,
     TEAL_BULLET_POINT_MAX_LENGTH: 190,
     SHORT_SCALE: 2.2,
@@ -1159,22 +1160,30 @@ class OpenRouterProvider extends AIProviderBase {
     const message = json.choices[0].message;
     const content = message?.content || '';
     const reasoning = message?.reasoning || '';
+    const finishReason = json.choices[0].finish_reason;
 
-    // For reasoning models (like DeepSeek), content might be empty while reasoning has the text
-    // Prefer content if available, otherwise use reasoning
-    let text = content;
+    // Log reasoning if present (for debugging)
+    if (reasoning) {
+      Logger.log(`Model reasoning detected (${reasoning.length} chars)`);
+    }
 
-    if (!text || text.trim().length === 0) {
-      if (reasoning && reasoning.trim().length > 0) {
-        Logger.log('Using reasoning field instead of content (reasoning model detected)');
-        text = reasoning;
+    // Content is the final answer - reasoning is just the thought process
+    if (!content || content.trim().length === 0) {
+      // If model hit token limit during reasoning, it never produced the answer
+      if (finishReason === 'length' && reasoning) {
+        Logger.error('Reasoning model hit token limit before producing final answer');
+        Logger.error(`Reasoning length: ${reasoning.length} chars`);
+        throw new Error('Model used all tokens for reasoning and did not produce final answer. Increase REASONING_MULTIPLIER.');
+      } else if (reasoning) {
+        Logger.error('Model produced reasoning but no final content');
+        throw new Error('Model produced reasoning but no final answer in content field');
       } else {
         Logger.error('Both content and reasoning are empty:', JSON.stringify(message));
-        throw new Error('Invalid response: both content and reasoning are empty');
+        throw new Error('Invalid response: no content or reasoning');
       }
     }
 
-    return String(text).trim();
+    return String(content).trim();
   }
 
   /**
