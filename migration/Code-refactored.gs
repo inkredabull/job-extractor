@@ -85,10 +85,18 @@ const CONFIG = {
   // AI Provider settings - Using OpenRouter for unified access
   AI: {
     ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
-    MODELS: {
+    MODELS_ENDPOINT: 'https://openrouter.ai/api/v1/models',
+    // Fallback models if dynamic discovery fails
+    FALLBACK_MODELS: {
       CLAUDE: 'anthropic/claude-3.7-sonnet',
       GEMINI: 'google/gemini-1.5-flash',
       OPENAI: 'openai/gpt-4o-mini'
+    },
+    // Model discovery settings
+    DISCOVERY: {
+      CACHE_DURATION_HOURS: 24,  // Refresh model list daily
+      PREFER_LATEST: true,         // Use most recent models
+      MIN_CONTEXT: 32000           // Minimum context window (tokens)
     },
     MAX_TOKENS: {
       ACHIEVEMENT: 150,
@@ -753,6 +761,223 @@ class ConfigService {
   }
 }
 //#endregion ConfigService
+
+//#region ModelDiscoveryService
+/**
+ * Service for discovering and caching latest AI models from OpenRouter
+ */
+class ModelDiscoveryService {
+  /**
+   * Create a ModelDiscoveryService
+   * @param {string} apiKey - OpenRouter API key
+   */
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.cacheKey = 'OPENROUTER_MODELS_CACHE';
+    this.timestampKey = 'OPENROUTER_MODELS_TIMESTAMP';
+  }
+
+  /**
+   * Get cached models or fetch fresh ones
+   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id'}
+   */
+  getModels() {
+    try {
+      // Check cache first
+      const cached = this._getCachedModels();
+      if (cached) {
+        Logger.log('Using cached models');
+        return cached;
+      }
+
+      // Fetch fresh models
+      Logger.log('Fetching latest models from OpenRouter...');
+      const models = this._fetchModels();
+
+      // Cache them
+      this._cacheModels(models);
+
+      return models;
+    } catch (error) {
+      Logger.error('Model discovery failed, using fallbacks', error);
+      return CONFIG.AI.FALLBACK_MODELS;
+    }
+  }
+
+  /**
+   * Force refresh models from API
+   * @returns {Object} Model map
+   */
+  refreshModels() {
+    try {
+      const models = this._fetchModels();
+      this._cacheModels(models);
+      Logger.log('Models refreshed successfully');
+      return models;
+    } catch (error) {
+      Logger.error('Model refresh failed', error);
+      return CONFIG.AI.FALLBACK_MODELS;
+    }
+  }
+
+  /**
+   * Get cached models if still valid
+   * @returns {Object|null} Cached models or null
+   * @private
+   */
+  _getCachedModels() {
+    const props = PropertiesService.getScriptProperties();
+    const cachedJson = props.getProperty(this.cacheKey);
+    const timestamp = props.getProperty(this.timestampKey);
+
+    if (!cachedJson || !timestamp) {
+      return null;
+    }
+
+    // Check if cache is expired
+    const cacheAge = Date.now() - parseInt(timestamp);
+    const maxAge = CONFIG.AI.DISCOVERY.CACHE_DURATION_HOURS * 60 * 60 * 1000;
+
+    if (cacheAge > maxAge) {
+      Logger.log('Model cache expired');
+      return null;
+    }
+
+    return JSON.parse(cachedJson);
+  }
+
+  /**
+   * Cache models with timestamp
+   * @param {Object} models - Models to cache
+   * @private
+   */
+  _cacheModels(models) {
+    const props = PropertiesService.getScriptProperties();
+    props.setProperty(this.cacheKey, JSON.stringify(models));
+    props.setProperty(this.timestampKey, Date.now().toString());
+  }
+
+  /**
+   * Fetch models from OpenRouter API
+   * @returns {Object} Model map
+   * @private
+   */
+  _fetchModels() {
+    const options = {
+      method: 'get',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(CONFIG.AI.MODELS_ENDPOINT, options);
+
+    if (response.getResponseCode() !== 200) {
+      throw new Error('Failed to fetch models: ' + response.getContentText());
+    }
+
+    const data = JSON.parse(response.getContentText());
+    return this._selectBestModels(data.data);
+  }
+
+  /**
+   * Select best model for each provider
+   * @param {Array} models - Array of model objects from API
+   * @returns {Object} Model map
+   * @private
+   */
+  _selectBestModels(models) {
+    const providers = {
+      'anthropic': null,
+      'google': null,
+      'openai': null
+    };
+
+    models.forEach(model => {
+      const modelId = model.id;
+      const provider = modelId.split('/')[0];
+
+      // Skip if not one of our target providers
+      if (!providers.hasOwnProperty(provider)) {
+        return;
+      }
+
+      // Filter criteria
+      const contextLength = model.context_length || 0;
+      const isChat = model.id.includes('chat') || model.id.includes('sonnet') ||
+                     model.id.includes('flash') || model.id.includes('gpt');
+
+      // Must meet minimum context requirement
+      if (contextLength < CONFIG.AI.DISCOVERY.MIN_CONTEXT) {
+        return;
+      }
+
+      // Must be a chat/text model (not image, audio, etc.)
+      if (!isChat) {
+        return;
+      }
+
+      // Select if we don't have one yet, or this is "better"
+      if (!providers[provider]) {
+        providers[provider] = model;
+      } else {
+        // Prefer models with:
+        // 1. More recent (if we can detect)
+        // 2. Larger context window
+        // 3. Known flagship models (sonnet, flash, gpt-4)
+        const current = providers[provider];
+
+        const isNewerGeneration = this._compareModelGenerations(modelId, current.id);
+        const hasMoreContext = contextLength > (current.context_length || 0);
+
+        if (isNewerGeneration || hasMoreContext) {
+          providers[provider] = model;
+        }
+      }
+    });
+
+    // Build result map
+    const result = {
+      CLAUDE: providers['anthropic']?.id || CONFIG.AI.FALLBACK_MODELS.CLAUDE,
+      GEMINI: providers['google']?.id || CONFIG.AI.FALLBACK_MODELS.GEMINI,
+      OPENAI: providers['openai']?.id || CONFIG.AI.FALLBACK_MODELS.OPENAI
+    };
+
+    Logger.log('Selected models:', JSON.stringify(result));
+    return result;
+  }
+
+  /**
+   * Compare model generations (basic heuristic)
+   * @param {string} model1 - Model ID 1
+   * @param {string} model2 - Model ID 2
+   * @returns {boolean} True if model1 is newer
+   * @private
+   */
+  _compareModelGenerations(model1, model2) {
+    // Look for version numbers
+    const extractVersion = (id) => {
+      const match = id.match(/(\d+\.?\d*)/);
+      return match ? parseFloat(match[1]) : 0;
+    };
+
+    const v1 = extractVersion(model1);
+    const v2 = extractVersion(model2);
+
+    // Prefer known flagship models
+    const isFlagship = (id) => {
+      return id.includes('sonnet') || id.includes('opus') ||
+             id.includes('gpt-4') || id.includes('flash');
+    };
+
+    if (isFlagship(model1) && !isFlagship(model2)) return true;
+    if (!isFlagship(model1) && isFlagship(model2)) return false;
+
+    return v1 > v2;
+  }
+}
+//#endregion ModelDiscoveryService
 // #endregion Data Access Layer
 
 // ====================
@@ -960,26 +1185,56 @@ class AIService {
    */
   constructor(configService) {
     this.configService = configService;
-    this.provider = this.initializeProvider();
+    const apiKey = this.configService.getAPIKey('OPENROUTER');
+    this.provider = new OpenRouterProvider(apiKey);
+    this.discovery = new ModelDiscoveryService(apiKey);
     this.defaultModel = 'claude';
-    this.modelMap = {
-      'claude': CONFIG.AI.MODELS.CLAUDE,
-      'gemini': CONFIG.AI.MODELS.GEMINI,
-      'openai': CONFIG.AI.MODELS.OPENAI
-    };
+
+    // Discover latest models dynamically
+    this.modelMap = this.discoverModels();
+
+    Logger.log('AIService initialized with models:', JSON.stringify(this.modelMap));
   }
 
   /**
-   * Initialize OpenRouter provider
-   * @returns {OpenRouterProvider} OpenRouter provider instance
+   * Discover and cache latest models from OpenRouter
+   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id'}
    */
-  initializeProvider() {
+  discoverModels() {
     try {
-      const apiKey = this.configService.getAPIKey('OPENROUTER');
-      return new OpenRouterProvider(apiKey);
+      const discovered = this.discovery.getModels();
+      return {
+        'claude': discovered.CLAUDE,
+        'gemini': discovered.GEMINI,
+        'openai': discovered.OPENAI
+      };
     } catch (error) {
-      Logger.error(`OpenRouter provider initialization failed: ${error.message}`);
-      throw new Error('Failed to initialize OpenRouter. Run setupAPIKeys() first.');
+      Logger.warn('Model discovery failed, using fallbacks:', error.message);
+      return {
+        'claude': CONFIG.AI.FALLBACK_MODELS.CLAUDE,
+        'gemini': CONFIG.AI.FALLBACK_MODELS.GEMINI,
+        'openai': CONFIG.AI.FALLBACK_MODELS.OPENAI
+      };
+    }
+  }
+
+  /**
+   * Refresh models from OpenRouter (force cache refresh)
+   * @returns {Object} Updated model map
+   */
+  refreshModels() {
+    try {
+      const discovered = this.discovery.refreshModels();
+      this.modelMap = {
+        'claude': discovered.CLAUDE,
+        'gemini': discovered.GEMINI,
+        'openai': discovered.OPENAI
+      };
+      Logger.log('Models refreshed:', JSON.stringify(this.modelMap));
+      return this.modelMap;
+    } catch (error) {
+      Logger.error('Model refresh failed:', error.message);
+      return this.modelMap; // Keep existing models
     }
   }
 
@@ -1946,6 +2201,9 @@ class MenuService {
       .addItem('Choose Model', 'chooseModel')
       .addItem('Compare Models', 'compareModels')
       .addSeparator()
+      .addItem('View Current Models', 'viewCurrentModels')
+      .addItem('Refresh Models', 'refreshModelsMenu')
+      .addSeparator()
       .addItem('Shorten', 'shorten')
       .addItem('Evaluate achievement', 'eval')
       .addItem('Categorize', 'findTheme')
@@ -2897,6 +3155,70 @@ function include(filename) {
 // 9. SECURITY & SETUP
 // ====================
 // #region Security & Setup
+
+/**
+ * View currently active AI models
+ * Menu item: "View Current Models"
+ */
+function viewCurrentModels() {
+  try {
+    const services = initializeServices();
+    const models = services.ai.modelMap;
+
+    const ui = SpreadsheetApp.getUi();
+    const message = `Current AI Models:\n\n` +
+                   `🤖 Claude: ${models.claude}\n` +
+                   `🔮 Gemini: ${models.gemini}\n` +
+                   `💬 OpenAI: ${models.openai}\n\n` +
+                   `These models are refreshed daily from OpenRouter.\n` +
+                   `Use "Refresh Models" to force an update.`;
+
+    ui.alert('Current AI Models', message, ui.ButtonSet.OK);
+  } catch (error) {
+    Logger.error('Error in viewCurrentModels', error);
+    DialogService.showAlert(`Error viewing models: ${error.message}`);
+  }
+}
+
+/**
+ * Force refresh AI models from OpenRouter
+ * Menu item: "Refresh Models"
+ */
+function refreshModelsMenu() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+
+    // Confirm refresh
+    const response = ui.alert(
+      'Refresh AI Models',
+      'This will fetch the latest models from OpenRouter.\n\n' +
+      'Do you want to continue?',
+      ui.ButtonSet.YES_NO
+    );
+
+    if (response !== ui.Button.YES) {
+      return;
+    }
+
+    const services = initializeServices();
+    const newModels = services.ai.refreshModels();
+
+    const message = `Models refreshed successfully!\n\n` +
+                   `🤖 Claude: ${newModels.claude}\n` +
+                   `🔮 Gemini: ${newModels.gemini}\n` +
+                   `💬 OpenAI: ${newModels.openai}`;
+
+    ui.alert('Models Updated', message, ui.ButtonSet.OK);
+  } catch (error) {
+    Logger.error('Error in refreshModelsMenu', error);
+    SpreadsheetApp.getUi().alert(
+      'Refresh Failed',
+      `Error refreshing models: ${error.message}\n\n` +
+      'Using cached models.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
 
 /**
  * One-time setup function for OpenRouter API key
