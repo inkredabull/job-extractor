@@ -2631,6 +2631,28 @@ function createCustomization() {
  */
 function chooseModel() {
   try {
+    // Get current models dynamically
+    const services = initializeServices();
+    const models = services.ai.modelMap;
+
+    // Format model names for display
+    const formatModelName = (modelId) => {
+      // Extract provider and model name
+      const parts = modelId.split('/');
+      const provider = parts[0];
+      const model = parts[1] || modelId;
+
+      // Clean up model name for display
+      return model
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .substring(0, 40); // Truncate if too long
+    };
+
+    const claudeDisplay = formatModelName(models.claude);
+    const geminiDisplay = formatModelName(models.gemini);
+    const openaiDisplay = formatModelName(models.openai);
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -2643,16 +2665,25 @@ function chooseModel() {
       margin: 0;
     }
     .container {
-      max-width: 400px;
+      max-width: 450px;
       margin: 0 auto;
     }
     h3 {
       margin-top: 0;
       color: #1a73e8;
     }
+    .model-info {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 15px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-family: monospace;
+    }
     select {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       margin: 10px 0;
       border: 1px solid #ddd;
       border-radius: 4px;
@@ -2704,11 +2735,17 @@ function chooseModel() {
     <h3>Choose AI Model</h3>
     <p class="description">Select a model to generate achievement from the current row:</p>
 
+    <div class="model-info">
+      🤖 Claude: ${models.claude}<br>
+      🔮 Gemini: ${models.gemini}<br>
+      💬 OpenAI: ${models.openai}
+    </div>
+
     <select id="modelSelect">
       <option value="" selected disabled>Select a model...</option>
-      <option value="claude">Claude 3.7 Sonnet (Recommended)</option>
-      <option value="gemini">Gemini 1.5 Flash (Fast)</option>
-      <option value="openai">OpenAI GPT-4o Mini (Concise)</option>
+      <option value="claude">🤖 ${claudeDisplay} (Recommended)</option>
+      <option value="gemini">🔮 ${geminiDisplay} (Fast)</option>
+      <option value="openai">💬 ${openaiDisplay} (Concise)</option>
     </select>
 
     <button id="generateBtn" onclick="generateWithModel()">Generate Achievement</button>
@@ -2776,6 +2813,24 @@ function chooseModel() {
  */
 function compareModels() {
   try {
+    // Get current models dynamically
+    const services = initializeServices();
+    const models = services.ai.modelMap;
+
+    // Format model names for display
+    const formatModelName = (modelId) => {
+      const parts = modelId.split('/');
+      const model = parts[1] || modelId;
+      return model
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .substring(0, 50);
+    };
+
+    const claudeDisplay = formatModelName(models.claude);
+    const geminiDisplay = formatModelName(models.gemini);
+    const openaiDisplay = formatModelName(models.openai);
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -2919,8 +2974,8 @@ function compareModels() {
 
     <div class="results" id="results" style="display: none;">
       <div class="result-card" id="resultClaude">
-        <h4>Claude 3.7 Sonnet</h4>
-        <div class="model-label">Anthropic's most capable model</div>
+        <h4>🤖 ${claudeDisplay}</h4>
+        <div class="model-label">${models.claude}</div>
         <div class="result-content" id="contentClaude">
           <div class="loading">Generating...</div>
         </div>
@@ -2928,8 +2983,8 @@ function compareModels() {
       </div>
 
       <div class="result-card" id="resultGemini">
-        <h4>Gemini 1.5 Flash</h4>
-        <div class="model-label">Google's fast multimodal model</div>
+        <h4>🔮 ${geminiDisplay}</h4>
+        <div class="model-label">${models.gemini}</div>
         <div class="result-content" id="contentGemini">
           <div class="loading">Generating...</div>
         </div>
@@ -2937,8 +2992,8 @@ function compareModels() {
       </div>
 
       <div class="result-card" id="resultOpenAI">
-        <h4>OpenAI GPT-4o Mini</h4>
-        <div class="model-label">OpenAI's efficient model</div>
+        <h4>💬 ${openaiDisplay}</h4>
+        <div class="model-label">${models.openai}</div>
         <div class="result-content" id="contentOpenAI">
           <div class="loading">Generating...</div>
         </div>
@@ -2949,9 +3004,9 @@ function compareModels() {
 
   <script>
     const MODELS = [
-      { key: 'claude', name: 'Claude 3.7 Sonnet', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude' },
-      { key: 'gemini', name: 'Gemini 1.5 Flash', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini' },
-      { key: 'openai', name: 'OpenAI GPT-4o Mini', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI' }
+      { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude' },
+      { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini' },
+      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI' }
     ];
 
     function runComparison() {
