@@ -91,8 +91,7 @@ const CONFIG = {
       CLAUDE: 'anthropic/claude-3.7-sonnet',
       GEMINI: 'google/gemini-1.5-flash',
       OPENAI: 'openai/gpt-4o-mini',
-      MISTRAL: 'mistralai/mistral-large-2407',
-      DEEPSEEK: 'deepseek/deepseek-chat'
+      MISTRAL: 'mistralai/mistral-large-2407'
     },
     // Model discovery settings
     DISCOVERY: {
@@ -108,9 +107,6 @@ const CONFIG = {
       CATEGORIZATION: 15,
       ARCHETYPE: 20
     },
-    // Reasoning models (DeepSeek) need much more tokens: reasoning + final answer
-    // With 3x, model uses all tokens for reasoning and produces no final answer
-    REASONING_MULTIPLIER: 6,
     TEAL_BULLET_POINT_MIN_LENGTH: 140,
     TEAL_BULLET_POINT_MAX_LENGTH: 190,
     SHORT_SCALE: 2.2,
@@ -222,7 +218,7 @@ Return TRUE only if all 6 = YES. Otherwise return FALSE. Return only TRUE or FAL
     ACHIEVEMENT_SIMPLIFIED: `
 Given the following CHALLENGE, ACTIONS, and RESULT, summarize into a single achievement which:
 
-* follows the format of: "ACTION_VERB_IN_ACTIVE_VOICE WHAT_WAS_DONE WITH_WHOM_LIKE_PEER_LEADER_FUNCTION_TEAM to ACHEIVED_PREFERABLY_QUANTIFIABLE_RESULT."
+* follows the format of: "ACTION_VERB_IN_ACTIVE_VOICE WHAT_WAS_DONE WITH_WHOM_LIKE_PEER_LEADER_FUNCTION_TEAM to ACHEIVED_PREFERABLY_QUANTIFIABLE_RESULT"
 * is approximately maxOuputSizeInChars characters
 * attempts to incorporate any technologies mentioned in ACTIONS`,
 
@@ -901,8 +897,7 @@ class ModelDiscoveryService {
       'anthropic': null,
       'google': null,
       'openai': null,
-      'mistralai': null,
-      'deepseek': null
+      'mistralai': null
     };
 
     models.forEach(model => {
@@ -918,7 +913,7 @@ class ModelDiscoveryService {
       const contextLength = model.context_length || 0;
       const isChat = model.id.includes('chat') || model.id.includes('sonnet') ||
                      model.id.includes('flash') || model.id.includes('gpt') ||
-                     model.id.includes('mistral') || model.id.includes('deepseek');
+                     model.id.includes('mistral');
 
       // Must meet minimum context requirement
       if (contextLength < CONFIG.AI.DISCOVERY.MIN_CONTEXT) {
@@ -954,8 +949,7 @@ class ModelDiscoveryService {
       CLAUDE: providers['anthropic']?.id || CONFIG.AI.FALLBACK_MODELS.CLAUDE,
       GEMINI: providers['google']?.id || CONFIG.AI.FALLBACK_MODELS.GEMINI,
       OPENAI: providers['openai']?.id || CONFIG.AI.FALLBACK_MODELS.OPENAI,
-      MISTRAL: providers['mistralai']?.id || CONFIG.AI.FALLBACK_MODELS.MISTRAL,
-      DEEPSEEK: providers['deepseek']?.id || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK
+      MISTRAL: providers['mistralai']?.id || CONFIG.AI.FALLBACK_MODELS.MISTRAL
     };
 
     Logger.log('Selected models:', JSON.stringify(result));
@@ -1094,7 +1088,7 @@ class AIProviderBase {
 //#region OpenRouterProvider
 /**
  * OpenRouter unified AI provider
- * Access to Claude, Gemini, OpenAI, Mistral, DeepSeek, and 200+ models through single API
+ * Access to Claude, Gemini, OpenAI, Mistral, and 200+ models through single API
  */
 class OpenRouterProvider extends AIProviderBase {
   /**
@@ -1249,7 +1243,7 @@ class AIService {
 
   /**
    * Discover and cache latest models from OpenRouter
-   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id', mistral: 'id', deepseek: 'id'}
+   * @returns {Object} Model map {claude: 'id', gemini: 'id', openai: 'id', mistral: 'id'}
    */
   discoverModels() {
     try {
@@ -1258,8 +1252,7 @@ class AIService {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
         'openai': discovered.OPENAI,
-        'mistral': discovered.MISTRAL,
-        'deepseek': discovered.DEEPSEEK
+        'mistral': discovered.MISTRAL
       };
     } catch (error) {
       Logger.warn('Model discovery failed, using fallbacks:', error.message);
@@ -1267,8 +1260,7 @@ class AIService {
         'claude': CONFIG.AI.FALLBACK_MODELS.CLAUDE,
         'gemini': CONFIG.AI.FALLBACK_MODELS.GEMINI,
         'openai': CONFIG.AI.FALLBACK_MODELS.OPENAI,
-        'mistral': CONFIG.AI.FALLBACK_MODELS.MISTRAL,
-        'deepseek': CONFIG.AI.FALLBACK_MODELS.DEEPSEEK
+        'mistral': CONFIG.AI.FALLBACK_MODELS.MISTRAL
       };
     }
   }
@@ -1284,8 +1276,7 @@ class AIService {
         'claude': discovered.CLAUDE,
         'gemini': discovered.GEMINI,
         'openai': discovered.OPENAI,
-        'mistral': discovered.MISTRAL,
-        'deepseek': discovered.DEEPSEEK
+        'mistral': discovered.MISTRAL
       };
       Logger.log('Models refreshed:', JSON.stringify(this.modelMap));
       return this.modelMap;
@@ -2706,7 +2697,6 @@ function chooseModel() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
-    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
 
     // Format model names for display
     const formatModelName = (modelId) => {
@@ -2729,7 +2719,6 @@ function chooseModel() {
     const geminiDisplay = formatModelName(geminiModel);
     const openaiDisplay = formatModelName(openaiModel);
     const mistralDisplay = formatModelName(mistralModel);
-    const deepseekDisplay = formatModelName(deepseekModel);
 
     const html = `
 <!DOCTYPE html>
@@ -2817,8 +2806,7 @@ function chooseModel() {
       🤖 Claude: ${claudeModel}<br>
       🔮 Gemini: ${geminiModel}<br>
       💬 OpenAI: ${openaiModel}<br>
-      ⚡ Mistral: ${mistralModel}<br>
-      🧠 DeepSeek: ${deepseekModel}
+      ⚡ Mistral: ${mistralModel}
     </div>
 
     <select id="modelSelect">
@@ -2827,7 +2815,6 @@ function chooseModel() {
       <option value="gemini">🔮 ${geminiDisplay} (Fast)</option>
       <option value="openai">💬 ${openaiDisplay} (Concise)</option>
       <option value="mistral">⚡ ${mistralDisplay} (Fastest)</option>
-      <option value="deepseek">🧠 ${deepseekDisplay} (Value)</option>
     </select>
 
     <button id="generateBtn" onclick="generateWithModel()">Generate Achievement</button>
@@ -2904,7 +2891,6 @@ function compareModels() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
-    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
 
     // Format model names for display
     const formatModelName = (modelId) => {
@@ -2923,7 +2909,6 @@ function compareModels() {
     const geminiDisplay = formatModelName(geminiModel);
     const openaiDisplay = formatModelName(openaiModel);
     const mistralDisplay = formatModelName(mistralModel);
-    const deepseekDisplay = formatModelName(deepseekModel);
 
     const html = `
 <!DOCTYPE html>
@@ -2979,7 +2964,7 @@ function compareModels() {
     }
     .results {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 15px;
     }
     .result-card {
@@ -3122,15 +3107,11 @@ function compareModels() {
 </head>
 <body>
   <div class="container">
-    <h3>🔍 Compare All AI Models</h3>
-    <p class="description">Generate achievements from all models in parallel and compare results</p>
-
     <div class="controls">
-      <button id="compareBtn" onclick="runComparison()">🚀 Generate All Models</button>
-      <div id="status" class="status"></div>
+      <div id="status" class="status">Generating all models...</div>
     </div>
 
-    <div class="results" id="results" style="display: none;">
+    <div class="results" id="results" style="display: grid;">
       <div class="result-card" id="resultClaude">
         <h4>🤖 ${claudeDisplay}</h4>
         <div class="model-label">${claudeModel}</div>
@@ -3174,17 +3155,6 @@ function compareModels() {
         <div class="metadata" id="metadataMistral" style="display: none;"></div>
         <button class="choose-btn" id="chooseMistral" onclick="chooseModel('mistral')">✓ Choose This</button>
       </div>
-
-      <div class="result-card" id="resultDeepSeek">
-        <h4>🧠 ${deepseekDisplay}</h4>
-        <div class="model-label">${deepseekModel}</div>
-        <div class="result-content" id="contentDeepSeek">
-          <div class="loading">Generating...</div>
-        </div>
-        <div class="char-count" id="countDeepSeek"></div>
-        <div class="metadata" id="metadataDeepSeek" style="display: none;"></div>
-        <button class="choose-btn" id="chooseDeepSeek" onclick="chooseModel('deepseek')">✓ Choose This</button>
-      </div>
     </div>
   </div>
 
@@ -3193,21 +3163,18 @@ function compareModels() {
       { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude', metadataId: 'metadataClaude' },
       { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini', metadataId: 'metadataGemini' },
       { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI', metadataId: 'metadataOpenAI' },
-      { key: 'mistral', name: '${mistralDisplay}', contentId: 'contentMistral', countId: 'countMistral', cardId: 'resultMistral', buttonId: 'chooseMistral', metadataId: 'metadataMistral' },
-      { key: 'deepseek', name: '${deepseekDisplay}', contentId: 'contentDeepSeek', countId: 'countDeepSeek', cardId: 'resultDeepSeek', buttonId: 'chooseDeepSeek', metadataId: 'metadataDeepSeek' }
+      { key: 'mistral', name: '${mistralDisplay}', contentId: 'contentMistral', countId: 'countMistral', cardId: 'resultMistral', buttonId: 'chooseMistral', metadataId: 'metadataMistral' }
     ];
 
     // Global storage for model results (full result objects)
     let modelResults = {};
 
     function runComparison() {
-      const button = document.getElementById('compareBtn');
       const status = document.getElementById('status');
       const results = document.getElementById('results');
 
-      button.disabled = true;
-      button.textContent = '⏳ Generating all models...';
-      status.style.display = 'none';
+      status.textContent = 'Generating all models...';
+      status.style.display = 'block';
       results.style.display = 'grid';
 
       // Reset all results
@@ -3238,10 +3205,10 @@ function compareModels() {
 
             if (completed === MODELS.length) {
               finishComparison(modelResults);
-              button.disabled = false;
-              button.textContent = '🚀 Generate All Models';
+              status.textContent = 'All models completed!';
+              status.className = 'status success';
             } else {
-              button.textContent = \`⏳ Generating... (\${completed}/\${MODELS.length})\`;
+              status.textContent = \`Generating... (\${completed}/\${MODELS.length})\`;
             }
           })
           .withFailureHandler(function(error) {
@@ -3249,8 +3216,10 @@ function compareModels() {
             completed++;
 
             if (completed === MODELS.length) {
-              button.disabled = false;
-              button.textContent = '🚀 Generate All Models';
+              status.textContent = 'Completed with errors';
+              status.className = 'status error';
+            } else {
+              status.textContent = \`Generating... (\${completed}/\${MODELS.length})\`;
             }
           })
           .generateAchievementWithModel(model.key);
@@ -3409,6 +3378,11 @@ function compareModels() {
       status.textContent = message;
       status.className = 'status ' + type;
     }
+
+    // Auto-start comparison when dialog opens
+    window.addEventListener('DOMContentLoaded', function() {
+      runComparison();
+    });
   </script>
 </body>
 </html>
@@ -3452,19 +3426,9 @@ function fetchWithModel(modelName) {
     }
 
     // Select appropriate max_tokens based on target audience
-    let maxTokens = targetAudience === 'linkedin'
+    const maxTokens = targetAudience === 'linkedin'
       ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
       : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
-
-    // Reasoning models (DeepSeek) need more tokens for internal thinking process
-    const modelId = services.ai.modelMap[modelName];
-    const isReasoningModel = modelId && modelId.includes('deepseek');
-
-    if (isReasoningModel) {
-      const originalTokens = maxTokens;
-      maxTokens = maxTokens * CONFIG.AI.REASONING_MULTIPLIER;
-      Logger.log(`Reasoning model detected (${modelId}): increased maxTokens from ${originalTokens} to ${maxTokens}`);
-    }
 
     Logger.log(`fetchWithModel: column="${columnHeader}" -> audience=${targetAudience}, maxTokens=${maxTokens}`);
 
@@ -3643,15 +3607,13 @@ function viewCurrentModels() {
     const geminiModel = models.gemini || CONFIG.AI.FALLBACK_MODELS.GEMINI;
     const openaiModel = models.openai || CONFIG.AI.FALLBACK_MODELS.OPENAI;
     const mistralModel = models.mistral || CONFIG.AI.FALLBACK_MODELS.MISTRAL;
-    const deepseekModel = models.deepseek || CONFIG.AI.FALLBACK_MODELS.DEEPSEEK;
 
     const ui = SpreadsheetApp.getUi();
     const message = `Current AI Models:\n\n` +
                    `🤖 Claude: ${claudeModel}\n` +
                    `🔮 Gemini: ${geminiModel}\n` +
                    `💬 OpenAI: ${openaiModel}\n` +
-                   `⚡ Mistral: ${mistralModel}\n` +
-                   `🧠 DeepSeek: ${deepseekModel}\n\n` +
+                   `⚡ Mistral: ${mistralModel}\n\n` +
                    `These models are refreshed daily from OpenRouter.\n` +
                    `Use "Refresh Models" to force an update.`;
 
@@ -3689,8 +3651,7 @@ function refreshModelsMenu() {
                    `🤖 Claude: ${newModels.claude}\n` +
                    `🔮 Gemini: ${newModels.gemini}\n` +
                    `💬 OpenAI: ${newModels.openai}\n` +
-                   `⚡ Mistral: ${newModels.mistral}\n` +
-                   `🧠 DeepSeek: ${newModels.deepseek}`;
+                   `⚡ Mistral: ${newModels.mistral}`;
 
     ui.alert('Models Updated', message, ui.ButtonSet.OK);
   } catch (error) {
