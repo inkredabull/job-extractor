@@ -3609,7 +3609,9 @@ function refreshModelsMenu() {
     const message = `Models refreshed successfully!\n\n` +
                    `🤖 Claude: ${newModels.claude}\n` +
                    `🔮 Gemini: ${newModels.gemini}\n` +
-                   `💬 OpenAI: ${newModels.openai}`;
+                   `💬 OpenAI: ${newModels.openai}\n` +
+                   `⚡ Mistral: ${newModels.mistral}\n` +
+                   `🧠 DeepSeek: ${newModels.deepseek}`;
 
     ui.alert('Models Updated', message, ui.ButtonSet.OK);
   } catch (error) {
