@@ -2185,16 +2185,40 @@ function onOpen(e) {
 function fetch() {
   try {
     const services = initializeServices();
+    const sheet = services.sheet.getSheet(CONFIG.SHEETS.STORY_BANK);
     const { rowIndex, row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
+
+    // Get the active cell to determine target audience from column header
+    const currentCell = services.sheet.getActiveCell();
+    const columnIndex = currentCell.getColumn();
+    const columnHeader = headers[columnIndex - 1]; // Convert 1-indexed to 0-indexed
+
+    // Determine target audience based on column header
+    let targetAudience = 'cv'; // default
+    if (columnHeader) {
+      const headerLower = columnHeader.toLowerCase();
+      if (headerLower.includes('linkedin')) {
+        targetAudience = 'linkedin';
+      } else if (headerLower.includes('cv')) {
+        targetAudience = 'cv';
+      }
+    }
+
+    Logger.log(`Column header: "${columnHeader}" -> Target audience: ${targetAudience}`);
 
     const challenge = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CHALLENGE)];
     const actions = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.ACTIONS)];
     const result = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.RESULT)];
     const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)];
 
-    const summary = services.achievement.generateAchievement(challenge, actions, result, client);
+    const summary = services.achievement.generateAchievement(
+      challenge,
+      actions,
+      result,
+      client,
+      targetAudience
+    );
 
-    const currentCell = services.sheet.getActiveCell();
     currentCell.setValue(summary);
   } catch (error) {
     Logger.error('Error in fetch', error);
