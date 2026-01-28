@@ -2930,6 +2930,29 @@ function compareModels() {
       border-top: 1px solid #eee;
       font-weight: 600;
     }
+    .choose-btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
+    .choose-btn:hover {
+      background-color: #1557b0;
+    }
+    .choose-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .choose-btn.success {
+      background-color: #28a745;
+    }
     .winner {
       background: #d4edda;
       border: 2px solid #28a745;
@@ -2980,6 +3003,7 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countClaude"></div>
+        <button class="choose-btn" id="chooseClaude" onclick="chooseModel('claude')">✓ Choose This</button>
       </div>
 
       <div class="result-card" id="resultGemini">
@@ -2989,6 +3013,7 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countGemini"></div>
+        <button class="choose-btn" id="chooseGemini" onclick="chooseModel('gemini')">✓ Choose This</button>
       </div>
 
       <div class="result-card" id="resultOpenAI">
@@ -2998,16 +3023,20 @@ function compareModels() {
           <div class="loading">Generating...</div>
         </div>
         <div class="char-count" id="countOpenAI"></div>
+        <button class="choose-btn" id="chooseOpenAI" onclick="chooseModel('openai')">✓ Choose This</button>
       </div>
     </div>
   </div>
 
   <script>
     const MODELS = [
-      { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude' },
-      { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini' },
-      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI' }
+      { key: 'claude', name: '${claudeDisplay}', contentId: 'contentClaude', countId: 'countClaude', cardId: 'resultClaude', buttonId: 'chooseClaude' },
+      { key: 'gemini', name: '${geminiDisplay}', contentId: 'contentGemini', countId: 'countGemini', cardId: 'resultGemini', buttonId: 'chooseGemini' },
+      { key: 'openai', name: '${openaiDisplay}', contentId: 'contentOpenAI', countId: 'countOpenAI', cardId: 'resultOpenAI', buttonId: 'chooseOpenAI' }
     ];
+
+    // Global storage for model results
+    let modelResults = {};
 
     function runComparison() {
       const button = document.getElementById('compareBtn');
@@ -3024,6 +3053,7 @@ function compareModels() {
         document.getElementById(model.contentId).innerHTML = '<div class="loading">Generating...</div>';
         document.getElementById(model.countId).textContent = '';
         document.getElementById(model.cardId).classList.remove('winner');
+        document.getElementById(model.buttonId).style.display = 'none'; // Hide button
 
         // Remove any existing winner badges
         const header = document.getElementById(model.cardId).querySelector('h4');
@@ -3032,7 +3062,7 @@ function compareModels() {
       });
 
       // Store results as they come in
-      const modelResults = {};
+      modelResults = {};
       let completed = 0;
 
       // Generate all models in parallel
@@ -3040,7 +3070,7 @@ function compareModels() {
         google.script.run
           .withSuccessHandler(function(result) {
             modelResults[model.key] = result;
-            displayResult(model.contentId, model.countId, result);
+            displayResult(model.contentId, model.countId, result, model.key);
             completed++;
 
             if (completed === MODELS.length) {
@@ -3064,9 +3094,48 @@ function compareModels() {
       });
     }
 
-    function displayResult(contentId, countId, text) {
+    function chooseModel(modelKey) {
+      const model = MODELS.find(m => m.key === modelKey);
+      if (!model) {
+        alert('Model not found');
+        return;
+      }
+
+      const content = modelResults[modelKey];
+      if (!content) {
+        alert('No result available for this model');
+        return;
+      }
+
+      const button = document.getElementById(model.buttonId);
+      button.disabled = true;
+      button.textContent = 'Applying...';
+
+      google.script.run
+        .withSuccessHandler(function() {
+          button.textContent = '✓ Applied!';
+          button.classList.add('success');
+          setTimeout(function() {
+            google.script.host.close();
+          }, 1000);
+        })
+        .withFailureHandler(function(error) {
+          button.disabled = false;
+          button.textContent = '✓ Choose This';
+          alert('Error applying: ' + error.message);
+        })
+        .setActiveCellValue(content);
+    }
+
+    function displayResult(contentId, countId, text, modelKey) {
       document.getElementById(contentId).textContent = text;
       document.getElementById(countId).textContent = 'Characters: ' + text.length;
+
+      // Show the choose button for this model
+      const model = MODELS.find(m => m.key === modelKey);
+      if (model) {
+        document.getElementById(model.buttonId).style.display = 'block';
+      }
     }
 
     function finishComparison(results) {
@@ -3156,14 +3225,33 @@ function fetchWithModel(modelName) {
 function generateAchievementWithModel(modelName) {
   try {
     const services = initializeServices();
+    const sheet = services.sheet.getSheet(CONFIG.SHEETS.STORY_BANK);
     const { rowIndex, row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
+
+    // Get the active cell to determine target audience from column header
+    const currentCell = services.sheet.getActiveCell();
+    const columnIndex = currentCell.getColumn();
+    const columnHeader = headers[columnIndex - 1]; // Convert 1-indexed to 0-indexed
+
+    // Determine target audience based on column header
+    let targetAudience = 'cv'; // default
+    if (columnHeader) {
+      const headerLower = columnHeader.toLowerCase();
+      if (headerLower.includes('linkedin')) {
+        targetAudience = 'linkedin';
+      } else if (headerLower.includes('cv')) {
+        targetAudience = 'cv';
+      }
+    }
+
+    Logger.log(`Column header: "${columnHeader}" -> Target audience: ${targetAudience} for model: ${modelName}`);
 
     const challenge = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CHALLENGE)];
     const actions = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.ACTIONS)];
     const result = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.RESULT)];
     const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)];
 
-    const prompt = services.achievement.buildPrompt(challenge, actions, result, client, 'cv');
+    const prompt = services.achievement.buildPrompt(challenge, actions, result, client, targetAudience);
     const response = services.ai.query(prompt, {
       provider: modelName,
       maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT
@@ -3174,6 +3262,22 @@ function generateAchievementWithModel(modelName) {
   } catch (error) {
     Logger.error(`Error in generateAchievementWithModel with ${modelName}`, error);
     throw new Error(`Failed to generate with ${modelName}: ${error.message}`);
+  }
+}
+
+/**
+ * Set active cell value to selected model output
+ * @param {string} content - Achievement text to set
+ */
+function setActiveCellValue(content) {
+  try {
+    const services = initializeServices();
+    const currentCell = services.sheet.getActiveCell();
+    currentCell.setValue(content);
+    Logger.log(`Set active cell to: ${content.substring(0, 50)}...`);
+  } catch (error) {
+    Logger.error('Error in setActiveCellValue', error);
+    throw new Error(`Failed to set cell value: ${error.message}`);
   }
 }
 
