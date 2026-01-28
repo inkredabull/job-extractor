@@ -1143,7 +1143,24 @@ class OpenRouterProvider extends AIProviderBase {
    */
   parseResponse(response) {
     const json = JSON.parse(response.getContentText());
-    return String(json.choices[0].message.content).trim();
+
+    // Log full response for debugging
+    Logger.log('OpenRouter response JSON:', JSON.stringify(json));
+
+    // Check if response has expected structure
+    if (!json.choices || json.choices.length === 0) {
+      Logger.error('No choices in response:', JSON.stringify(json));
+      throw new Error('Invalid response: no choices array');
+    }
+
+    const content = json.choices[0].message?.content;
+
+    if (content === null || content === undefined) {
+      Logger.error('No content in message:', JSON.stringify(json.choices[0]));
+      throw new Error('Invalid response: no content in message');
+    }
+
+    return String(content).trim();
   }
 
   /**
@@ -3252,8 +3269,15 @@ function compareModels() {
 
     function displayResult(contentId, countId, resultObj, modelKey) {
       // resultObj = { text, latencyMs, prompt, config }
-      document.getElementById(contentId).textContent = resultObj.text;
-      document.getElementById(countId).textContent = 'Characters: ' + resultObj.text.length;
+      const text = resultObj.text || '';
+
+      if (text.length === 0) {
+        document.getElementById(contentId).innerHTML = '<div style="color: #e67e22; font-style: italic;">⚠️ Model returned empty response. Check logs for details.</div>';
+      } else {
+        document.getElementById(contentId).textContent = text;
+      }
+
+      document.getElementById(countId).textContent = 'Characters: ' + text.length;
 
       // Display metadata
       const model = MODELS.find(m => m.key === modelKey);
@@ -3469,18 +3493,25 @@ function generateAchievementWithModel(modelName) {
 
     const prompt = services.achievement.buildPrompt(challenge, actions, result, client, targetAudience);
 
+    // Select appropriate max_tokens based on target audience
+    const maxTokens = targetAudience === 'linkedin'
+      ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
+      : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    Logger.log(`generateAchievementWithModel: using maxTokens=${maxTokens} for audience=${targetAudience}`);
+
     // Configuration used for this request
     const config = {
       provider: modelName,
       model: services.ai.modelMap[modelName],
-      maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT,
+      maxTokens: maxTokens,
       targetAudience: targetAudience,
       columnHeader: columnHeader
     };
 
     const response = services.ai.query(prompt, {
       provider: modelName,
-      maxTokens: CONFIG.AI.MAX_TOKENS.ACHIEVEMENT
+      maxTokens: maxTokens
     });
 
     const endTime = new Date().getTime();
@@ -3488,8 +3519,13 @@ function generateAchievementWithModel(modelName) {
 
     Logger.log(`Generated achievement using ${modelName}: ${response.length} chars in ${latencyMs}ms`);
 
+    // Log if response is empty
+    if (!response || response.length === 0) {
+      Logger.warn(`Empty response from ${modelName}!`);
+    }
+
     return {
-      text: response,
+      text: response || '',
       latencyMs: latencyMs,
       prompt: prompt,
       config: config
