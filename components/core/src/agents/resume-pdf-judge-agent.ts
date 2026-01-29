@@ -150,8 +150,7 @@ Your suggestions should be CONCRETE and TACTICAL:
 - "Condense the third bullet under 'Software Engineer at Google' from 90 to 60 characters"
 - "Reduce Experience section bullets from 4 to 3 per role"
 - "Combine the last two roles under 'Early Career' into a single condensed entry"
-
-IMPORTANT: Be aggressive in cutting content. It's better to have a tight one-page resume than overflow to two pages.
+${maxPages === 1 ? '\nIMPORTANT: Be aggressive in cutting content. It is better to have a tight one-page resume than overflow to two pages.' : '\nIMPORTANT: For two-page resumes, ensure RELEVANT EXPERIENCE fits on page 1 with header, summary, and skills. RELATED EXPERIENCE should start on page 2.'}
 
 Return your evaluation as JSON:
 {
