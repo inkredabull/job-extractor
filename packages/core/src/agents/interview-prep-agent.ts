@@ -607,11 +607,17 @@ ${whyBody}
 ${focusStoryBody}
 }`;
 
-      // Save combined output
+      // Save combined output in both formats
       const jobDir = resolveFromProjectRoot('logs', jobId);
-      const combinedPath = path.join(jobDir, 'about-me-combined.md');
-      fs.writeFileSync(combinedPath, combinedRTF, 'utf-8');
-      console.log(`📝 Combined sections saved to: ${combinedPath}`);
+      const mdPath = path.join(jobDir, 'about-me-combined.md');
+      const rtfPath = path.join(jobDir, 'about-me-combined.rtf');
+
+      fs.writeFileSync(mdPath, combinedRTF, 'utf-8');
+      fs.writeFileSync(rtfPath, combinedRTF, 'utf-8');
+
+      console.log(`📝 Combined sections saved to:`);
+      console.log(`   • ${mdPath}`);
+      console.log(`   • ${rtfPath} (open this to copy formatted text)`);
 
       return combinedRTF;
     } catch (error) {
