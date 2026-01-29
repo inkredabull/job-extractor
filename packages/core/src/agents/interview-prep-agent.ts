@@ -8,6 +8,8 @@ import * as readline from 'readline';
 
 export class InterviewPrepAgent extends ClaudeBaseAgent {
   private currentJobId: string = '';
+  private cachedUserTheme: string | null = null; // Cache theme to avoid asking twice
+  private cachedCompanyUrl: string | null = null; // Cache company URL to avoid asking twice
   private profileConfig: ProfileConfig = {
     location: "hybrid in/near SF",
     role: "I'm a hands-on leader who still builds",
@@ -51,6 +53,10 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
   ): Promise<StatementResult> {
     // Focus functionality has been merged into 'about-me' - no separate focus type needed
     try {
+      // Clear cached prompts for new generation
+      this.cachedUserTheme = null;
+      this.cachedCompanyUrl = null;
+
       // Store jobId for use in sub-methods
       this.currentJobId = jobId;
       let content: string;
@@ -607,17 +613,12 @@ ${whyBody}
 ${focusStoryBody}
 }`;
 
-      // Save combined output in both formats
+      // Save combined output as RTF
       const jobDir = resolveFromProjectRoot('logs', jobId);
-      const mdPath = path.join(jobDir, 'about-me-combined.md');
       const rtfPath = path.join(jobDir, 'about-me-combined.rtf');
 
-      fs.writeFileSync(mdPath, combinedRTF, 'utf-8');
       fs.writeFileSync(rtfPath, combinedRTF, 'utf-8');
-
-      console.log(`📝 Combined sections saved to:`);
-      console.log(`   • ${mdPath}`);
-      console.log(`   • ${rtfPath} (open this to copy formatted text)`);
+      console.log(`📝 Combined sections saved to: ${rtfPath}`);
 
       return combinedRTF;
     } catch (error) {
@@ -2077,6 +2078,12 @@ ${project.result}`;
   }
 
   private async askUserForTheme(): Promise<string> {
+    // Return cached theme if already asked
+    if (this.cachedUserTheme !== null) {
+      console.log(`✅ Using previously provided theme: "${this.cachedUserTheme}"`);
+      return this.cachedUserTheme;
+    }
+
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -2088,14 +2095,17 @@ ${project.result}`;
       rl.question('What theme should I consider when making the focal story choice? (e.g., "customer success", "observability", "scale", "innovation"): ', (answer: string) => {
         rl.close();
         const theme = answer.trim();
-        
+
+        // Cache the theme for subsequent calls
+        this.cachedUserTheme = theme;
+
         if (theme) {
           console.log(`✅ Will focus on theme: "${theme}"`);
         } else {
           console.log('📋 Will focus on general high-impact stories');
         }
         console.log('');
-        
+
         resolve(theme);
       });
     });
@@ -2223,6 +2233,17 @@ ${project.result}`;
   }
 
   private async promptForCompanyUrl(companyName: string): Promise<string | null> {
+    // Return cached company URL if already asked
+    if (this.cachedCompanyUrl !== null) {
+      if (this.cachedCompanyUrl === '') {
+        // User previously chose to skip
+        console.log('⏭️  Using previous choice: skipping company URL (Enter was pressed previously)');
+        return null;
+      }
+      console.log(`✅ Using previously provided company URL: "${this.cachedCompanyUrl}"`);
+      return this.cachedCompanyUrl;
+    }
+
     // Check if stdin is available and is a TTY (interactive terminal)
     if (!process.stdin.isTTY) {
       console.log('⏭️  Skipping interactive company URL prompt (non-TTY environment)');
@@ -2243,7 +2264,12 @@ ${project.result}`;
 
       rl.question(`Please provide the company website URL (or press Enter to skip): `, (url) => {
         rl.close();
-        resolve(url.trim() || null);
+        const trimmedUrl = url.trim();
+
+        // Cache the company URL (or empty string if skipped)
+        this.cachedCompanyUrl = trimmedUrl || '';
+
+        resolve(trimmedUrl || null);
       });
     });
   }
