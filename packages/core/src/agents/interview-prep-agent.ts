@@ -592,11 +592,17 @@ Format as:
 
       // Extract RTF content from each section (remove RTF header/footer if present)
       const extractRTFBody = (rtfContent: string): string => {
-        // Remove RTF header if present
-        let body = rtfContent.replace(/^\{?\\rtf1[^}]*\}?/i, '');
-        // Remove RTF footer if present
-        body = body.replace(/\}$/, '');
-        return body.trim();
+        // Look for the specific font table pattern we use
+        const fontTableEnd = rtfContent.indexOf('Times New Roman;}}');
+        if (fontTableEnd !== -1) {
+          // Extract everything after the font table definition
+          let body = rtfContent.substring(fontTableEnd + 'Times New Roman;}}'.length);
+          // Remove the final closing brace
+          body = body.replace(/\}$/s, '');
+          return body.trim();
+        }
+        // If no RTF wrapper found, return as-is
+        return rtfContent.trim();
       };
 
       // Combine sections in order: opener, themes, why, focus-story
@@ -605,8 +611,9 @@ Format as:
       const whyBody = extractRTFBody(sectionContents.why);
       const focusStoryBody = extractRTFBody(sectionContents['focus-story']);
 
-      // Combine into final RTF document
+      // Combine into final RTF document with proper font selection and formatting
       const combinedRTF = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+\\f0\\fs24
 ${openerBody}
 ${themesBody}
 ${whyBody}
