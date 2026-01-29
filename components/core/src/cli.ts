@@ -857,6 +857,7 @@ program
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
+  .option('--experience-format <format>', 'Experience section format: "standard" (default) or "split" (Relevant vs Related sections)', 'standard')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
   .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
@@ -881,10 +882,28 @@ program
         process.exit(1);
       }
 
-      const mode = (options.mode || 'leader') as 'leader' | 'builder';
-      console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
+      // Validate experience-format option
+      if (options.experienceFormat && !['standard', 'split'].includes(options.experienceFormat)) {
+        console.error('❌ Error: Experience format must be either "standard" or "split"');
+        process.exit(1);
+      }
 
-      const creator = new ResumeCreatorAgent(anthropicConfig.anthropicApiKey, anthropicConfig.model, anthropicConfig.maxTokens, anthropicConfig.maxRoles, mode);
+      const mode = (options.mode || 'leader') as 'leader' | 'builder';
+      const experienceFormat = (options.experienceFormat || 'standard') as 'standard' | 'split';
+
+      console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
+      if (experienceFormat === 'split') {
+        console.log(`📊 Experience Format: ${experienceFormat} (Relevant vs Related sections)`);
+      }
+
+      const creator = new ResumeCreatorAgent(
+        anthropicConfig.anthropicApiKey,
+        anthropicConfig.model,
+        anthropicConfig.maxTokens,
+        anthropicConfig.maxRoles,
+        mode,
+        experienceFormat
+      );
 
       // Show generate mode if enabled
       if (options.generate) {

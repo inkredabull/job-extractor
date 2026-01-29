@@ -12,12 +12,21 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private maxRoles: number;
   private claudeApiKey: string;
   private mode: 'builder' | 'leader';
+  private experienceFormat: 'standard' | 'split';
 
-  constructor(claudeApiKey: string, model?: string, maxTokens?: number, maxRoles: number = 3, mode: 'builder' | 'leader' = 'leader') {
+  constructor(
+    claudeApiKey: string,
+    model?: string,
+    maxTokens?: number,
+    maxRoles: number = 3,
+    mode: 'builder' | 'leader' = 'leader',
+    experienceFormat: 'standard' | 'split' = 'standard'
+  ) {
     super(claudeApiKey, model, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
     this.mode = mode;
+    this.experienceFormat = experienceFormat;
   }
 
   async createResume(
@@ -815,12 +824,24 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       const fragmentsFileName = this.mode === 'builder' ? 'resume-creator-builder-fragments.md' : 'resume-creator-leader-fragments.md';
       const fragmentsPath = path.resolve('prompts', fragmentsFileName);
       const fragments = this.loadFragments(fragmentsPath);
-      
+
+      // Override rolesSpecificInstructions if using split format
+      if (this.experienceFormat === 'split') {
+        const splitExperiencePath = path.resolve('prompts', 'resume-creator-split-experience.md');
+        try {
+          const splitExperienceContent = fs.readFileSync(splitExperiencePath, 'utf-8');
+          // Remove the markdown header and extract just the content
+          fragments['rolesSpecificInstructions'] = splitExperienceContent.replace(/^## .+$/m, '').trim();
+        } catch (error) {
+          console.warn(`⚠️  Failed to load split experience template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
       // Replace fragment placeholders with mode-specific content
       // First, define all possible fragment placeholders
       const allPlaceholders = [
         'modeSpecificInstructions',
-        'summaryGuidance', 
+        'summaryGuidance',
         'rolesSpecificInstructions',
         'metricsType',
         'bulletPointGuidance',
@@ -829,7 +850,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         'skillsSpecificInstructions',
         'enforcementSection'
       ];
-      
+
       // Replace each placeholder with fragment content or empty string if not found
       allPlaceholders.forEach(key => {
         const placeholder = `{{${key}}}`;
