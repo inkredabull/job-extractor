@@ -38,14 +38,14 @@ export abstract class ClaudeBaseAgent {
           ],
         });
 
-        // Clear the timer and progress line
+        // Clear the timer and show final elapsed time
         clearInterval(timerInterval);
-        process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear the line
-
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (complete)\n`);
+
         const inputTokens = response.usage.input_tokens;
         const outputTokens = response.usage.output_tokens;
-        console.log(`✅ Response received in ${duration}s (${inputTokens} input tokens, ${outputTokens} output tokens)`);
+        console.log(`✅ Response received (${inputTokens} input tokens, ${outputTokens} output tokens)`);
 
         // Extract text content from the response
         const textContent = response.content.find(block => block.type === 'text');
@@ -53,7 +53,8 @@ export abstract class ClaudeBaseAgent {
       } catch (error) {
         // Make sure to clear interval on error too
         clearInterval(timerInterval);
-        process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear the line
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (failed)\n`);
         throw error;
       }
     } catch (error) {
