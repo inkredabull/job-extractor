@@ -51,6 +51,7 @@ Table of Contents
 * [Job Extractor](#job-extractor)
 * [Table of Contents](#table-of-contents)
    * [Features](#features)
+   * [LangSmith Evaluation & Monitoring](#langsmith-evaluation--monitoring)
    * [Installation](#installation)
    * [Usage](#usage)
       * [Command Line Interface](#command-line-interface)
@@ -185,13 +186,139 @@ Job Extractor is an AI-powered career toolkit that delivers **10x improvement in
 **Primary Value Proposition**: **10x improvement in job search efficiency**
 
 - **Time Savings**: Reduces job application process from 2+ hours to 15-20 minutes per job
-- **Quality Improvement**: Higher application relevance leads to better response rates  
+- **Quality Improvement**: Higher application relevance leads to better response rates
 - **Scale Enhancement**: Can process 20-30 jobs per day vs. 2-3 manually
 - **Success Optimization**: Data-driven approach improves overall job search outcomes
 
 **ROI**: For a job search taking 3-6 months, this system could compress it to 1-2 months while improving success rates - potentially worth $20-50K+ in faster employment and better role matching.
 
 The architecture treats job searching as a **systematic, data-driven process** rather than manual grunt work, which aligns with how modern software engineers approach other complex problems.
+
+## LangSmith Evaluation & Monitoring
+
+**Why LangSmith?**
+
+This project uses [LangSmith](https://smith.langchain.com/) as its primary evaluation and monitoring framework for AI-powered components. LangSmith was integrated in July 2025 (commit `25675c6`) to provide production-grade observability and quality assurance for the LLM-powered agents.
+
+### Key Benefits
+
+1. **Job Extraction Quality Assurance**
+   - Validate that job postings are correctly parsed and structured
+   - Track extraction accuracy across different job board formats (LinkedIn, Greenhouse, Workday)
+   - Monitor for regression when updating prompts or models
+
+2. **Resume Generation Evaluation**
+   - Assess quality of AI-generated resume content against job requirements
+   - Compare different prompts and model configurations (OpenAI vs Anthropic)
+   - Ensure generated resumes maintain professional standards and accuracy
+
+3. **Scoring Algorithm Validation**
+   - Verify job scoring logic produces consistent, reliable results
+   - Test criteria matching against known datasets
+   - Track scoring performance over time
+
+4. **Production Monitoring**
+   - Real-time tracing of LLM API calls
+   - Performance metrics (latency, token usage, costs)
+   - Error tracking and debugging for agent failures
+
+### What Gets Evaluated
+
+The evaluation framework (`examples/langsmith_evaluation.py`) focuses on:
+
+- **Required Terms Extraction**: Validates that critical job requirements (skills, experience levels) are correctly identified
+- **Data Completeness**: Ensures all mandatory fields (title, company, location, description) are populated
+- **Coverage & Accuracy**: Measures how well extracted data matches source job postings
+- **Prompt Performance**: A/B testing different prompt strategies for resume generation
+
+### Setup Instructions
+
+**Optional Feature**: LangSmith integration is entirely optional. The system works without it, but you won't have evaluation metrics or production monitoring.
+
+1. **Get API Key**
+   ```bash
+   # Sign up at https://smith.langchain.com/
+   # Copy your API key from the settings page
+   ```
+
+2. **Configure Environment**
+   ```bash
+   # Add to .env file
+   LANGSMITH_API_KEY=your_langsmith_api_key_here
+   ```
+
+3. **Install Python Dependencies (Optional)**
+
+   **Note**: A `requirements.txt` was included in the July 2025 commit but later removed to keep the project Node.js-focused. For evaluation features, install dependencies manually:
+
+   ```bash
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+   # Install LangSmith
+   pip install langsmith>=0.1.0 python-dotenv>=1.0.0
+
+   # Verify installation
+   python -c "import langsmith; print('✅ LangSmith ready!')"
+   ```
+
+4. **Run Evaluation Example**
+   ```bash
+   # Activate virtual environment
+   source venv/bin/activate
+
+   # Run example evaluation
+   python examples/langsmith_evaluation.py
+
+   # Expected output:
+   # 🔍 LangSmith Job Extraction Evaluation
+   # ✅ LangSmith API connection successful!
+   # 📊 Evaluation Results:
+   #    - Required terms extraction quality
+   #    - Job data completeness scores
+   #    - Coverage and accuracy metrics
+   ```
+
+### Usage in Practice
+
+**During Development:**
+- Run evaluation scripts after modifying extraction agents or prompts
+- Compare metrics before/after changes to catch regressions
+- Use LangSmith dashboard to visualize agent traces and debug issues
+
+**In Production:**
+- LangSmith automatically traces all LLM calls when `LANGSMITH_API_KEY` is set
+- Monitor API usage, costs, and latency in real-time
+- Set up alerts for errors or performance degradation
+
+### Architecture Integration
+
+LangSmith integrates seamlessly with the existing agent architecture:
+
+```
+JobExtractorAgent → [LangSmith Trace] → OpenAI API
+ResumeCreatorAgent → [LangSmith Trace] → Anthropic API
+JobScorerAgent → [LangSmith Evaluation] → Scoring Metrics
+```
+
+All agent interactions with LLM APIs are automatically traced and logged when the API key is configured, with zero code changes required.
+
+### Example Use Cases
+
+1. **Prompt Engineering**: Test different resume generation prompts and compare outputs side-by-side
+2. **Model Comparison**: Evaluate Claude vs GPT for job extraction accuracy
+3. **Regression Testing**: Validate that agent updates don't degrade extraction quality
+4. **Cost Optimization**: Identify expensive operations and optimize token usage
+5. **Error Analysis**: Debug failed job extractions by replaying traces
+
+### Related Files
+
+- `examples/langsmith_evaluation.py` - Example evaluation script demonstrating core concepts
+- Environment variable: `LANGSMITH_API_KEY` - Optional API key for cloud features
+- All agent classes automatically support LangSmith tracing when configured
+
+For more information, visit the [LangSmith documentation](https://docs.smith.langchain.com/).
 
 ## Installation
 
@@ -782,11 +909,11 @@ job-extractor apply "4c32e01e" "https://company.com/apply"
 📄 Field Values:
 --------------------------------------------------
 Full Name *:
-  Value: Anthony Bull
+  Value: John Doe
   Type: text
 
 Email Address *:
-  Value: anthony@bluxomelabs.com
+  Value: user@example.com
   Type: email
 
 Why are you interested in this role?:
