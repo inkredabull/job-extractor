@@ -14,10 +14,10 @@ export abstract class ClaudeBaseAgent {
     this.maxTokens = maxTokens;
   }
 
-  protected async makeClaudeRequest(prompt: string): Promise<string> {
+  protected async makeClaudeRequest(prompt: string, cachedContent?: string): Promise<string> {
     try {
       const startTime = Date.now();
-      console.log(`🤖 Sending request to Claude (${this.model})...`);
+      console.log(`🤖 Sending request to Claude (${this.model})${cachedContent ? ' with prompt caching' : ''}...`);
 
       // Start elapsed time display
       let elapsedSeconds = 0;
@@ -27,13 +27,36 @@ export abstract class ClaudeBaseAgent {
       }, 1000);
 
       try {
+        // Build content array with optional caching
+        const content: Array<any> = [];
+
+        if (cachedContent) {
+          // Add cached content first (e.g., CV)
+          content.push({
+            type: 'text',
+            text: cachedContent,
+            cache_control: { type: 'ephemeral' }
+          });
+          // Add the prompt second
+          content.push({
+            type: 'text',
+            text: prompt
+          });
+        } else {
+          // Simple string prompt
+          content.push({
+            type: 'text',
+            text: prompt
+          });
+        }
+
         const response = await this.anthropic.messages.create({
           model: this.model,
           max_tokens: this.maxTokens,
           messages: [
             {
               role: 'user',
-              content: prompt,
+              content: content.length === 1 && !cachedContent ? prompt : content,
             },
           ],
         });
@@ -45,7 +68,12 @@ export abstract class ClaudeBaseAgent {
 
         const inputTokens = response.usage.input_tokens;
         const outputTokens = response.usage.output_tokens;
-        console.log(`✅ Response received (${inputTokens} input tokens, ${outputTokens} output tokens)`);
+        const cacheInfo = cachedContent && (response.usage as any).cache_creation_input_tokens
+          ? ` (${(response.usage as any).cache_creation_input_tokens} cached)`
+          : cachedContent && (response.usage as any).cache_read_input_tokens
+          ? ` (${(response.usage as any).cache_read_input_tokens} from cache)`
+          : '';
+        console.log(`✅ Response received (${inputTokens} input tokens, ${outputTokens} output tokens${cacheInfo})`);
 
         // Extract text content from the response
         const textContent = response.content.find(block => block.type === 'text');

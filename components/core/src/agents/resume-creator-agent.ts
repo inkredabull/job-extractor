@@ -13,6 +13,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   private claudeApiKey: string;
   private mode: 'builder' | 'leader';
   private experienceFormat: 'standard' | 'split';
+  private critiqueModel: string;
+  private useFastMode: boolean;
 
   constructor(
     claudeApiKey: string,
@@ -20,13 +22,22 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     maxTokens?: number,
     maxRoles: number = 3,
     mode: 'builder' | 'leader' = 'leader',
-    experienceFormat: 'standard' | 'split' = 'standard'
+    experienceFormat: 'standard' | 'split' = 'standard',
+    useFastMode: boolean = false
   ) {
-    super(claudeApiKey, model, maxTokens);
+    // If fast mode, use Haiku for initial generation, otherwise use provided model or default Sonnet
+    const initialModel = useFastMode
+      ? 'claude-3-5-haiku-20241022'
+      : (model || 'claude-3-7-sonnet-20250219');
+
+    super(claudeApiKey, initialModel, maxTokens);
     this.maxRoles = maxRoles;
     this.claudeApiKey = claudeApiKey;
     this.mode = mode;
     this.experienceFormat = experienceFormat;
+    this.useFastMode = useFastMode;
+    // Always use Sonnet for critique regardless of fast mode
+    this.critiqueModel = 'claude-3-7-sonnet-20250219';
   }
 
   async createResume(
@@ -360,10 +371,10 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private async runCritique(jobId: string): Promise<any> {
     try {
-      // Create ResumeCriticAgent and run critique
+      // Create ResumeCriticAgent and run critique with Sonnet for best quality
       const critic = new ResumeCriticAgent(
         this.claudeApiKey,
-        this.model,
+        this.critiqueModel,
         this.maxTokens
       );
       
@@ -989,9 +1000,13 @@ ${companyValues}
 Ensure the resume highlights experiences and achievements that demonstrate alignment with these values.`;
     }
 
+    // Format CV content for caching
+    const formattedCV = `Current CV Content:\n${this.formatCVForPrompt(cvContent)}`;
+
+    // Build prompt without CV content (it will be passed separately for caching)
     const prompt = this.loadPromptTemplate({
       job,
-      cvContent,
+      cvContent: '', // Empty string - CV will be cached separately
       maxRoles: this.maxRoles,
       recommendationsSection,
       companyValuesSection
@@ -1002,7 +1017,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       try {
         const logsDir = resolveFromProjectRoot('logs');
         const jobDir = path.resolve(logsDir, jobId);
-        
+
         // Create logs and job directories if they don't exist
         if (!fs.existsSync(logsDir)) {
           fs.mkdirSync(logsDir, { recursive: true });
@@ -1010,18 +1025,22 @@ Ensure the resume highlights experiences and achievements that demonstrate align
         if (!fs.existsSync(jobDir)) {
           fs.mkdirSync(jobDir, { recursive: true });
         }
-        
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const promptLogFile = path.join(jobDir, `prompt-${timestamp}.txt`);
-        
+
         const logContent = [
           '📝 Prompt being sent to Claude for resume tailoring:',
           '='.repeat(80),
+          'CACHED CV CONTENT:',
+          formattedCV.substring(0, 500) + '...',
+          '',
+          'PROMPT:',
           prompt,
           '='.repeat(80),
           `\nGenerated at: ${new Date().toISOString()}`
         ].join('\n');
-        
+
         fs.writeFileSync(promptLogFile, logContent, 'utf-8');
         console.log(`📄 Prompt logged to: ${promptLogFile}`);
       } catch (error) {
@@ -1030,7 +1049,7 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     }
 
     console.log('⏳ Generating tailored resume content...');
-    const response = await this.makeClaudeRequest(prompt);
+    const response = await this.makeClaudeRequest(prompt, formattedCV);
     console.log('📝 Parsing response and extracting content...');
     
     try {
@@ -1188,11 +1207,11 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       }
 
       console.log(`🔍 No recommendations found for job ${jobId}, running automatic critique...`);
-      
-      // Create ResumeCriticAgent and run critique
+
+      // Create ResumeCriticAgent and run critique with Sonnet for best quality
       const critic = new ResumeCriticAgent(
         this.claudeApiKey,
-        this.model,
+        this.critiqueModel,
         this.maxTokens
       );
       
