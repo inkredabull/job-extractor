@@ -557,7 +557,7 @@ app.post('/extract', async (req, res) => {
         console.log(`  -> Executing extract with HTML file: ${tempHtmlFile}`);
 
         const output = await new Promise((resolve, reject) => {
-          const args = ['ts-node', 'packages/core/src/cli.ts', 'extract', '--type', 'html'];
+          const args = ['ts-node', 'components/core/src/cli.ts', 'extract', '--type', 'html'];
           if (reminderPriority) {
             args.push('--reminder-priority', reminderPriority.toString());
           }
@@ -688,7 +688,7 @@ app.post('/extract', async (req, res) => {
         console.log(`  -> Executing extract with JSON file: ${tempJsonFile}`);
         
         const output = await new Promise((resolve, reject) => {
-          const args = ['ts-node', 'packages/core/src/cli.ts', 'extract', '--type', 'jsonfile'];
+          const args = ['ts-node', 'components/core/src/cli.ts', 'extract', '--type', 'jsonfile'];
           if (reminderPriority) {
             args.push('--reminder-priority', reminderPriority.toString());
           }
@@ -828,7 +828,7 @@ app.post('/extract', async (req, res) => {
       process.chdir(projectDir);
 
       // Build extract command with optional flags
-      let command = `npx ts-node packages/core/src/cli.ts extract "${url}"`;
+      let command = `npx ts-node components/core/src/cli.ts extract "${url}"`;
       if (reminderPriority) {
         command += ` --reminder-priority ${reminderPriority}`;
       }
@@ -991,7 +991,7 @@ app.post('/linkedin-reminder', async (req, res) => {
     
     // Use the MacOS reminder creation via CLI
     const output = await new Promise((resolve, reject) => {
-      const args = ['ts-node', 'packages/core/src/cli.ts', 'reminder'];
+      const args = ['ts-node', 'components/core/src/cli.ts', 'reminder'];
       
       // Add title (required)
       args.push('--title', title);
@@ -1385,7 +1385,7 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
     // Step 1: Score the job
     console.log(`  -> Scoring job ${jobId}...`);
     const scoreOutput = await new Promise((resolve, reject) => {
-      const scoreArgs = ['ts-node', 'packages/core/src/cli.ts', 'score', jobId];
+      const scoreArgs = ['ts-node', 'components/core/src/cli.ts', 'score', jobId];
       
       const scoreChild = spawn('npx', scoreArgs, {
         cwd: projectDir,
@@ -1484,7 +1484,7 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
     // Step 3: Generate resume (only if enabled and score meets threshold)
     console.log(`  -> Generating resume for job ${jobId} (score ${jobScore}% >= ${scoreThreshold}%)...`);
     const resumeOutput = await new Promise((resolve, reject) => {
-      const resumeArgs = ['ts-node', 'packages/core/src/cli.ts', 'resume', jobId];
+      const resumeArgs = ['ts-node', 'components/core/src/cli.ts', 'resume', jobId];
       
       const resumeChild = spawn('npx', resumeArgs, {
         cwd: projectDir,

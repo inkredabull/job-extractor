@@ -53,7 +53,7 @@ app.post('/extract', async (req, res) => {
         console.log(`CLI Server: Executing extract with JSON file: ${tempJsonFile}`);
         
         const output = await new Promise((resolve, reject) => {
-          const child = spawn('npx', ['ts-node', 'packages/core/src/cli.ts', 'extract', '--type', 'jsonfile', tempJsonFile], {
+          const child = spawn('npx', ['ts-node', 'components/core/src/cli.ts', 'extract', '--type', 'jsonfile', tempJsonFile], {
             cwd: projectDir,
             stdio: ['pipe', 'pipe', 'pipe']
           });
