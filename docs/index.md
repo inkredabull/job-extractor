@@ -72,7 +72,7 @@ npm run unified-server
 ## Repository Structure
 
 ```
-packages/
+components/
 ├── core/              # Main CLI tool and agents
 ├── chrome-extension/  # Browser extension
 ├── mcp-server/        # MCP server component
@@ -83,8 +83,8 @@ packages/
 ## Links
 
 - **GitHub Repository**: [View on GitHub](https://github.com/inkredabull/job-extractor)
-- **Core Component**: [packages/core/](https://github.com/inkredabull/job-extractor/tree/main/packages/core)
-- **Chrome Extension**: [packages/chrome-extension/](https://github.com/inkredabull/job-extractor/tree/main/packages/chrome-extension)
+- **Core Component**: [components/core/](https://github.com/inkredabull/job-extractor/tree/main/components/core)
+- **Chrome Extension**: [components/chrome-extension/](https://github.com/inkredabull/job-extractor/tree/main/components/chrome-extension)
 
 ## License
 

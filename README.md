@@ -3,17 +3,17 @@
 > AI-powered career toolkit monorepo - extraction, scoring, resume creation, and interview preparation
 
 [![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://inkredabull.github.io/job-extractor/)
-[![Monorepo](https://img.shields.io/badge/structure-monorepo-orange)](./packages/)
+[![Monorepo](https://img.shields.io/badge/structure-monorepo-orange)](./components/)
 
 ## 📦 Components
 
 This monorepo solves distinct job search problems through specialized components:
 
-- **[Core CLI Tool](./packages/core/)** - Solves the problem of manual job analysis by automating extraction, scoring, resume tailoring, and interview prep using AI-powered agents
-- **[Chrome Extension](./packages/chrome-extension/)** - Solves the context-switching problem by enabling one-click job tracking and CV-aware interview assistance directly in your browser
-- **[Unified Server](./packages/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking, CLI automation, and CV-aware AI responses in a single endpoint
-- **[AMA App](./packages/ama-app/)** - Solves the interview preparation problem by providing an interactive interface for practicing answers with AI feedback
-- **[Evaluation Package](./packages/evaluation/)** - Solves the quality assurance problem by providing LangSmith-powered evaluation and monitoring for AI agent performance
+- **[Core CLI Tool](./components/core/)** - Solves the problem of manual job analysis by automating extraction, scoring, resume tailoring, and interview prep using AI-powered agents
+- **[Chrome Extension](./components/chrome-extension/)** - Solves the context-switching problem by enabling one-click job tracking and CV-aware interview assistance directly in your browser
+- **[Unified Server](./components/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking, CLI automation, and CV-aware AI responses in a single endpoint
+- **[AMA App](./components/ama-app/)** - Solves the interview preparation problem by providing an interactive interface for practicing answers with AI feedback
+- **[Evaluation Package](./components/evaluation/)** - Solves the quality assurance problem by providing LangSmith-powered evaluation and monitoring for AI agent performance
 
 ## 🚀 Quick Start
 
@@ -273,7 +273,7 @@ The evaluation framework (`examples/langsmith_evaluation.py`) focuses on:
 4. **Run Evaluation Example**
    ```bash
    # Activate virtual environment (from evaluation package)
-   cd packages/evaluation/python
+   cd components/evaluation/python
    source venv/bin/activate
 
    # Install package
@@ -328,16 +328,16 @@ All agent interactions with LLM APIs are automatically traced and logged when th
 
 ### Related Files & Packages
 
-- **[Evaluation Package](./packages/evaluation/)** - Full-featured evaluation package with Python and TypeScript interfaces
-- `packages/evaluation/python/src/job_extractor_eval/` - Core evaluation logic
+- **[Evaluation Package](./components/evaluation/)** - Full-featured evaluation package with Python and TypeScript interfaces
+- `components/evaluation/python/src/job_extractor_eval/` - Core evaluation logic
 - `examples/langsmith_evaluation.py` - Legacy standalone evaluation script (deprecated, use package instead)
 - Environment variable: `LANGSMITH_API_KEY` - Optional API key for cloud features
 - All agent classes automatically support LangSmith tracing when configured
 
 For more information:
 - [LangSmith Documentation](https://docs.smith.langchain.com/)
-- [Evaluation Package README](./packages/evaluation/README.md)
-- [Python Package README](./packages/evaluation/python/README.md)
+- [Evaluation Package README](./components/evaluation/README.md)
+- [Python Package README](./components/evaluation/python/README.md)
 
 ## Installation
 
@@ -1714,7 +1714,7 @@ src/
 ├── cli.ts                     # Command-line interface with logging
 └── index.ts                   # Main exports
 
-packages/chrome-extension/extension/  # Chrome Extension for CV-aware assistance
+components/chrome-extension/extension/  # Chrome Extension for CV-aware assistance
 ├── manifest.json              # Extension manifest (Manifest V3)
 ├── popup.html                 # Extension popup interface
 ├── popup.js                   # Popup functionality and controls
@@ -1727,11 +1727,11 @@ packages/chrome-extension/extension/  # Chrome Extension for CV-aware assistance
 │   └── icon128.svg
 └── README.md                  # Extension usage and installation guide
 
-packages/unified-server/       # Unified server for all backend services
+components/unified-server/       # Unified server for all backend services
 ├── unified-server.js          # Main server with job extraction and CV responses
 └── package.json               # Server package configuration
 
-packages/evaluation/           # LangSmith evaluation and monitoring package
+components/evaluation/           # LangSmith evaluation and monitoring package
 ├── python/                    # Python package with native LangSmith integration
 │   ├── src/
 │   │   └── job_extractor_eval/
@@ -1769,7 +1769,7 @@ logs/                          # Auto-generated job extraction and scoring logs
     └── judge-attempt-*.json   # PDF judge validation results
 
 examples/                      # Legacy example scripts
-└── langsmith_evaluation.py    # Legacy standalone evaluation script (deprecated, use packages/evaluation)
+└── langsmith_evaluation.py    # Legacy standalone evaluation script (deprecated, use components/evaluation)
 
 data/                          # Evaluation data (created by extract-for-eval)
 ├── index.jsonl                # Job index with required terms

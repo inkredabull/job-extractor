@@ -20,4 +20,4 @@ Browser extension that provides seamless integration with job application forms,
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/chrome-extension)
+[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/chrome-extension)

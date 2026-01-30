@@ -1,5 +1,5 @@
-import { StatementAgent } from '../packages/core/src/agents/statement-agent';
-import { JobListing, StatementType, StatementOptions } from '../packages/core/src/types';
+import { StatementAgent } from '../components/core/src/agents/statement-agent';
+import { JobListing, StatementType, StatementOptions } from '../components/core/src/types';
 import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
 import * as path from 'path';

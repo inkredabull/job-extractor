@@ -6,7 +6,7 @@ Job extraction service with multiple strategies (JSON-LD, LLM, RegEx) for robust
 
 ## Overview
 
-This package will consolidate all job extraction logic from the codebase into a single, reusable service. Currently, the extraction logic resides in `packages/core/src/agents/job-extractor-agent.ts` and is accessed via the unified server.
+This package will consolidate all job extraction logic from the codebase into a single, reusable service. Currently, the extraction logic resides in `components/core/src/agents/job-extractor-agent.ts` and is accessed via the unified server.
 
 ## Current State
 
@@ -25,7 +25,7 @@ As of the latest refactoring (Jan 2026), we've successfully consolidated the ext
 ## Planned Architecture
 
 ```
-packages/extraction/
+components/extraction/
 ├── src/
 │   ├── extractors/
 │   │   ├── json-ld-extractor.ts      # Structured data extraction (JSON-LD)
@@ -153,7 +153,7 @@ Test fixtures should include:
 
 ## Key Extraction Methods to Move
 
-From `packages/core/src/agents/job-extractor-agent.ts`:
+From `components/core/src/agents/job-extractor-agent.ts`:
 
 - `extractApplicantCount()` → `applicant-counter.ts`
 - `extractSalaryFromText()` → `regex-extractor.ts`
@@ -165,7 +165,7 @@ From `packages/core/src/agents/job-extractor-agent.ts`:
 - `extractPartialJobData()` → `llm-extractor.ts`
 - `createExtractionPrompt()` → `llm-extractor.ts`
 
-From `packages/core/src/utils/web-scraper.ts`:
+From `components/core/src/utils/web-scraper.ts`:
 
 - `extractStructuredData()` → `json-ld-extractor.ts`
 - `simplifyHtml()` → `extraction-service.ts`
@@ -182,11 +182,11 @@ From `packages/core/src/utils/web-scraper.ts`:
 
 ## Related Files
 
-- `packages/core/src/agents/job-extractor-agent.ts` - Current implementation
-- `packages/core/src/utils/web-scraper.ts` - HTML utilities
-- `packages/unified-server/unified-server.js` - Server orchestration
-- `packages/chrome-extension/extension/content.js` - Chrome extension consumer
-- `packages/chrome-extension/extension/background.js` - Background script
+- `components/core/src/agents/job-extractor-agent.ts` - Current implementation
+- `components/core/src/utils/web-scraper.ts` - HTML utilities
+- `components/unified-server/unified-server.js` - Server orchestration
+- `components/chrome-extension/extension/content.js` - Chrome extension consumer
+- `components/chrome-extension/extension/background.js` - Background script
 
 ## License
 

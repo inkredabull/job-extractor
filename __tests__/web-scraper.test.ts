@@ -1,4 +1,4 @@
-import { WebScraper } from '../packages/core/src/utils/web-scraper';
+import { WebScraper } from '../components/core/src/utils/web-scraper';
 import axios from 'axios';
 
 jest.mock('axios');

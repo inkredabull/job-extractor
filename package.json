@@ -4,12 +4,12 @@
   "description": "Monorepo for AI-powered job search toolkit - extraction, scoring, resume creation, and interview preparation",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "components/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "build:core": "npm run build --workspace=@inkredabull/job-extractor-core",
-    "dev": "ts-node packages/core/src/cli.ts",
+    "dev": "ts-node components/core/src/cli.ts",
     "test": "npm run test --workspaces",
     "test:watch": "npm run test:watch --workspace=@inkredabull/job-extractor-core",
     "lint": "npm run lint --workspaces",
@@ -17,7 +17,7 @@
     "unified-server": "npm run start --workspace=@inkredabull/job-extractor-unified-server",
     "unified-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-unified-server",
     "evaluate": "npm run eval --workspace=@job-extractor/evaluation",
-    "evaluate:check": "cd packages/evaluation/python && source venv/bin/activate && python -m job_extractor_eval.cli --check-setup",
+    "evaluate:check": "cd components/evaluation/python && source venv/bin/activate && python -m job_extractor_eval.cli --check-setup",
     "setup-gmail": "node scripts/setup-gmail-auth.js",
     "archive:jobs": "node scripts/archive-jobs.js"
   },

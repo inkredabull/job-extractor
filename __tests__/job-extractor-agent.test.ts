@@ -1,6 +1,6 @@
-import { JobExtractorAgent } from '../packages/core/src/agents/job-extractor-agent';
-import { WebScraper } from '../packages/core/src/utils/web-scraper';
-import { AgentConfig } from '../packages/core/src/types';
+import { JobExtractorAgent } from '../components/core/src/agents/job-extractor-agent';
+import { WebScraper } from '../components/core/src/utils/web-scraper';
+import { AgentConfig } from '../components/core/src/types';
 
 jest.mock('../src/utils/web-scraper');
 jest.mock('openai');

@@ -30,4 +30,4 @@ The server runs on port 3000 by default.
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/unified-server)
+[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/unified-server)

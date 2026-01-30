@@ -5,7 +5,7 @@ LangSmith-powered evaluation and monitoring for Job Extractor agents.
 ## Installation
 
 ```bash
-# From packages/evaluation/python directory
+# From components/evaluation/python directory
 pip install -e .
 
 # Or install dependencies only

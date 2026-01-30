@@ -17,7 +17,7 @@ The package uses a **hybrid approach**:
 - **TypeScript** - Node.js wrapper for seamless monorepo integration
 
 ```
-packages/evaluation/
+components/evaluation/
 ├── python/              # Python package with LangSmith
 │   ├── src/
 │   │   └── job_extractor_eval/
@@ -37,7 +37,7 @@ packages/evaluation/
 ### Python Setup
 
 ```bash
-cd packages/evaluation/python
+cd components/evaluation/python
 
 # Create virtual environment
 python3 -m venv venv
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 npm install
 
 # Build TypeScript
-cd packages/evaluation
+cd components/evaluation
 npm run build
 ```
 
@@ -67,7 +67,7 @@ npm run build
 
 ```bash
 # Activate virtual environment
-source packages/evaluation/python/venv/bin/activate
+source components/evaluation/python/venv/bin/activate
 
 # Evaluate a job
 evaluate-jobs abc123
@@ -140,7 +140,7 @@ Get your API key from: https://smith.langchain.com/
 ### Python Development
 
 ```bash
-cd packages/evaluation/python
+cd components/evaluation/python
 
 # Install dev dependencies
 pip install -e ".[dev]"
@@ -158,7 +158,7 @@ mypy src/
 ### TypeScript Development
 
 ```bash
-cd packages/evaluation
+cd components/evaluation
 
 # Watch mode
 npm run dev
@@ -212,7 +212,7 @@ npm run dev -- extract "https://example.com/job"
 # 2. Get the job ID from output (e.g., abc123)
 
 # 3. Evaluate extraction quality
-cd packages/evaluation/python
+cd components/evaluation/python
 source venv/bin/activate
 evaluate-jobs abc123
 

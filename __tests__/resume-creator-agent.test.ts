@@ -1,5 +1,5 @@
-import { ResumeCreatorAgent } from '../packages/core/src/agents/resume-creator-agent';
-import { JobListing } from '../packages/core/src/types';
+import { ResumeCreatorAgent } from '../components/core/src/agents/resume-creator-agent';
+import { JobListing } from '../components/core/src/types';
 import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
 import * as path from 'path';

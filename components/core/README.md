@@ -40,4 +40,4 @@ npm test
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/core)
+[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/core)
