@@ -1,13 +1,13 @@
 # AMA Chat Application
 
-A professional chat application that connects to Anthony Bull's expertise through an MCP server. Built with React, TypeScript, and Vite.
+A professional chat application that provides expertise through an MCP server. Built with React, TypeScript, and Vite.
 
 ## Features
 
 - Clean, modern chat interface
 - Real-time communication with MCP server
 - Mobile-responsive design
-- Professional styling suitable for https://ama.bluxomelabs.com/
+- Professional styling suitable for production deployment
 - TypeScript for type safety
 - Optimized build for production deployment
 
@@ -63,7 +63,7 @@ This creates a `dist/` folder with optimized static files ready for deployment.
 
 3. Configure subdomain:
    - In Bluehost cPanel, go to "Subdomains"
-   - Create subdomain: `ama.bluxomelabs.com`
+   - Create subdomain: `ama.yourdomain.com`
    - Point document root to folder containing the uploaded files
 
 4. Update production API endpoint:
@@ -112,5 +112,5 @@ The app connects to the existing MCP server endpoints:
 
 ## License
 
-Private - Anthony Bull / Inkredabull
+MIT License
 ```

@@ -901,7 +901,7 @@ export class ApplicationAgent extends BaseAgent {
       const personalInfo: any = {};
       
       // Extract name (first line)
-      personalInfo.name = lines[0]?.trim() || 'Anthony Bull';
+      personalInfo.name = lines[0]?.trim() || 'John Doe';
       
       // Extract contact info from initial lines
       let emailFound = false;
@@ -956,22 +956,22 @@ export class ApplicationAgent extends BaseAgent {
       }
       
       // Set defaults for missing fields
-      if (!emailFound) personalInfo.email = 'anthony@bluxomelabs.com';
-      if (!phoneFound) personalInfo.phone = '+1 415-269-4893';
+      if (!emailFound) personalInfo.email = 'user@example.com';
+      if (!phoneFound) personalInfo.phone = '+1-555-0100';
       if (!locationFound) personalInfo.location = 'San Francisco, CA';
-      if (!linkedinFound) personalInfo.linkedin = 'https://linkedin.com/in/anthonybull';
-      if (!githubFound) personalInfo.github = 'https://github.com/inkredabull';
+      if (!linkedinFound) personalInfo.linkedin = 'https://linkedin.com/in/yourprofile';
+      if (!githubFound) personalInfo.github = 'https://github.com/yourusername';
       
       return personalInfo;
     } catch (error) {
       // Fallback personal info
       return {
-        name: 'Anthony Bull',
-        email: 'anthony@bluxomelabs.com',
-        phone: '+1 415-269-4893',
+        name: 'John Doe',
+        email: 'user@example.com',
+        phone: '+1-555-0100',
         location: 'San Francisco, CA',
-        linkedin: 'https://linkedin.com/in/anthonybull',
-        github: 'https://github.com/inkredabull'
+        linkedin: 'https://linkedin.com/in/yourprofile',
+        github: 'https://github.com/yourusername'
       };
     }
   }
@@ -1052,7 +1052,7 @@ export class ApplicationAgent extends BaseAgent {
         return linkedinUrl;
       } else {
         console.log(`⚠️  No LinkedIn URL found in personal info, using default`);
-        return 'https://linkedin.com/in/anthonybull';
+        return 'https://linkedin.com/in/yourprofile';
       }
     }
 
@@ -1065,7 +1065,7 @@ export class ApplicationAgent extends BaseAgent {
         return githubUrl;
       } else {
         console.log(`⚠️  No GitHub URL found in personal info, using default`);
-        return 'https://github.com/inkredabull';
+        return 'https://github.com/yourusername';
       }
     }
 

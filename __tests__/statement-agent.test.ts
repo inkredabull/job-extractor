@@ -27,7 +27,7 @@ describe('StatementAgent', () => {
       }
     };
 
-    mockCvContent = `Anthony Bull - Software Engineering Leader
+    mockCvContent = `John Doe - Software Engineering Leader
 
 EXPERIENCE:
 CTO @ Myna.co (2022-2024)
@@ -84,7 +84,7 @@ SKILLS:
       const mockResponse = {
         content: [
           {
-            text: 'Greetings:\n\nI am excited about the Head of Engineering position at Tech Startup. With my experience leading engineering teams at Myna.co and CourseKey, I bring proven expertise in scaling technical organizations and implementing AI/ML solutions. My track record includes growing teams from 12 to 23 members while successfully scaling user bases from 0 to 1M+ DAUs.\n\nRegards, Anthony'
+            text: 'Greetings:\n\nI am excited about the Head of Engineering position at Tech Startup. With my experience leading engineering teams at Myna.co and CourseKey, I bring proven expertise in scaling technical organizations and implementing AI/ML solutions. My track record includes growing teams from 12 to 23 members while successfully scaling user bases from 0 to 1M+ DAUs.\n\nRegards, John'
           }
         ]
       };
@@ -101,7 +101,7 @@ SKILLS:
       expect(result.success).toBe(true);
       expect(result.type).toBe('cover-letter');
       expect(result.content).toContain('Greetings:');
-      expect(result.content).toContain('Regards, Anthony');
+      expect(result.content).toContain('Regards, John');
       expect(result.characterCount).toBeGreaterThan(0);
     });
 
@@ -109,7 +109,7 @@ SKILLS:
       const mockResponse = {
         content: [
           {
-            text: 'Anthony is an exceptional engineering leader with proven experience scaling technical teams and implementing cutting-edge AI/ML solutions. At Myna.co, he successfully led a 12-person team while implementing GenAI technologies that transformed development processes. His ability to scale organizations is evident from his work at CourseKey, where he grew the engineering team to 23 members and scaled the platform to over 1M daily active users.'
+            text: 'John is an exceptional engineering leader with proven experience scaling technical teams and implementing cutting-edge AI/ML solutions. At Myna.co, he successfully led a 12-person team while implementing GenAI technologies that transformed development processes. His ability to scale organizations is evident from his work at CourseKey, where he grew the engineering team to 23 members and scaled the platform to over 1M daily active users.'
           }
         ]
       };
@@ -157,7 +157,7 @@ SKILLS:
       const mockResponse = {
         content: [
           {
-            text: 'Anthony brings over a decade of engineering leadership experience, progressing from individual contributor roles to executive positions. His expertise spans from early-stage startups to scaling platforms serving millions of users, with particular strength in AI/ML implementation and team building across distributed organizations.'
+            text: 'John brings over a decade of engineering leadership experience, progressing from individual contributor roles to executive positions. His expertise spans from early-stage startups to scaling platforms serving millions of users, with particular strength in AI/ML implementation and team building across distributed organizations.'
           }
         ]
       };
@@ -254,7 +254,7 @@ SKILLS:
   describe('statement options', () => {
     it('should handle custom emphasis for cover letters', async () => {
       const mockResponse = {
-        content: [{ text: 'Greetings:\nStatement with custom emphasis.\nRegards, Anthony' }]
+        content: [{ text: 'Greetings:\nStatement with custom emphasis.\nRegards, John' }]
       };
 
       (mockAnthropic.messages.create as jest.MockedFunction<any>)\n        .mockResolvedValueOnce(mockResponse);

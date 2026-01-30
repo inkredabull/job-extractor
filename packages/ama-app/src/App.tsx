@@ -17,7 +17,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Hi! I'm Anthony Bull. Ask me anything about engineering leadership, startup scaling, or technical expertise. What would you like to know?",
+      text: "Hi! I'm here to help. Ask me anything about engineering leadership, startup scaling, or technical expertise. What would you like to know?",
       isUser: false,
       timestamp: new Date()
     }
@@ -53,7 +53,7 @@ function App() {
     // Add typing indicator
     const typingMessage: Message = {
       id: 'typing',
-      text: 'Anthony is typing...',
+      text: 'Typing...',
       isUser: false,
       timestamp: new Date(),
       isTyping: true
@@ -114,7 +114,7 @@ function App() {
       <header className="header">
         <div className="header-content">
           <h1>Ask Me Anything</h1>
-          <p>Anthony Bull • Engineering Leadership & Startup Scaling</p>
+          <p>Engineering Leadership & Startup Scaling</p>
         </div>
       </header>
 
