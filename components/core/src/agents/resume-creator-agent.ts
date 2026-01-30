@@ -23,9 +23,9 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     maxRoles: number = 3,
     mode: 'builder' | 'leader' = 'leader',
     experienceFormat: 'standard' | 'split' = 'standard',
-    useFastMode: boolean = false
+    useFastMode: boolean = true
   ) {
-    // If fast mode, use Haiku for initial generation, otherwise use provided model or default Sonnet
+    // Default to Haiku for fast generation with caching, use Sonnet only when explicitly requested
     const initialModel = useFastMode
       ? 'claude-3-5-haiku-20241022'
       : (model || 'claude-3-7-sonnet-20250219');
@@ -36,7 +36,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     this.mode = mode;
     this.experienceFormat = experienceFormat;
     this.useFastMode = useFastMode;
-    // Always use Sonnet for critique regardless of fast mode
+    // Always use Sonnet for critique regardless of mode
     this.critiqueModel = 'claude-3-7-sonnet-20250219';
   }
 

@@ -858,7 +858,7 @@ program
   .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
   .option('--experience-format <format>', 'Experience section format: "standard" (default) or "split" (Relevant vs Related sections)', 'standard')
-  .option('--fast', 'Use Claude Haiku for faster resume generation (~5-10x faster, slightly lower quality). Critique still uses Sonnet.')
+  .option('--sonnet', 'Use Claude Sonnet without caching for highest quality (slower, ~5-10x more expensive). Default uses Haiku with caching for speed.')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
   .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
@@ -891,14 +891,16 @@ program
 
       const mode = (options.mode || 'leader') as 'leader' | 'builder';
       const experienceFormat = (options.experienceFormat || 'standard') as 'standard' | 'split';
-      const useFastMode = !!options.fast;
+      const useFastMode = !options.sonnet; // Default to fast mode (Haiku + caching) unless --sonnet specified
 
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
       if (experienceFormat === 'split') {
         console.log(`📊 Experience Format: ${experienceFormat} (Relevant vs Related sections)`);
       }
-      if (useFastMode) {
-        console.log(`⚡ Fast Mode: enabled (using Haiku with prompt caching for ~5-10x faster generation)`);
+      if (options.sonnet) {
+        console.log(`🎨 Quality Mode: using Sonnet without caching for highest quality (slower)`);
+      } else {
+        console.log(`⚡ Default Mode: using Haiku with prompt caching for fast generation (~5-10x faster)`);
       }
 
       const creator = new ResumeCreatorAgent(
