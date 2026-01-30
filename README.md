@@ -13,6 +13,7 @@ This monorepo solves distinct job search problems through specialized components
 - **[Chrome Extension](./packages/chrome-extension/)** - Solves the context-switching problem by enabling one-click job tracking and CV-aware interview assistance directly in your browser
 - **[Unified Server](./packages/unified-server/)** - Solves the integration problem by combining Chrome extension job tracking, CLI automation, and CV-aware AI responses in a single endpoint
 - **[AMA App](./packages/ama-app/)** - Solves the interview preparation problem by providing an interactive interface for practicing answers with AI feedback
+- **[Evaluation Package](./packages/evaluation/)** - Solves the quality assurance problem by providing LangSmith-powered evaluation and monitoring for AI agent performance
 
 ## 🚀 Quick Start
 
@@ -31,6 +32,12 @@ npm run unified-server
 
 # Start unified server with AI responses (for CV-aware interview assistance)
 npm run unified-server:llm
+
+# Run LangSmith evaluation (requires Python setup)
+npm run evaluate <job-id>
+
+# Check LangSmith configuration
+npm run evaluate:check
 ```
 
 ---
@@ -265,11 +272,18 @@ The evaluation framework (`examples/langsmith_evaluation.py`) focuses on:
 
 4. **Run Evaluation Example**
    ```bash
-   # Activate virtual environment
+   # Activate virtual environment (from evaluation package)
+   cd packages/evaluation/python
    source venv/bin/activate
 
-   # Run example evaluation
-   python examples/langsmith_evaluation.py
+   # Install package
+   pip install -e .
+
+   # Run evaluation for a specific job
+   evaluate-jobs <job-id>
+
+   # Or check LangSmith setup
+   npm run evaluate:check
 
    # Expected output:
    # 🔍 LangSmith Job Extraction Evaluation
@@ -312,13 +326,18 @@ All agent interactions with LLM APIs are automatically traced and logged when th
 4. **Cost Optimization**: Identify expensive operations and optimize token usage
 5. **Error Analysis**: Debug failed job extractions by replaying traces
 
-### Related Files
+### Related Files & Packages
 
-- `examples/langsmith_evaluation.py` - Example evaluation script demonstrating core concepts
+- **[Evaluation Package](./packages/evaluation/)** - Full-featured evaluation package with Python and TypeScript interfaces
+- `packages/evaluation/python/src/job_extractor_eval/` - Core evaluation logic
+- `examples/langsmith_evaluation.py` - Legacy standalone evaluation script (deprecated, use package instead)
 - Environment variable: `LANGSMITH_API_KEY` - Optional API key for cloud features
 - All agent classes automatically support LangSmith tracing when configured
 
-For more information, visit the [LangSmith documentation](https://docs.smith.langchain.com/).
+For more information:
+- [LangSmith Documentation](https://docs.smith.langchain.com/)
+- [Evaluation Package README](./packages/evaluation/README.md)
+- [Python Package README](./packages/evaluation/python/README.md)
 
 ## Installation
 
@@ -1712,6 +1731,24 @@ packages/unified-server/       # Unified server for all backend services
 ├── unified-server.js          # Main server with job extraction and CV responses
 └── package.json               # Server package configuration
 
+packages/evaluation/           # LangSmith evaluation and monitoring package
+├── python/                    # Python package with native LangSmith integration
+│   ├── src/
+│   │   └── job_extractor_eval/
+│   │       ├── evaluators.py  # Core evaluation logic
+│   │       ├── cli.py         # CLI interface
+│   │       └── __init__.py
+│   ├── pyproject.toml         # Python package configuration
+│   ├── requirements.txt       # Python dependencies
+│   └── README.md              # Python package docs
+├── src/                       # TypeScript wrapper for Node.js integration
+│   ├── langsmith-runner.ts    # Python process spawner
+│   ├── types.ts               # TypeScript type definitions
+│   └── index.ts               # Main exports
+├── package.json               # Node.js package config
+├── tsconfig.json              # TypeScript config
+└── README.md                  # Package documentation
+
 __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
 ├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
@@ -1731,8 +1768,8 @@ logs/                          # Auto-generated job extraction and scoring logs
     ├── tailored-*.md          # Editable tailored resume markdown
     └── judge-attempt-*.json   # PDF judge validation results
 
-examples/                      # Evaluation and example scripts
-└── langsmith_evaluation.py    # LangSmith evaluation example
+examples/                      # Legacy example scripts
+└── langsmith_evaluation.py    # Legacy standalone evaluation script (deprecated, use packages/evaluation)
 
 data/                          # Evaluation data (created by extract-for-eval)
 ├── index.jsonl                # Job index with required terms

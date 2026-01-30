@@ -16,6 +16,8 @@
     "clean": "npm run clean --workspaces && rm -rf dist",
     "unified-server": "npm run start --workspace=@inkredabull/job-extractor-unified-server",
     "unified-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-unified-server",
+    "evaluate": "npm run eval --workspace=@job-extractor/evaluation",
+    "evaluate:check": "cd packages/evaluation/python && source venv/bin/activate && python -m job_extractor_eval.cli --check-setup",
     "setup-gmail": "node scripts/setup-gmail-auth.js",
     "archive:jobs": "node scripts/archive-jobs.js"
   },
@@ -29,7 +31,9 @@
     "resume",
     "interview",
     "chrome-extension",
-    "unified-server"
+    "unified-server",
+    "evaluation",
+    "langsmith"
   ],
   "author": "",
   "license": "MIT",
