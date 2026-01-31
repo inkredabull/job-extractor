@@ -857,7 +857,7 @@ program
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
-  .option('--experience-format <format>', 'Experience section format: "standard" (default) or "split" (Relevant vs Related sections)', 'standard')
+  .option('--split', 'Use split experience format with Relevant and Related sections (default is standard single section)')
   .option('--sonnet', 'Use Claude Sonnet without caching for highest quality (slower, ~5-10x more expensive). Default uses Haiku with caching for speed.')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
@@ -883,19 +883,13 @@ program
         process.exit(1);
       }
 
-      // Validate experience-format option
-      if (options.experienceFormat && !['standard', 'split'].includes(options.experienceFormat)) {
-        console.error('❌ Error: Experience format must be either "standard" or "split"');
-        process.exit(1);
-      }
-
       const mode = (options.mode || 'leader') as 'leader' | 'builder';
-      const experienceFormat = (options.experienceFormat || 'standard') as 'standard' | 'split';
+      const experienceFormat = options.split ? 'split' : 'standard';
       const useFastMode = !options.sonnet; // Default to fast mode (Haiku + caching) unless --sonnet specified
 
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
-      if (experienceFormat === 'split') {
-        console.log(`📊 Experience Format: ${experienceFormat} (Relevant vs Related sections)`);
+      if (options.split) {
+        console.log(`📊 Experience Format: split (Relevant vs Related sections)`);
       }
       if (options.sonnet) {
         console.log(`🎨 Quality Mode: using Sonnet without caching for highest quality (slower)`);
