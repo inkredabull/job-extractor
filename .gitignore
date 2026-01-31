@@ -115,6 +115,7 @@ jspm_packages/
 !tsconfig.json
 !extension/manifest.json
 !packages/chrome-extension/extension/manifest.json
+!components/chrome-extension/extension/manifest.json
 !jest.config.js
 !requirements.txt
 !examples/**/*.py
