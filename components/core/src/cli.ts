@@ -887,9 +887,13 @@ program
       const experienceFormat = options.split ? 'split' : 'standard';
       const useFastMode = !options.sonnet; // Default to fast mode (Haiku + caching) unless --sonnet specified
 
+      // Split format needs more roles (3-5 relevant + 2-3 related = 5-8 total)
+      // Standard format typically uses 3-4 roles
+      const maxRoles = options.split ? 7 : anthropicConfig.maxRoles;
+
       console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
       if (options.split) {
-        console.log(`📊 Experience Format: split (Relevant vs Related sections)`);
+        console.log(`📊 Experience Format: split (Relevant vs Related sections, using ${maxRoles} roles)`);
       }
       if (options.sonnet) {
         console.log(`🎨 Quality Mode: using Sonnet without caching for highest quality (slower)`);
@@ -901,7 +905,7 @@ program
         anthropicConfig.anthropicApiKey,
         anthropicConfig.model,
         anthropicConfig.maxTokens,
-        anthropicConfig.maxRoles,
+        maxRoles,
         mode,
         experienceFormat,
         useFastMode
