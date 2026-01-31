@@ -1059,26 +1059,64 @@ Ensure the resume highlights experiences and achievements that demonstrate align
         throw new Error('No JSON found in tailoring response');
       }
 
-      // Sanitize JSON string by properly escaping control characters
-      // This handles cases where Claude returns literal control chars in strings
+      // Sanitize JSON by properly escaping newlines and control chars inside strings
+      // Claude sometimes returns JSON with literal newlines in string values
       let jsonString = jsonMatch[0];
 
-      // Remove or escape invalid control characters:
-      // - Remove NULL and other control chars that should never appear
-      // - Escape literal newlines/tabs/etc within string values
-      jsonString = jsonString
-        // Remove NULL bytes and other problematic control chars
-        .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, (match) => {
-          // Map common control chars to their escape sequences
-          const escapeMap: { [key: string]: string } = {
-            '\n': '\\n',
-            '\r': '\\r',
-            '\t': '\\t'
-          };
-          return escapeMap[match] || ''; // Return escape or remove
-        });
+      // Parse char-by-char to track whether we're inside a string value
+      let sanitized = '';
+      let inString = false;
+      let escapeNext = false;
 
-      const result = JSON.parse(jsonString);
+      for (let i = 0; i < jsonString.length; i++) {
+        const char = jsonString[i];
+
+        // Handle already-escaped characters
+        if (escapeNext) {
+          sanitized += char;
+          escapeNext = false;
+          continue;
+        }
+
+        // Track escape character
+        if (char === '\\') {
+          sanitized += char;
+          escapeNext = true;
+          continue;
+        }
+
+        // Track string boundaries (unescaped quotes)
+        if (char === '"') {
+          inString = !inString;
+          sanitized += char;
+          continue;
+        }
+
+        // Escape control characters only when inside string values
+        if (inString) {
+          if (char === '\n') {
+            sanitized += '\\n';
+            continue;
+          }
+          if (char === '\r') {
+            sanitized += '\\r';
+            continue;
+          }
+          if (char === '\t') {
+            sanitized += '\\t';
+            continue;
+          }
+          // Remove other control chars (0x00-0x1F)
+          const code = char.charCodeAt(0);
+          if (code < 32) {
+            continue; // Skip invalid control char
+          }
+        }
+
+        sanitized += char;
+      }
+
+      const result = JSON.parse(sanitized);
       return {
         markdownContent: this.addHeaderToMarkdown(result.markdownContent),
         changes: result.changes
