@@ -14,11 +14,12 @@ Include roles that directly align with the target position's core requirements. 
 
 For each relevant role:
 - Include dates on the same line as title and company name
-- Add a paragraph break
+- Add a blank line after the title/dates line
 - Include role overview (175-225 characters) with specific quantitative {{metricsType}} metrics
-- Add a paragraph break
+- Add a blank line after the overview
 - Include 4-5 bullet points for the most recent role, 3-4 for subsequent relevant roles
 - Each bullet point should be between 75 and 90 characters
+- **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets.**
 
 ### RELATED EXPERIENCE
 
@@ -32,11 +33,12 @@ Include roles that provide supporting context but aren't direct matches. These m
 
 For each related role:
 - Include dates on the same line as title and company name
-- Add a paragraph break
+- Add a blank line after the title/dates line
 - Include brief overview (100-150 characters) focusing on transferable value
-- Add a paragraph break
+- Add a blank line after the overview
 - Include 1-2 bullet points per role highlighting most relevant achievements
 - Each bullet point should be between 75 and 90 characters
+- **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets.**
 
 ### Pagination Requirements
 

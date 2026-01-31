@@ -52,16 +52,17 @@ Include the most recent {{maxRoles}} roles in reverse-chronological order.
 
 {{rolesSpecificInstructions}}
 
-For each role, always include dates on the same line as title and company name. 
+For each role, always include dates on the same line as title and company name.
 
-After the role, add a paragraph break.
+After the role title/dates line, add a blank line.
 
 For each role, include an overview of the role of between 175 and 225 characters, being sure to include specific, quantitative {{metricsType}} metrics where referenced.
 
-After the overview, add a paragraph break.
+After the overview paragraph, add a blank line.
 
-Include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that. 
+Then include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that.
 Each bullet point should be between 75 and 90 characters.
+**CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets on the same line as the overview.**
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.
