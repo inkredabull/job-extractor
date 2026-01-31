@@ -1051,20 +1051,32 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     console.log('⏳ Generating tailored resume content...');
     const response = await this.makeClaudeRequest(prompt, formattedCV);
     console.log('📝 Parsing response and extracting content...');
-    
+
+    let jsonMatch: RegExpMatchArray | null = null;
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in tailoring response');
       }
 
-      // Sanitize JSON string by removing/escaping invalid control characters
+      // Sanitize JSON string by properly escaping control characters
       // This handles cases where Claude returns literal control chars in strings
       let jsonString = jsonMatch[0];
 
-      // Replace literal control characters (except those already escaped)
-      // Target control chars: \x00-\x1F (except \n, \r, \t which should be escaped)
-      jsonString = jsonString.replace(/(?<!\\)([\x00-\x08\x0B-\x0C\x0E-\x1F])/g, '');
+      // Remove or escape invalid control characters:
+      // - Remove NULL and other control chars that should never appear
+      // - Escape literal newlines/tabs/etc within string values
+      jsonString = jsonString
+        // Remove NULL bytes and other problematic control chars
+        .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, (match) => {
+          // Map common control chars to their escape sequences
+          const escapeMap: { [key: string]: string } = {
+            '\n': '\\n',
+            '\r': '\\r',
+            '\t': '\\t'
+          };
+          return escapeMap[match] || ''; // Return escape or remove
+        });
 
       const result = JSON.parse(jsonString);
       return {
@@ -1072,6 +1084,16 @@ Ensure the resume highlights experiences and achievements that demonstrate align
         changes: result.changes
       };
     } catch (error) {
+      // On parse error, save the problematic JSON for debugging
+      if (error instanceof SyntaxError && jsonMatch) {
+        const jobDir = path.join(process.cwd(), 'logs', jobId || 'unknown');
+        if (!fs.existsSync(jobDir)) {
+          fs.mkdirSync(jobDir, { recursive: true });
+        }
+        const debugPath = path.join(jobDir, `debug-json-error-${new Date().toISOString()}.txt`);
+        fs.writeFileSync(debugPath, jsonMatch[0]);
+        throw new Error(`Failed to parse JSON (saved to ${debugPath}): ${error.message}`);
+      }
       throw new Error(`Failed to generate tailored content: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
     }
   }
