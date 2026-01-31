@@ -1057,7 +1057,16 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       if (!jsonMatch) {
         throw new Error('No JSON found in tailoring response');
       }
-      const result = JSON.parse(jsonMatch[0]);
+
+      // Sanitize JSON string by removing/escaping invalid control characters
+      // This handles cases where Claude returns literal control chars in strings
+      let jsonString = jsonMatch[0];
+
+      // Replace literal control characters (except those already escaped)
+      // Target control chars: \x00-\x1F (except \n, \r, \t which should be escaped)
+      jsonString = jsonString.replace(/(?<!\\)([\x00-\x08\x0B-\x0C\x0E-\x1F])/g, '');
+
+      const result = JSON.parse(jsonString);
       return {
         markdownContent: this.addHeaderToMarkdown(result.markdownContent),
         changes: result.changes
