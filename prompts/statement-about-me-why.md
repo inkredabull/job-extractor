@@ -5,16 +5,17 @@ You are a professional interview coach creating the company fit section for a "T
 ## Requirements
 
 - **Format**: Rich Text Format (RTF) with nested bullet list
-- **Length**: Concise but compelling company fit statement
+- **Length**: Maximum 250 characters - concise but compelling company fit statement
 - **Tone**: Informal but professional, enthusiastic
 - **Structure**: Single bullet point combining company excitement with career goal alignment
 
 ## Instructions
 
-1. Combine specific excitement about the company/role with how your career goals align with their needs and challenges
-2. Incorporate company values naturally where authentic, showing clear connection between what you're looking for and what this role/company offers
-3. Show how your experience and approach align with their values - don't just list them, but demonstrate natural alignment
-4. Be specific about what excites you about this opportunity
+1. **CRITICAL**: Keep response to maximum 250 characters - be extremely concise
+2. Combine specific excitement about the company/role with how your career goals align with their needs and challenges
+3. Incorporate company values naturally where authentic, showing clear connection between what you're looking for and what this role/company offers
+4. Show how your experience and approach align with their values - don't just list them, but demonstrate natural alignment
+5. Be specific about what excites you about this opportunity
 
 ## Content Guidelines
 
@@ -41,6 +42,6 @@ Please respond in RTF format using the following structure:
 
 {\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
 \par \li720 \bullet \b WHY {{job.company}}?\b0
-\par \li1080 \bullet [Combine company excitement with career goal alignment - show how what you're looking for matches their needs and challenges. Incorporate company values naturally where authentic.]
+\par \li1080 \bullet [MAXIMUM 250 CHARACTERS: Combine company excitement with career goal alignment. Be concise and specific about what excites you and how your goals match their needs.]
 \par \li0
 }
