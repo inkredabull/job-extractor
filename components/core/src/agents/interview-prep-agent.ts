@@ -263,7 +263,7 @@ Format as:
     
     switch (type) {
       case 'cover-letter':
-        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters. Begin with "Greetings:" and end with "Regards, Anthony". Use informal tone.`;
+        return `${basePrompt}\n\nCreate a cover letter between 300-425 characters in a SINGLE paragraph. Begin with "Greetings:" on its own line (not indented) and end with "Regards, Anthony". Use informal tone.`;
       case 'endorsement':
         return `${basePrompt}\n\nCreate an endorsement between 375-500 characters in third person. Use first name only when referencing the candidate.`;
       case 'about-me':
@@ -835,7 +835,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
   private getTypeSpecificInstructions(type: StatementType, options: StatementOptions): string {
     switch (type) {
       case 'cover-letter':
-        let instructions = 'Length: 600-850 characters. Begin with "Greetings:" and end with "Regards, Anthony". Informal tone.';
+        let instructions = 'Length: 300-425 characters. SINGLE paragraph only. Begin with "Greetings:" on its own line (not indented) and end with "Regards, Anthony". Informal tone.';
         if (options.emphasis) {
           instructions += `\n\nEMPHASIS: ${options.emphasis}`;
         }
