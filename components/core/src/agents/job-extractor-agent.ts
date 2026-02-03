@@ -1309,74 +1309,12 @@ Return only the synthesized job description text, no additional formatting or co
       const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
       const jobTitle = `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`;
 
-      // Subtask 1: "Apply for" action reminder
-      const applySubtask = {
-        title: `Apply for ${jobTitle}`,
-        notes: `Submit application for this position
+      // Common tags for all reminders - include job ID
+      const commonTags = config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'];
+      commonTags.push(`#${jobId}`); // Tag all reminders with job ID
 
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-URL: ${sourceUrl || 'No URL provided'}
-Job ID: ${jobId}
-
-Action required: Complete and submit application`,
-        dueTime: '09:00' // Morning reminder
-      };
-
-      // Subtask 2: "Ping" follow-up reminder
-      const pingSubtask = {
-        title: `Ping about ${jobTitle}`,
-        notes: `Follow up on application status
-
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-Job ID: ${jobId}
-
-Suggested actions:
-- Check application portal for updates
-- Send follow-up email to recruiter
-- Connect with employees on LinkedIn`,
-        dueTime: '17:00' // Afternoon reminder
-      };
-
-      // Subtask 3: "Prep for" interview preparation reminder
-      const prepSubtask = {
-        title: `Prep for ${jobTitle}`,
-        notes: `Prepare for interview
-
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-Job ID: ${jobId}
-
-Preparation tasks:
-- Research company background and recent news
-- Review job description and requirements
-- Prepare answers to common interview questions
-- Prepare questions to ask the interviewer
-- Review your resume and relevant experiences`,
-        dueTime: '10:00' // Morning reminder
-      };
-
-      // Subtask 4: "Follow-up / further outreach" networking reminder
-      const followUpSubtask = {
-        title: `Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`,
-        notes: `Additional networking and outreach
-
-Position: ${jobData.title || 'Unknown Position'}
-Company: ${jobData.company || 'Unknown Company'}
-Job ID: ${jobId}
-
-Outreach activities:
-- Connect with hiring manager on LinkedIn
-- Reach out to employees in similar roles
-- Engage with company content on social media
-- Send thank you notes after interviews
-- Follow up on pending responses`,
-        dueTime: '14:00' // Early afternoon reminder
-      };
-
-      // Parent reminder: Main tracking reminder with subtasks
-      const parentReminder = {
+      // Reminder 1: Main tracking reminder
+      const trackingReminder = {
         title: jobTitle,
         notes: `Job Application Tracking
 
@@ -1395,23 +1333,110 @@ Next steps:
 - Prepare for potential interview`,
         list: config.list_name,
         priority: reminderPriority || config.default_priority,
-        tags: config.tags ? config.tags.split(',').map((t: string) => t.trim()) : ['#applying'],
+        tags: commonTags,
         dueDate: today,
-        dueTime: config.due_date?.time || '23:59',
-        subtasks: [applySubtask, pingSubtask, prepSubtask, followUpSubtask]
+        dueTime: config.due_date?.time || '23:59'
       };
 
-      // Create the parent reminder with subtasks
-      const result = await reminderService.createReminder(parentReminder);
+      // Reminder 2: "Apply for" action reminder
+      const applyReminder = {
+        title: `Apply for ${jobTitle}`,
+        notes: `Submit application for this position
 
-      if (result.success) {
-        console.log(`✅ Created reminder with subtasks: ${parentReminder.title}`);
-        console.log(`   └─ Subtask 1: Apply for ${jobTitle}`);
-        console.log(`   └─ Subtask 2: Ping about ${jobTitle}`);
-        console.log(`   └─ Subtask 3: Prep for ${jobTitle}`);
-        console.log(`   └─ Subtask 4: Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`);
-      } else {
-        console.warn(`⚠️  Failed to create reminder "${parentReminder.title}": ${result.error}`);
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+URL: ${sourceUrl || 'No URL provided'}
+Job ID: ${jobId}
+
+Action required: Complete and submit application`,
+        list: config.list_name,
+        priority: reminderPriority || config.default_priority,
+        tags: commonTags,
+        dueDate: today,
+        dueTime: '09:00' // Morning reminder
+      };
+
+      // Reminder 3: "Ping" follow-up reminder
+      const pingReminder = {
+        title: `Ping about ${jobTitle}`,
+        notes: `Follow up on application status
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Suggested actions:
+- Check application portal for updates
+- Send follow-up email to recruiter
+- Connect with employees on LinkedIn`,
+        list: config.list_name,
+        priority: reminderPriority || config.default_priority,
+        tags: commonTags,
+        dueDate: today,
+        dueTime: '17:00' // Afternoon reminder
+      };
+
+      // Reminder 4: "Prep for" interview preparation reminder
+      const prepReminder = {
+        title: `Prep for ${jobTitle}`,
+        notes: `Prepare for interview
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Preparation tasks:
+- Research company background and recent news
+- Review job description and requirements
+- Prepare answers to common interview questions
+- Prepare questions to ask the interviewer
+- Review your resume and relevant experiences`,
+        list: config.list_name,
+        priority: reminderPriority || config.default_priority,
+        tags: commonTags,
+        dueDate: today,
+        dueTime: '10:00' // Morning reminder
+      };
+
+      // Reminder 5: "Follow-up / further outreach" networking reminder
+      const followUpReminder = {
+        title: `Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`,
+        notes: `Additional networking and outreach
+
+Position: ${jobData.title || 'Unknown Position'}
+Company: ${jobData.company || 'Unknown Company'}
+Job ID: ${jobId}
+
+Outreach activities:
+- Connect with hiring manager on LinkedIn
+- Reach out to employees in similar roles
+- Engage with company content on social media
+- Send thank you notes after interviews
+- Follow up on pending responses`,
+        list: config.list_name,
+        priority: reminderPriority || config.default_priority,
+        tags: commonTags,
+        dueDate: today,
+        dueTime: '14:00' // Early afternoon reminder
+      };
+
+      // Create all reminders as separate top-level reminders
+      const reminders = [trackingReminder, applyReminder, pingReminder, prepReminder, followUpReminder];
+      const results = await Promise.all(reminders.map(r => reminderService.createReminder(r)));
+
+      const successCount = results.filter(r => r.success).length;
+      if (successCount > 0) {
+        console.log(`✅ Created ${successCount} reminders for ${jobTitle}, all tagged with #${jobId}`);
+        if (results[0].success) console.log(`   • ${trackingReminder.title}`);
+        if (results[1].success) console.log(`   • Apply for ${jobTitle}`);
+        if (results[2].success) console.log(`   • Ping about ${jobTitle}`);
+        if (results[3].success) console.log(`   • Prep for ${jobTitle}`);
+        if (results[4].success) console.log(`   • Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`);
+      }
+
+      const failedCount = results.filter(r => !r.success).length;
+      if (failedCount > 0) {
+        console.warn(`⚠️  Failed to create ${failedCount} reminder(s)`);
       }
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
