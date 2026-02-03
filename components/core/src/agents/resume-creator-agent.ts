@@ -256,13 +256,14 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
     // Run PDF judge validation (unless skipped)
     if (!skipJudge) {
-      const maxAttempts = 2;
+      // Split mode needs more attempts to get 2-page format right
+      const maxAttempts = this.experienceFormat === 'split' ? 4 : 2;
 
       // Set guidance based on experience format
       const guidance: PDFValidationGuidance = {
         maxPages: this.experienceFormat === 'split' ? 2 : 1,
         requiredSections: this.experienceFormat === 'split'
-          ? ['Summary', 'Relevant Experience', 'Skills']
+          ? ['Summary', 'Relevant Experience', 'Related Experience', 'Skills']
           : ['Summary', 'Experience', 'Skills', 'Technologies']
       };
 
