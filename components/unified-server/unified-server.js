@@ -743,8 +743,8 @@ app.post('/extract', async (req, res) => {
           // Set timeout
           setTimeout(() => {
             child.kill();
-            reject(new Error('Command timed out after 30 seconds'));
-          }, 30000);
+            reject(new Error('Command timed out after 45 seconds'));
+          }, 45000);
         });
         
         // Parse the output to extract job ID
