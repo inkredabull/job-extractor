@@ -808,7 +808,7 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
         reminderPriority: reminderPriority,
         createReminders: true  // Track button explicitly creates reminders
       }),
-      signal: AbortSignal.timeout(30000) // 30 second timeout for JSON processing
+      signal: AbortSignal.timeout(90000) // 90 second timeout for JSON processing (allows time for reminders)
     });
     
     console.log('Job Extractor Background: Unified server response status:', response.status);
