@@ -1103,7 +1103,7 @@ app.post('/generate-blurb', async (req, res) => {
     }
 
     const output = await new Promise((resolve, reject) => {
-      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'prep', 'cover-letter', jobId, '--person', perspective, '--content', '--regen'];
+      const args = ['run', 'dev', '--workspace=@inkredabull/career-catalyst-core', '--', 'prep', 'cover-letter', jobId, '--person', perspective, '--content', '--regen'];
 
       // Add company URL if provided
       if (companyWebsite) {
@@ -1236,7 +1236,7 @@ app.post('/generate-score', async (req, res) => {
 
     // Run the CLI score command
     const output = await new Promise((resolve, reject) => {
-      const args = ['run', 'dev', '--workspace=@inkredabull/job-extractor-core', '--', 'score', jobId];
+      const args = ['run', 'dev', '--workspace=@inkredabull/career-catalyst-core', '--', 'score', jobId];
 
       console.log(`  -> Executing: npm ${args.join(' ')}`);
 
