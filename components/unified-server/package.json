@@ -1,10 +1,10 @@
 {
-  "name": "@inkredabull/job-extractor-unified-server",
+  "name": "@inkredabull/career-catalyst-unified-server",
   "version": "1.0.0",
   "description": "Unified server combining CLI server and MCP server functionality",
   "main": "unified-server.js",
   "bin": {
-    "job-extractor-server": "unified-server.js"
+    "career-catalyst-server": "unified-server.js"
   },
   "scripts": {
     "start": "node unified-server.js",

@@ -12,4 +12,4 @@ This component is currently under development.
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/ama-app)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/packages/ama-app)

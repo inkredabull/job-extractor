@@ -1,8 +1,8 @@
-# Job Extractor
+# Career Catalyst
 
 > AI-powered career toolkit monorepo - extraction, scoring, resume creation, and interview preparation
 
-[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://inkredabull.github.io/job-extractor/)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://inkredabull.github.io/career-catalyst/)
 [![Monorepo](https://img.shields.io/badge/structure-monorepo-orange)](./components/)
 
 ## 📦 Components
@@ -42,11 +42,11 @@ npm run evaluate:check
 
 ---
 
-# Job Extractor
+# Career Catalyst
 
 ## High-level
 
-  Job Extractor is an AI-powered career toolkit that transforms how you approach job applications and interview preparation. It automatically extracts and analyzes job postings, generates tailored resumes and cover letters, creates personalized interview stories using the STAR method, and helps you connect with relevant professionals on LinkedIn. The tool learns from your CV to provide contextual career advice and can even auto-fill job applications, making your job search more strategic and efficient.
+  Career Catalyst is an AI-powered career toolkit that transforms how you approach job applications and interview preparation. It automatically extracts and analyzes job postings, generates tailored resumes and cover letters, creates personalized interview stories using the STAR method, and helps you connect with relevant professionals on LinkedIn. The tool learns from your CV to provide contextual career advice and can even auto-fill job applications, making your job search more strategic and efficient.
 
 ## Technical details
 
@@ -55,7 +55,7 @@ npm run evaluate:check
 Table of Contents
 =================
 
-* [Job Extractor](#job-extractor)
+* [Career Catalyst](#career-catalyst)
 * [Table of Contents](#table-of-contents)
    * [Features](#features)
    * [LangSmith Evaluation & Monitoring](#langsmith-evaluation--monitoring)
@@ -110,7 +110,7 @@ Table of Contents
 
 ## Features
 
-Job Extractor is an AI-powered career toolkit that delivers **10x improvement in job search efficiency** by transforming manual job hunting into a systematic, data-driven process.
+Career Catalyst is an AI-powered career toolkit that delivers **10x improvement in job search efficiency** by transforming manual job hunting into a systematic, data-driven process.
 
 ### 🎯 **Core Features**
 
@@ -344,7 +344,7 @@ For more information:
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd job-extractor
+cd career-catalyst
 ```
 
 2. Install dependencies:
@@ -436,16 +436,16 @@ Extract job information from a URL and automatically score it:
 
 ```bash
 # Extract and score automatically (recommended workflow)
-job-extractor extract "https://example.com/job-posting"
+career-catalyst extract "https://example.com/job-posting"
 
 # Extract with custom criteria for scoring
-job-extractor extract "https://example.com/job-posting" -c my-criteria.json
+career-catalyst extract "https://example.com/job-posting" -c my-criteria.json
 
 # Extract only (skip automatic scoring)
-job-extractor extract "https://example.com/job-posting" --no-score
+career-catalyst extract "https://example.com/job-posting" --no-score
 
 # Extract even if competition is too high
-job-extractor extract "https://example.com/job-posting" --force-extract
+career-catalyst extract "https://example.com/job-posting" --force-extract
 
 # Or with npm run dev (note the -- separator for passing flags)
 npm run dev -- extract "https://example.com/job-posting" --force-extract
@@ -464,10 +464,10 @@ Score previously extracted jobs against customizable criteria:
 
 ```bash
 # Score a job using its ID from the log filename
-job-extractor score "4c32e01e"
+career-catalyst score "4c32e01e"
 
 # Score with custom criteria file
-job-extractor score "4c32e01e" -c my-criteria.json
+career-catalyst score "4c32e01e" -c my-criteria.json
 ```
 
 **Score Options:**
@@ -479,10 +479,10 @@ Create a new job entry for manual population when you don't have a URL to extrac
 
 ```bash
 # Create a new empty job entry
-job-extractor create-job
+career-catalyst create-job
 
 # Create with company and title information
-job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
+career-catalyst create-job --company "TechCorp" --title "Senior Software Engineer"
 
 # Or with npm run dev (note the -- separator for passing flags)
 npm run dev -- create-job --company "TechCorp" --title "Senior Software Engineer"
@@ -513,8 +513,8 @@ npm run dev -- create-job --company "TechCorp" --title "Senior Software Engineer
 
 **Next steps after creation:**
 1. Edit the generated JSON file to add job details (description, location, salary, etc.)
-2. Run `job-extractor extract-description {jobId}` to process the description
-3. Run `job-extractor score {jobId}` to score the job against your criteria
+2. Run `career-catalyst extract-description {jobId}` to process the description
+3. Run `career-catalyst score {jobId}` to score the job against your criteria
 
 **Use cases:**
 - Jobs shared via email or Slack without public URLs
@@ -528,22 +528,22 @@ Generate a tailored PDF resume for a specific job posting with two distinct appr
 
 ```bash
 # Generate a tailored resume for a job (uses cache if available)
-job-extractor resume "4c32e01e"
+career-catalyst resume "4c32e01e"
 
 # Generate resume in builder mode (emphasizes technical work)
-job-extractor resume "4c32e01e" --mode builder
+career-catalyst resume "4c32e01e" --mode builder
 
 # Generate resume in leader mode (emphasizes management/strategy) - this is the default
-job-extractor resume "4c32e01e" --mode leader
+career-catalyst resume "4c32e01e" --mode leader
 
 # Force regenerate fresh content (ignores cache)
-job-extractor resume "4c32e01e" --regen
+career-catalyst resume "4c32e01e" --regen
 
 # Specify custom output path
-job-extractor resume "4c32e01e" -o tailored-resume.pdf
+career-catalyst resume "4c32e01e" -o tailored-resume.pdf
 
 # Combine flags: builder mode with custom output path
-job-extractor resume "4c32e01e" --mode builder -o tailored-resume.pdf --regen
+career-catalyst resume "4c32e01e" --mode builder -o tailored-resume.pdf --regen
 
 # With npm run dev (note the -- separator for passing flags)
 npm run dev -- resume "4c32e01e" --mode builder --regen
@@ -615,7 +615,7 @@ The tool can automatically generate tailored resumes when job scores exceed a co
 **Example workflow:**
 ```bash
 # With auto-resume enabled (score ≥ 85% threshold)
-job-extractor extract "https://example.com/great-job"
+career-catalyst extract "https://example.com/great-job"
 
 # Output will include:
 # ✅ Job extracted and scored: 87%
@@ -630,7 +630,7 @@ Analyze and critique a generated resume to get actionable feedback:
 
 ```bash
 # Critique the most recent resume for a job
-job-extractor critique "4c32e01e"
+career-catalyst critique "4c32e01e"
 ```
 
 **How it works:**
@@ -673,46 +673,46 @@ Generate comprehensive interview preparation materials for job applications:
 
 ```bash
 # Generate a cover letter
-job-extractor prep cover-letter "4c32e01e"
+career-catalyst prep cover-letter "4c32e01e"
 
 # Generate a cover letter with special emphasis
-job-extractor prep cover-letter "4c32e01e" --emphasis "Focus on AI/ML and technical architecture experience"
+career-catalyst prep cover-letter "4c32e01e" --emphasis "Focus on AI/ML and technical architecture experience"
 
 # Generate an endorsement (third-person recommendation)
-job-extractor prep endorsement "4c32e01e"
+career-catalyst prep endorsement "4c32e01e"
 
 # Generate "about me" talking points for interviews
-job-extractor prep about-me "4c32e01e" --company-info "the innovative AI platform and strong engineering culture"
+career-catalyst prep about-me "4c32e01e" --company-info "the innovative AI platform and strong engineering culture"
 
 # Generate a general statement
-job-extractor prep general "4c32e01e"
+career-catalyst prep general "4c32e01e"
 
 # Generate focus story to highlight company values
-job-extractor prep focus "4c32e01e"
+career-catalyst prep focus "4c32e01e"
 
 # Extract priority themes from job description
-job-extractor prep themes "4c32e01e"
+career-catalyst prep themes "4c32e01e"
 
 # Get interview stories and highlighted examples
-job-extractor prep stories "4c32e01e"
+career-catalyst prep stories "4c32e01e"
 
 # Generate personal profile and Google Apps Script
-job-extractor prep profile
+career-catalyst prep profile
 
 # List available projects for extraction
-job-extractor prep list-projects "4c32e01e"
+career-catalyst prep list-projects "4c32e01e"
 
 # Extract specific project information for application forms
-job-extractor prep project "4c32e01e" 2
+career-catalyst prep project "4c32e01e" 2
 
 # Get just the content without formatting (useful for copying)
-job-extractor prep cover-letter "4c32e01e" --content
+career-catalyst prep cover-letter "4c32e01e" --content
 
 # Force regenerate statement (ignoring cache)
-job-extractor prep endorsement "4c32e01e" --regen
+career-catalyst prep endorsement "4c32e01e" --regen
 
 # Combine flags
-job-extractor prep about-me "4c32e01e" --regen --content
+career-catalyst prep about-me "4c32e01e" --regen --content
 ```
 
 **Interview Preparation Types:**
@@ -818,7 +818,7 @@ Extract likely KPIs and performance metrics for the first 90 days and first year
 
 ```bash
 # Extract performance metrics for a job
-job-extractor metrics "4c32e01e"
+career-catalyst metrics "4c32e01e"
 ```
 
 **How it works:**
@@ -870,7 +870,7 @@ Automatically fill job application forms using your resume and interview prepara
 
 ```bash
 # Fill application form using resume and interview data
-job-extractor apply "4c32e01e" "https://company.com/apply"
+career-catalyst apply "4c32e01e" "https://company.com/apply"
 
 # The agent will:
 # 1. Open a visible browser window using Stagehand automation
@@ -887,24 +887,24 @@ job-extractor apply "4c32e01e" "https://company.com/apply"
 
 ```bash
 # Extract job first (if not already done)
-job-extractor extract "https://company.com/job-posting"
+career-catalyst extract "https://company.com/job-posting"
 
 # The apply command will automatically:
 # 1. Generate a tailored resume if one doesn't exist
 # 2. Use existing interview prep statements if available
 # 3. Fill the application form
-job-extractor apply "4c32e01e" "https://company.com/apply"
+career-catalyst apply "4c32e01e" "https://company.com/apply"
 ```
 
 **Optional but recommended:** Generate interview prep statements for better results:
 
 ```bash
 # Generate interview prep content for optimal form filling
-job-extractor prep cover-letter "4c32e01e"
-job-extractor prep about-me "4c32e01e"
+career-catalyst prep cover-letter "4c32e01e"
+career-catalyst prep about-me "4c32e01e"
 
 # Then fill the application form
-job-extractor apply "4c32e01e" "https://company.com/apply"
+career-catalyst apply "4c32e01e" "https://company.com/apply"
 ```
 
 **How it works:**
@@ -1014,15 +1014,15 @@ The statement generation feature includes intelligent caching to improve perform
 **Cache behavior:**
 ```bash
 # First call - generates new content and caches it
-job-extractor statement cover-letter "4c32e01e" cv.txt
+career-catalyst statement cover-letter "4c32e01e" cv.txt
 # Output: 📋 No cached cover letter statement found, generating...
 
 # Second call - uses cached content (much faster)
-job-extractor statement cover-letter "4c32e01e" cv.txt --content
+career-catalyst statement cover-letter "4c32e01e" cv.txt --content
 # Output: 📋 Using cached cover letter statement for job 4c32e01e
 
 # Force regeneration when needed
-job-extractor statement cover-letter "4c32e01e" cv.txt --regen
+career-catalyst statement cover-letter "4c32e01e" cv.txt --regen
 # Output: 🔄 Regenerating cover letter statement for job 4c32e01e
 ```
 
@@ -1040,55 +1040,55 @@ job-extractor statement cover-letter "4c32e01e" cv.txt --regen
 
 ```bash
 # Extract and automatically score job (recommended workflow)
-job-extractor extract "https://example.com/job-posting"
+career-catalyst extract "https://example.com/job-posting"
 
 # Extract with custom criteria for auto-scoring
-job-extractor extract "https://example.com/job" -c senior-engineer-criteria.json
+career-catalyst extract "https://example.com/job" -c senior-engineer-criteria.json
 
 # Extract only without scoring
-job-extractor extract "https://example.com/job" --no-score
+career-catalyst extract "https://example.com/job" --no-score
 
 # Extract with JSON format output and auto-scoring
-job-extractor extract "https://example.com/job" -f json
+career-catalyst extract "https://example.com/job" -f json
 
 # Extract and save to additional file with auto-scoring
-job-extractor extract "https://example.com/job" -o job-data.json
+career-catalyst extract "https://example.com/job" -o job-data.json
 
 # Works great with structured data sites (Workday, Greenhouse, etc.)
-job-extractor extract "https://company.myworkdaysite.com/job-posting"
+career-catalyst extract "https://company.myworkdaysite.com/job-posting"
 
 # Manually score an extracted job (use the job ID from log filename)
-job-extractor score "a1b2c3d4"
+career-catalyst score "a1b2c3d4"
 
 # Manually score with custom criteria
-job-extractor score "a1b2c3d4" -c senior-engineer-criteria.json
+career-catalyst score "a1b2c3d4" -c senior-engineer-criteria.json
 
 # Create a new job entry for manual population
-job-extractor create-job --company "TechCorp" --title "Senior Software Engineer"
+career-catalyst create-job --company "TechCorp" --title "Senior Software Engineer"
 
 # Generate a tailored resume for a specific job (uses cache if available)
-job-extractor resume "a1b2c3d4"
+career-catalyst resume "a1b2c3d4"
 
 # Generate builder-focused resume (emphasizes technical work)
-job-extractor resume "a1b2c3d4" --mode builder
+career-catalyst resume "a1b2c3d4" --mode builder
 
 # Force regenerate fresh content (ignores cache)
-job-extractor resume "a1b2c3d4" --regen
+career-catalyst resume "a1b2c3d4" --regen
 
 # Generate resume with custom output path
-job-extractor resume "a1b2c3d4" -o "resumes/google-resume.pdf"
+career-catalyst resume "a1b2c3d4" -o "resumes/google-resume.pdf"
 
 # Generate builder-focused resume with custom output path
-job-extractor resume "a1b2c3d4" --mode builder -o "resumes/technical-resume.pdf" --regen
+career-catalyst resume "a1b2c3d4" --mode builder -o "resumes/technical-resume.pdf" --regen
 
 # With npm run dev (requires -- separator for flags)
 npm run dev -- resume "a1b2c3d4" --mode builder --regen
 
 # Critique a generated resume for feedback
-job-extractor critique "a1b2c3d4"
+career-catalyst critique "a1b2c3d4"
 
 # Fill application form using resume and interview data
-job-extractor apply "a1b2c3d4" "https://company.com/apply"
+career-catalyst apply "a1b2c3d4" "https://company.com/apply"
 ```
 
 ## Output Schemas
@@ -1510,17 +1510,17 @@ The resume generation system includes intelligent caching to improve performance
 **Example workflow:**
 ```bash
 # First generation - calls Claude API and creates cache
-job-extractor resume "4c32e01e" my-cv.txt
+career-catalyst resume "4c32e01e" my-cv.txt
 # 🔄 Regenerating tailored content for job 4c32e01e
 # 📋 Tailored content cached to: logs/4c32e01e/tailored-a1b2c3d4.json
 # 📝 Editable markdown saved to: logs/4c32e01e/tailored-a1b2c3d4.md
 
 # Second generation - uses cache (fast, no API call)
-job-extractor resume "4c32e01e" my-cv.txt  
+career-catalyst resume "4c32e01e" my-cv.txt  
 # 📋 Using cached tailored content for job 4c32e01e
 
 # Force regeneration - calls Claude API and updates cache
-job-extractor resume "4c32e01e" my-cv.txt --regen
+career-catalyst resume "4c32e01e" my-cv.txt --regen
 # 🔄 Regenerating tailored content for job 4c32e01e
 ```
 
@@ -1538,11 +1538,11 @@ You can directly edit the generated markdown files to fine-tune your resume cont
 code logs/4c32e01e/tailored-a1b2c3d4.md
 
 # After editing, regenerate the PDF with your changes (uses edited cache)
-job-extractor resume "4c32e01e" my-cv.txt
+career-catalyst resume "4c32e01e" my-cv.txt
 # 📋 Using cached tailored content for job 4c32e01e (with your edits)
 
 # Or force fresh generation if you want to start over
-job-extractor resume "4c32e01e" my-cv.txt --regen
+career-catalyst resume "4c32e01e" my-cv.txt --regen
 # 🔄 Regenerating tailored content for job 4c32e01e (overwrites your edits)
 ```
 
@@ -1565,7 +1565,7 @@ After generating an improved resume (with critique recommendations), the ResumeP
 **Example workflow:**
 ```bash
 # Generate resume with critique enabled (default)
-job-extractor resume "4c32e01e"
+career-catalyst resume "4c32e01e"
 
 # Output shows validation process:
 🔄 Regenerating resume with critique recommendations...
@@ -1605,7 +1605,7 @@ The judge provides specific, tactical feedback:
 **Skip validation:**
 If you prefer not to enforce the one-page limit:
 ```bash
-job-extractor resume "4c32e01e" --skip-judge
+career-catalyst resume "4c32e01e" --skip-judge
 ```
 
 **Logged Results:**
@@ -1698,7 +1698,7 @@ src/
 ├── agents/
 │   ├── base-agent.ts          # Abstract base class for all agents
 │   ├── claude-base-agent.ts   # Abstract base class for Claude-powered agents
-│   ├── job-extractor-agent.ts # Job extraction with dual strategy
+│   ├── career-catalyst-agent.ts # Job extraction with dual strategy
 │   ├── job-scorer-agent.ts    # Job scoring and matching against criteria
 │   ├── resume-creator-agent.ts # AI-powered resume generation with leader/builder modes and PDF creation
 │   ├── resume-critic-agent.ts # AI-powered resume analysis and critique
@@ -1751,7 +1751,7 @@ components/evaluation/           # LangSmith evaluation and monitoring package
 
 __tests__/
 ├── base-agent.test.ts         # Tests for base OpenAI agent functionality
-├── job-extractor-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
+├── career-catalyst-agent.test.ts # Tests for JSON-LD, salary parsing, fallback
 ├── job-scorer-agent.test.ts   # Tests for job scoring and criteria matching
 ├── resume-creator-agent.test.ts # Tests for CV parsing, tailoring, and PDF generation
 ├── resume-critic-agent.test.ts # Tests for resume analysis and critique generation
@@ -2019,7 +2019,7 @@ MIT License - see LICENSE file for details.
    - **Problem**: Mode flags like `--mode builder` show default behavior instead
    - **Cause**: npm requires `--` separator to pass flags to the underlying script
    - **Solution**: Use `npm run dev -- resume "jobId" --mode builder` instead of `npm run dev resume "jobId" --mode builder`
-   - **Alternative**: Use the compiled binary directly: `job-extractor resume "jobId" --mode builder`
+   - **Alternative**: Use the compiled binary directly: `career-catalyst resume "jobId" --mode builder`
 
 ### Getting Help
 

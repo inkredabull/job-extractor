@@ -42,4 +42,4 @@ Set `ANTHROPIC_API_KEY` in your `.env` file to enable LLM support.
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/unified-server)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/packages/unified-server)

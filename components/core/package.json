@@ -1,10 +1,10 @@
 {
-  "name": "@inkredabull/job-extractor-core",
+  "name": "@inkredabull/career-catalyst-core",
   "version": "1.0.0",
   "description": "Core CLI tool and agents for job extraction, scoring, resume creation, and interview preparation",
   "main": "dist/index.js",
   "bin": {
-    "job-extractor": "dist/cli.js"
+    "career-catalyst": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

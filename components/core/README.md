@@ -1,10 +1,10 @@
-# @inkredabull/job-extractor-core
+# @inkredabull/career-catalyst-core
 
 Core CLI tool and agent system for job extraction, scoring, resume creation, and interview preparation.
 
 ## Overview
 
-This package contains the main TypeScript CLI tool and all AI-powered agents that form the core of the Job Extractor system.
+This package contains the main TypeScript CLI tool and all AI-powered agents that form the core of the Career Catalyst system.
 
 ## Features
 
@@ -35,9 +35,9 @@ npm test
 
 ## Documentation
 
-- [GitHub Pages Documentation](https://inkredabull.github.io/job-extractor/job-extractor-core/)
+- [GitHub Pages Documentation](https://inkredabull.github.io/career-catalyst/career-catalyst-core/)
 - [Main Repository README](../../README.md)
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/core)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/components/core)

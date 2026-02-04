@@ -1,22 +1,22 @@
 {
-  "name": "job-extractor",
+  "name": "career-catalyst",
   "version": "1.0.0",
-  "description": "Monorepo for AI-powered job search toolkit - extraction, scoring, resume creation, and interview preparation",
+  "description": "AI-powered career acceleration toolkit - streamline job search with intelligent extraction, scoring, resume tailoring, and interview preparation",
   "private": true,
   "workspaces": [
     "components/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:core": "npm run build --workspace=@inkredabull/job-extractor-core",
+    "build:core": "npm run build --workspace=@inkredabull/career-catalyst-core",
     "dev": "ts-node components/core/src/cli.ts",
     "test": "npm run test --workspaces",
-    "test:watch": "npm run test:watch --workspace=@inkredabull/job-extractor-core",
+    "test:watch": "npm run test:watch --workspace=@inkredabull/career-catalyst-core",
     "lint": "npm run lint --workspaces",
     "clean": "npm run clean --workspaces && rm -rf dist",
-    "unified-server": "npm run start --workspace=@inkredabull/job-extractor-unified-server",
-    "unified-server:llm": "npm run start:llm --workspace=@inkredabull/job-extractor-unified-server",
-    "evaluate": "npm run eval --workspace=@job-extractor/evaluation",
+    "unified-server": "npm run start --workspace=@inkredabull/career-catalyst-unified-server",
+    "unified-server:llm": "npm run start:llm --workspace=@inkredabull/career-catalyst-unified-server",
+    "evaluate": "npm run eval --workspace=@career-catalyst/evaluation",
     "evaluate:check": "cd components/evaluation/python && source venv/bin/activate && python -m job_extractor_eval.cli --check-setup",
     "setup-gmail": "node scripts/setup-gmail-auth.js",
     "archive:jobs": "node scripts/archive-jobs.js"

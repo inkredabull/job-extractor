@@ -1,4 +1,4 @@
-# @inkredabull/job-extractor-extension
+# @inkredabull/career-catalyst-extension
 
 Chrome extension for job application assistance and CV-aware responses.
 
@@ -15,9 +15,9 @@ Browser extension that provides seamless integration with job application forms,
 
 ## Documentation
 
-- [GitHub Pages Documentation](https://inkredabull.github.io/job-extractor/chrome-extension/)
+- [GitHub Pages Documentation](https://inkredabull.github.io/career-catalyst/chrome-extension/)
 - [Extension README](./extension/README.md)
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/chrome-extension)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/components/chrome-extension)

@@ -76,8 +76,8 @@ The core package is organized into:
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/packages/core)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/packages/core)
 
 ## Documentation
 
-See the main [README.md](https://github.com/inkredabull/job-extractor/blob/main/README.md) for comprehensive documentation.
+See the main [README.md](https://github.com/inkredabull/career-catalyst/blob/main/README.md) for comprehensive documentation.

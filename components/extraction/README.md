@@ -1,4 +1,4 @@
-# @inkredabull/job-extractor-extraction
+# @inkredabull/career-catalyst-extraction
 
 > **Status**: Package structure created, implementation pending
 
@@ -6,7 +6,7 @@ Job extraction service with multiple strategies (JSON-LD, LLM, RegEx) for robust
 
 ## Overview
 
-This package will consolidate all job extraction logic from the codebase into a single, reusable service. Currently, the extraction logic resides in `components/core/src/agents/job-extractor-agent.ts` and is accessed via the unified server.
+This package will consolidate all job extraction logic from the codebase into a single, reusable service. Currently, the extraction logic resides in `components/core/src/agents/career-catalyst-agent.ts` and is accessed via the unified server.
 
 ## Current State
 
@@ -14,7 +14,7 @@ As of the latest refactoring (Jan 2026), we've successfully consolidated the ext
 
 ### Before
 - **Chrome Extension**: Used regex-based extraction in `content.js`
-- **CLI**: Used robust LLM-based extraction in `job-extractor-agent.ts`
+- **CLI**: Used robust LLM-based extraction in `career-catalyst-agent.ts`
 - **Result**: Two different implementations with different quality levels
 
 ### After
@@ -65,7 +65,7 @@ components/extraction/
 
 ## Features to Extract
 
-### Core Methods (from job-extractor-agent.ts)
+### Core Methods (from career-catalyst-agent.ts)
 
 1. **extractApplicantCount(html: string)**
    - Detects applicant count from HTML
@@ -92,7 +92,7 @@ components/extraction/
 ## Usage (Planned)
 
 ```typescript
-import { ExtractionService } from '@inkredabull/job-extractor-extraction';
+import { ExtractionService } from '@inkredabull/career-catalyst-extraction';
 
 const extractor = new ExtractionService({
   llmApiKey: process.env.ANTHROPIC_API_KEY,
@@ -137,12 +137,12 @@ Test fixtures should include:
 - Unified server calls CLI extraction methods
 
 ### Phase 2: Create Extraction Package (Future)
-- Move extraction methods from `job-extractor-agent.ts` to this package
+- Move extraction methods from `career-catalyst-agent.ts` to this package
 - Create `ExtractionService` class
 - Separate extractors for each strategy
 
 ### Phase 3: Update Consumers (Future)
-- Update `job-extractor-agent.ts` to import from extraction package
+- Update `career-catalyst-agent.ts` to import from extraction package
 - Update unified server to use extraction package directly
 - Remove old extraction code
 
@@ -153,7 +153,7 @@ Test fixtures should include:
 
 ## Key Extraction Methods to Move
 
-From `components/core/src/agents/job-extractor-agent.ts`:
+From `components/core/src/agents/career-catalyst-agent.ts`:
 
 - `extractApplicantCount()` → `applicant-counter.ts`
 - `extractSalaryFromText()` → `regex-extractor.ts`
@@ -182,7 +182,7 @@ From `components/core/src/utils/web-scraper.ts`:
 
 ## Related Files
 
-- `components/core/src/agents/job-extractor-agent.ts` - Current implementation
+- `components/core/src/agents/career-catalyst-agent.ts` - Current implementation
 - `components/core/src/utils/web-scraper.ts` - HTML utilities
 - `components/unified-server/unified-server.js` - Server orchestration
 - `components/chrome-extension/extension/content.js` - Chrome extension consumer

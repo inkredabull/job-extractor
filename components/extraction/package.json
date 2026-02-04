@@ -1,5 +1,5 @@
 {
-  "name": "@inkredabull/job-extractor-extraction",
+  "name": "@inkredabull/career-catalyst-extraction",
   "version": "1.0.0",
   "description": "Job extraction service with multiple strategies (JSON-LD, LLM, RegEx)",
   "main": "dist/index.js",

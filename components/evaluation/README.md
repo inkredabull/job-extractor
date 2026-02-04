@@ -1,10 +1,10 @@
-# @job-extractor/evaluation
+# @career-catalyst/evaluation
 
-LangSmith-powered evaluation and monitoring for Job Extractor agents.
+LangSmith-powered evaluation and monitoring for Career Catalyst agents.
 
 ## Overview
 
-This package provides comprehensive evaluation capabilities for the Job Extractor system:
+This package provides comprehensive evaluation capabilities for the Career Catalyst system:
 - **Job extraction quality assessment** - Validate parsing accuracy
 - **Resume generation evaluation** - Assess AI-generated content quality
 - **Scoring algorithm validation** - Test criteria matching consistency
@@ -86,7 +86,7 @@ python -m job_extractor_eval.cli abc123 --completeness-only
 ### TypeScript/Node.js
 
 ```typescript
-import { evaluateJob, checkLangSmithSetup } from '@job-extractor/evaluation';
+import { evaluateJob, checkLangSmithSetup } from '@career-catalyst/evaluation';
 
 // Check if LangSmith is configured
 const isConfigured = await checkLangSmithSetup({ verbose: true });
@@ -175,8 +175,8 @@ npm run lint
 This package can access job data through the core package:
 
 ```typescript
-import { evaluateJob } from '@job-extractor/evaluation';
-import { JobExtractorAgent } from '@job-extractor/core';
+import { evaluateJob } from '@career-catalyst/evaluation';
+import { JobExtractorAgent } from '@career-catalyst/core';
 
 // Extract and evaluate in one workflow
 const agent = new JobExtractorAgent(config);

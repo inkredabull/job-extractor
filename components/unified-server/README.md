@@ -1,4 +1,4 @@
-# @inkredabull/job-extractor-unified-server
+# @inkredabull/career-catalyst-unified-server
 
 Unified server combining CLI server and MCP server functionality.
 
@@ -26,8 +26,8 @@ The server runs on port 3000 by default.
 
 ## Documentation
 
-- [GitHub Pages Documentation](https://inkredabull.github.io/job-extractor/unified-server/)
+- [GitHub Pages Documentation](https://inkredabull.github.io/career-catalyst/unified-server/)
 
 ## Source Code
 
-[View on GitHub](https://github.com/inkredabull/job-extractor/tree/main/components/unified-server)
+[View on GitHub](https://github.com/inkredabull/career-catalyst/tree/main/components/unified-server)

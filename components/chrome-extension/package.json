@@ -1,5 +1,5 @@
 {
-  "name": "@inkredabull/job-extractor-extension",
+  "name": "@inkredabull/career-catalyst-extension",
   "version": "1.0.0",
   "description": "Chrome extension for job application assistance and CV-aware responses",
   "main": "extension/background.js",

@@ -83,7 +83,7 @@ Set up a cron job to run the agent regularly:
 
 ```bash
 # Add to crontab (runs daily at 9 AM)
-0 9 * * * cd /path/to/job-extractor && npm run dev whogothired
+0 9 * * * cd /path/to/career-catalyst && npm run dev whogothired
 ```
 
 ## How It Works

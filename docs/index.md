@@ -6,7 +6,7 @@ Welcome to the Job Extractor monorepo - an AI-powered career toolkit that delive
 
 This monorepo contains the following components:
 
-### [Core CLI Tool](./job-extractor-core/)
+### [Core CLI Tool](./career-catalyst-core/)
 The main TypeScript CLI tool for job extraction, scoring, resume creation, and interview preparation.
 
 **Features:**
@@ -16,7 +16,7 @@ The main TypeScript CLI tool for job extraction, scoring, resume creation, and i
 - Interview preparation materials generation
 - Automated application form filling
 
-[View Documentation →](./job-extractor-core/)
+[View Documentation →](./career-catalyst-core/)
 
 ### [Chrome Extension](./chrome-extension/)
 Browser extension for job application assistance and CV-aware responses.
@@ -82,9 +82,9 @@ components/
 
 ## Links
 
-- **GitHub Repository**: [View on GitHub](https://github.com/inkredabull/job-extractor)
-- **Core Component**: [components/core/](https://github.com/inkredabull/job-extractor/tree/main/components/core)
-- **Chrome Extension**: [components/chrome-extension/](https://github.com/inkredabull/job-extractor/tree/main/components/chrome-extension)
+- **GitHub Repository**: [View on GitHub](https://github.com/inkredabull/career-catalyst)
+- **Core Component**: [components/core/](https://github.com/inkredabull/career-catalyst/tree/main/components/core)
+- **Chrome Extension**: [components/chrome-extension/](https://github.com/inkredabull/career-catalyst/tree/main/components/chrome-extension)
 
 ## License
 
