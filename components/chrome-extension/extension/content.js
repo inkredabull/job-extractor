@@ -295,6 +295,32 @@ function createGutter() {
           </select>
         </div>
 
+        <div class="form-field">
+          <label>Create Reminders:</label>
+          <div class="reminder-checkboxes">
+            <label class="reminder-checkbox-label">
+              <input type="checkbox" id="reminder-track" class="reminder-checkbox" checked>
+              <span>📋 Track Application</span>
+            </label>
+            <label class="reminder-checkbox-label">
+              <input type="checkbox" id="reminder-apply" class="reminder-checkbox" checked>
+              <span>✍️ Apply</span>
+            </label>
+            <label class="reminder-checkbox-label">
+              <input type="checkbox" id="reminder-ping" class="reminder-checkbox" checked>
+              <span>📞 Ping Recruiter</span>
+            </label>
+            <label class="reminder-checkbox-label">
+              <input type="checkbox" id="reminder-prep" class="reminder-checkbox" checked>
+              <span>🎯 Interview Prep</span>
+            </label>
+            <label class="reminder-checkbox-label">
+              <input type="checkbox" id="reminder-followup" class="reminder-checkbox" checked>
+              <span>📧 Follow-up</span>
+            </label>
+          </div>
+        </div>
+
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
         </div>
@@ -1349,15 +1375,25 @@ async function handleTrackFromForm() {
     
     // Get priority for reminder creation
     const reminderPriority = parseInt(document.getElementById('reminder-priority')?.value) || 5;
-    
+
+    // Get selected reminders
+    const selectedReminders = [];
+    if (document.getElementById('reminder-track')?.checked) selectedReminders.push('track');
+    if (document.getElementById('reminder-apply')?.checked) selectedReminders.push('apply');
+    if (document.getElementById('reminder-ping')?.checked) selectedReminders.push('ping');
+    if (document.getElementById('reminder-prep')?.checked) selectedReminders.push('prep');
+    if (document.getElementById('reminder-followup')?.checked) selectedReminders.push('followup');
+
     console.log('Job Extractor: Tracking job from form fields:', jobInfo);
     console.log('Job Extractor: Reminder priority:', reminderPriority);
-    
+    console.log('Job Extractor: Selected reminders:', selectedReminders);
+
     // Send JSON payload to extract functionality server-side
     const extractResponse = await chrome.runtime.sendMessage({
       action: 'extractFromJson',
       jobData: jobInfo,
-      reminderPriority: reminderPriority
+      reminderPriority: reminderPriority,
+      selectedReminders: selectedReminders
     });
     
     if (extractResponse.success) {

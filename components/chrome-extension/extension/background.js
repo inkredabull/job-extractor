@@ -590,9 +590,10 @@ async function handleExtractFromJson(request, sendResponse) {
     console.log('Job Extractor Background: Handling extract from JSON request');
     console.log('Job data:', request.jobData);
     console.log('Reminder priority:', request.reminderPriority);
-    
+    console.log('Selected reminders:', request.selectedReminders);
+
     // Send JSON payload to unified server with type='json' flag and reminder priority
-    const extractResponse = await callLocalUnifiedServerWithJson(request.jobData, request.reminderPriority);
+    const extractResponse = await callLocalUnifiedServerWithJson(request.jobData, request.reminderPriority, request.selectedReminders);
     
     sendResponse({
       success: true,
@@ -792,9 +793,21 @@ async function callUnifiedServerGenerateScore(jobId) {
 }
 
 // Call local unified server with JSON data
-async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
+async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5, selectedReminders = null) {
   try {
     console.log('Job Extractor Background: Calling unified server for JSON extraction');
+
+    const requestBody = {
+      type: 'json',
+      data: jobData,
+      reminderPriority: reminderPriority,
+      createReminders: true  // Track button explicitly creates reminders
+    };
+
+    // Add selectedReminders if provided
+    if (selectedReminders && selectedReminders.length > 0) {
+      requestBody.selectedReminders = selectedReminders;
+    }
 
     const response = await fetch('http://localhost:3000/extract', {
       method: 'POST',
@@ -802,12 +815,7 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        type: 'json',
-        data: jobData,
-        reminderPriority: reminderPriority,
-        createReminders: true  // Track button explicitly creates reminders
-      }),
+      body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(90000) // 90 second timeout for JSON processing (allows time for reminders)
     });
     

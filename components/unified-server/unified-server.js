@@ -528,7 +528,7 @@ app.post('/cv-question', async (req, res) => {
 app.post('/extract', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Extract request`);
   try {
-    const { url, type, data, html, reminderPriority, createReminders } = req.body;
+    const { url, type, data, html, reminderPriority, createReminders, selectedReminders } = req.body;
 
     // Handle different extraction types
     if (type === 'html') {
@@ -695,6 +695,10 @@ app.post('/extract', async (req, res) => {
           // Skip reminders unless explicitly requested (for preview/display extraction)
           if (!createReminders) {
             args.push('--no-reminders');
+          }
+          // Pass selected reminders if provided
+          if (selectedReminders && selectedReminders.length > 0) {
+            args.push('--selected-reminders', selectedReminders.join(','));
           }
           // Skip post-workflow (scoring, resume generation) for Chrome extension requests
           // This allows immediate response to the extension

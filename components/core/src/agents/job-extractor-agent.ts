@@ -13,7 +13,7 @@ export class JobExtractorAgent extends BaseAgent {
     super(config);
   }
 
-  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromInput(input: string, type: 'url' | 'html' | 'json' | 'jsonfile', options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean; selectedReminders?: string[] }): Promise<ExtractorResult> {
     switch (type) {
       case 'url':
         return this.extractFromUrl(input, options);
@@ -31,7 +31,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromUrl(url: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean; selectedReminders?: string[] }): Promise<ExtractorResult> {
     try {
       // Fetch HTML
       const html = await WebScraper.fetchHtml(url);
@@ -44,7 +44,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromHtml(html: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean; selectedReminders?: string[] }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Check applicant count first - early exit if too competitive (unless overridden)
       const applicantInfo = this.extractApplicantCount(html);
@@ -99,7 +99,7 @@ export class JobExtractorAgent extends BaseAgent {
 
       // Create reminder for tracked job (unless --no-reminders flag is set)
       if (!options?.skipReminders) {
-        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority, options?.selectedReminders);
       } else {
         console.log('⏭️  Skipping reminder creation (--no-reminders flag set)');
       }
@@ -124,7 +124,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }, sourceUrl?: string): Promise<ExtractorResult> {
+  async extractFromJson(jsonInput: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean; selectedReminders?: string[] }, sourceUrl?: string): Promise<ExtractorResult> {
     try {
       // Parse the JSON input
       let jobData: any;
@@ -161,7 +161,7 @@ export class JobExtractorAgent extends BaseAgent {
 
       // Create reminder for tracked job (unless --no-reminders flag is set)
       if (!options?.skipReminders) {
-        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority);
+        await this.createJobReminder(jobDataWithSource, jobId, sourceUrl, options?.reminderPriority, options?.selectedReminders);
       } else {
         console.log('⏭️  Skipping reminder creation (--no-reminders flag set)');
       }
@@ -186,7 +186,7 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
-  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean }): Promise<ExtractorResult> {
+  async extractFromJsonFile(filePath: string, options?: { ignoreCompetition?: boolean; reminderPriority?: number; skipReminders?: boolean; skipPostWorkflow?: boolean; selectedReminders?: string[] }): Promise<ExtractorResult> {
     try {
       // Read the JSON file
       const jsonContent = fs.readFileSync(filePath, 'utf-8');
@@ -1295,7 +1295,7 @@ Return only the synthesized job description text, no additional formatting or co
   /**
    * Create a parent reminder with subtasks for the tracked job using macOS Reminders
    */
-  private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number): Promise<void> {
+  private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number, selectedReminders?: string[]): Promise<void> {
     try {
       // Dynamically import the MacOSReminderService to make it optional
       // @ts-ignore - Optional dependency, may not be available
@@ -1421,17 +1421,44 @@ Outreach activities:
       };
 
       // Create all reminders as separate top-level reminders
-      const reminders = [trackingReminder, applyReminder, pingReminder, prepReminder, followUpReminder];
-      const results = await Promise.all(reminders.map(r => reminderService.createReminder(r)));
+      // Filter based on selectedReminders if provided
+      const allReminders = {
+        track: trackingReminder,
+        apply: applyReminder,
+        ping: pingReminder,
+        prep: prepReminder,
+        followup: followUpReminder
+      };
+
+      let remindersToCreate: any[] = [];
+      if (selectedReminders && selectedReminders.length > 0) {
+        // Create only selected reminders
+        selectedReminders.forEach(type => {
+          if (allReminders[type as keyof typeof allReminders]) {
+            remindersToCreate.push(allReminders[type as keyof typeof allReminders]);
+          }
+        });
+        console.log(`📋 Creating ${remindersToCreate.length} selected reminder(s): ${selectedReminders.join(', ')}`);
+      } else {
+        // Create all reminders if none specified
+        remindersToCreate = [trackingReminder, applyReminder, pingReminder, prepReminder, followUpReminder];
+      }
+
+      if (remindersToCreate.length === 0) {
+        console.log('📋 No reminders selected to create');
+        return;
+      }
+
+      const results = await Promise.all(remindersToCreate.map(r => reminderService.createReminder(r)));
 
       const successCount = results.filter(r => r.success).length;
       if (successCount > 0) {
         console.log(`✅ Created ${successCount} reminders for ${jobTitle}, all tagged with #${jobId}`);
-        if (results[0].success) console.log(`   • ${trackingReminder.title}`);
-        if (results[1].success) console.log(`   • Apply for ${jobTitle}`);
-        if (results[2].success) console.log(`   • Ping about ${jobTitle}`);
-        if (results[3].success) console.log(`   • Prep for ${jobTitle}`);
-        if (results[4].success) console.log(`   • Follow-up / further outreach for: ${jobData.title || 'Unknown Position'} @ ${jobData.company || 'Unknown Company'}`);
+        remindersToCreate.forEach((reminder, idx) => {
+          if (results[idx].success) {
+            console.log(`   • ${reminder.title}`);
+          }
+        });
       }
 
       const failedCount = results.filter(r => !r.success).length;
