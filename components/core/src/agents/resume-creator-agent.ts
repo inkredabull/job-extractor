@@ -20,7 +20,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     claudeApiKey: string,
     model?: string,
     maxTokens?: number,
-    maxRoles: number = 3,
+    maxRoles: number = 4,
     mode: 'builder' | 'leader' = 'leader',
     experienceFormat: 'standard' | 'split' = 'standard',
     useFastMode: boolean = true
@@ -935,7 +935,7 @@ header-includes: |
   \\geometry{bottom=0.4in, footskip=0.25in}
   \\pagestyle{fancy}
   \\fancyhf{}
-  \\fancyfoot[C]{\\footnotesize \\textit{Customized by \\href{https://github.com/inkredabull/job-extractor}{job-extractor}}}
+  \\fancyfoot[C]{\\footnotesize \\textit{Customized by \\href{https://github.com/inkredabull/career-catalyst}{career-catalyst}}}
   \\renewcommand{\\headrulewidth}{0pt}
 ---
 `;
