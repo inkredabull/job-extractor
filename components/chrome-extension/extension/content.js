@@ -208,26 +208,6 @@ function createGutter() {
         </div>
       </div>
 
-      <!-- Job Scoring Section -->
-      <div class="section scoring-section">
-        <h4 class="section-header">📊 Job Scoring Report</h4>
-        <p class="section-description">AI-powered job compatibility analysis</p>
-
-        <div id="scoring-status" class="scoring-status">
-          <span id="scoring-status-text">Track a job to generate scoring report</span>
-        </div>
-
-        <div class="button-row">
-          <button id="generate-score" class="action-btn score-btn" style="display: none;">
-            ✨ Generate Score
-          </button>
-          <button id="view-report" class="action-btn report-btn" style="display: none;">
-            📊 View Report
-          </button>
-        </div>
-      </div>
-
-
       <!-- Job Information Section -->
       <div class="section job-info-section">
         <h4 class="section-header">📄 Job Information</h4>
@@ -323,6 +303,36 @@ function createGutter() {
 
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
+        </div>
+      </div>
+
+      <!-- Info About the Role Section -->
+      <div class="section role-info-section">
+        <h4 class="section-header">📋 Info About the Role</h4>
+        <p class="section-description">Role-specific details extracted from description</p>
+
+        <div class="form-field">
+          <label for="reports-to">Reports to:</label>
+          <input type="text" id="reports-to" class="job-input" placeholder="Will be extracted from job description..." disabled>
+        </div>
+      </div>
+
+      <!-- Job Scoring Section -->
+      <div class="section scoring-section">
+        <h4 class="section-header">📊 Job Scoring Report</h4>
+        <p class="section-description">AI-powered job compatibility analysis</p>
+
+        <div id="scoring-status" class="scoring-status">
+          <span id="scoring-status-text">Track a job to generate scoring report</span>
+        </div>
+
+        <div class="button-row">
+          <button id="generate-score" class="action-btn score-btn" style="display: none;">
+            ✨ Generate Score
+          </button>
+          <button id="view-report" class="action-btn report-btn" style="display: none;">
+            📊 View Report
+          </button>
         </div>
       </div>
     </div>
@@ -574,6 +584,17 @@ function populateFieldsFromJobData(jobData, jobId) {
   const urlField = document.getElementById('job-url');
   if (urlField) urlField.value = window.location.href;
 
+  // Extract and populate reports-to field from the description
+  if (jobData.description) {
+    extractedJobDescription = jobData.description;
+    const reportsTo = extractReportsTo();
+    const reportsToField = document.getElementById('reports-to');
+    if (reportsToField) {
+      reportsToField.value = reportsTo;
+      reportsToField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
   console.log('Job Extractor: Job information populated:', {
     title: jobData.title,
     company: jobData.company,
@@ -637,6 +658,14 @@ function extractJobInformationLocal() {
   // Set the current URL
   const urlField = document.getElementById('job-url');
   if (urlField) urlField.value = window.location.href;
+
+  // Extract reports-to information
+  const reportsTo = extractReportsTo();
+  const reportsToField = document.getElementById('reports-to');
+  if (reportsToField) {
+    reportsToField.value = reportsTo;
+    reportsToField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 
   console.log('Job Extractor: Basic extraction completed');
 }
@@ -1022,16 +1051,64 @@ function extractSalaryRange() {
 // Helper function to parse salary values (handles K suffix and commas)
 function parseSalaryValue(value) {
   if (!value) return 0;
-  
+
   // Remove commas and dollar signs
   let cleaned = value.replace(/[\$,]/g, '');
-  
+
   // Handle K suffix
   if (cleaned.toLowerCase().endsWith('k')) {
     return parseInt(cleaned.slice(0, -1)) * 1000;
   }
-  
+
   return parseInt(cleaned) || 0;
+}
+
+// Extract "Reports to:" information from job description
+function extractReportsTo() {
+  console.log('🔍 Job Extractor: Extracting reports-to information');
+
+  const descText = extractedJobDescription || document.body.innerText || '';
+
+  // Comprehensive patterns to find reporting relationships
+  const reportsToPatterns = [
+    // Direct patterns: "reports to [title]", "reporting to [title]"
+    /reports?\s+(?:directly\s+)?to\s+(?:the\s+)?([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i,
+    /reporting\s+(?:directly\s+)?to\s+(?:the\s+)?([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i,
+
+    // "This role reports to [title]"
+    /this\s+(?:role|position)\s+reports?\s+(?:directly\s+)?to\s+(?:the\s+)?([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i,
+
+    // "You will report to [title]"
+    /you\s+(?:will\s+)?report\s+(?:directly\s+)?to\s+(?:the\s+)?([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i,
+
+    // "[Title] will report to [title]"
+    /[A-Z][A-Za-z\s]+?\s+will\s+report\s+(?:directly\s+)?to\s+(?:the\s+)?([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i,
+
+    // "Reports directly to: [title]"
+    /reports?\s+(?:directly\s+)?to:\s*([A-Z][A-Za-z\s,&\/]+?)(?:\s+and|\s+or|\.|\,|\n|$)/i
+  ];
+
+  for (const pattern of reportsToPatterns) {
+    const match = descText.match(pattern);
+    if (match && match[1]) {
+      let reportsTo = match[1].trim();
+
+      // Clean up the extracted text
+      reportsTo = reportsTo
+        .replace(/\s+/g, ' ')  // Normalize whitespace
+        .replace(/\s*[,.]$/, '')  // Remove trailing punctuation
+        .trim();
+
+      // Validate that it looks like a job title (not too long, has reasonable content)
+      if (reportsTo.length > 3 && reportsTo.length < 100) {
+        console.log(`🔍 Found reports-to: "${reportsTo}"`);
+        return reportsTo;
+      }
+    }
+  }
+
+  console.log('🔍 No reports-to information found');
+  return '';
 }
 
 // Extract job description from the current page
