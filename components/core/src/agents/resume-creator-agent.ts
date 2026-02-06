@@ -1003,10 +1003,13 @@ Ensure the resume highlights experiences and achievements that demonstrate align
     // Format CV content for caching
     const formattedCV = `Current CV Content:\n${this.formatCVForPrompt(cvContent)}`;
 
-    // Build prompt without CV content (it will be passed separately for caching)
+    // Build prompt with reference to cached content
+    // When caching is used, we tell Claude the CV is provided above
+    const cvContentPlaceholder = 'See the "Current CV Content" section provided above.';
+
     const prompt = this.loadPromptTemplate({
       job,
-      cvContent: '', // Empty string - CV will be cached separately
+      cvContent: cvContentPlaceholder,
       maxRoles: this.maxRoles,
       recommendationsSection,
       companyValuesSection

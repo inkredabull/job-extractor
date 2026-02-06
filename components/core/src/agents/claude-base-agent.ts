@@ -77,7 +77,14 @@ export abstract class ClaudeBaseAgent {
 
         // Extract text content from the response
         const textContent = response.content.find(block => block.type === 'text');
-        return textContent?.text || '';
+        const responseText = textContent?.text || '';
+
+        // Debug: Log response if it's unexpectedly short
+        if (outputTokens < 500) {
+          console.log(`⚠️  Warning: Short response (${outputTokens} tokens). Response text: "${responseText.substring(0, 500)}"`);
+        }
+
+        return responseText;
       } catch (error) {
         // Make sure to clear interval on error too
         clearInterval(timerInterval);
