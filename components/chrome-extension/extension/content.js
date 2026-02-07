@@ -315,6 +315,11 @@ function createGutter() {
           <label for="reports-to">Reports to:</label>
           <input type="text" id="reports-to" class="job-input" placeholder="Will be extracted from job description..." disabled>
         </div>
+
+        <div class="form-field">
+          <label for="company-stage">Stage of the Company:</label>
+          <input type="text" id="company-stage" class="job-input" placeholder="Will be looked up from company data..." disabled>
+        </div>
       </div>
 
       <!-- Job Scoring Section -->
@@ -374,6 +379,25 @@ function createGutter() {
   document.getElementById('company-name').addEventListener('input', debounce((e) => {
     updateConnectionsSection(e.target.value.trim());
   }, 300));
+
+  // Add company name field change listener to update company stage
+  document.getElementById('company-name').addEventListener('input', debounce(async (e) => {
+    const companyName = e.target.value.trim();
+    if (companyName) {
+      // First try to get from description
+      let stage = extractCompanyStage();
+
+      // If not found in description, try API lookup (future enhancement)
+      if (!stage) {
+        stage = await fetchCompanyStage(companyName);
+      }
+
+      const companyStageField = document.getElementById('company-stage');
+      if (companyStageField) {
+        companyStageField.value = stage;
+      }
+    }
+  }, 500));
 
   // Always reset to local mode on page load to avoid unexpected token usage
   resetExtractionModeToLocal();
@@ -584,14 +608,22 @@ function populateFieldsFromJobData(jobData, jobId) {
   const urlField = document.getElementById('job-url');
   if (urlField) urlField.value = window.location.href;
 
-  // Extract and populate reports-to field from the description
+  // Extract and populate reports-to and company-stage fields from the description
   if (jobData.description) {
     extractedJobDescription = jobData.description;
+
     const reportsTo = extractReportsTo();
     const reportsToField = document.getElementById('reports-to');
     if (reportsToField) {
       reportsToField.value = reportsTo;
       reportsToField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const companyStage = extractCompanyStage();
+    const companyStageField = document.getElementById('company-stage');
+    if (companyStageField) {
+      companyStageField.value = companyStage;
+      companyStageField.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }
 
@@ -665,6 +697,14 @@ function extractJobInformationLocal() {
   if (reportsToField) {
     reportsToField.value = reportsTo;
     reportsToField.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Extract company stage information
+  const companyStage = extractCompanyStage();
+  const companyStageField = document.getElementById('company-stage');
+  if (companyStageField) {
+    companyStageField.value = companyStage;
+    companyStageField.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   console.log('Job Extractor: Basic extraction completed');
@@ -1109,6 +1149,82 @@ function extractReportsTo() {
 
   console.log('🔍 No reports-to information found');
   return '';
+}
+
+// Extract company stage from job description
+function extractCompanyStage() {
+  console.log('🔍 Job Extractor: Extracting company stage');
+
+  const descText = extractedJobDescription || document.body.innerText || '';
+  const lowerText = descText.toLowerCase();
+
+  // Define stage patterns with their labels
+  const stagePatterns = [
+    // Funding rounds
+    { pattern: /\bseries\s+[a-e]\b/i, label: (match) => match[0].toUpperCase() },
+    { pattern: /\bseed(?:\s+stage|\s+funded)?\b/i, label: 'Seed' },
+    { pattern: /\bpre-seed\b/i, label: 'Pre-seed' },
+
+    // Company maturity
+    { pattern: /\bpublicly\s+traded\b/i, label: 'Public' },
+    { pattern: /\bpublic\s+company\b/i, label: 'Public' },
+    { pattern: /\bipo\b/i, label: 'Public/IPO' },
+    { pattern: /\bfortune\s+\d+\b/i, label: 'Fortune 500' },
+
+    // Startup stages
+    { pattern: /\bearly[-\s]stage\s+startup\b/i, label: 'Early-stage Startup' },
+    { pattern: /\blate[-\s]stage\s+startup\b/i, label: 'Late-stage Startup' },
+    { pattern: /\bgrowth[-\s]stage\s+startup\b/i, label: 'Growth-stage Startup' },
+    { pattern: /\bstartup\b/i, label: 'Startup' },
+
+    // Established companies
+    { pattern: /\bestablished\s+company\b/i, label: 'Established' },
+    { pattern: /\benterprise\s+company\b/i, label: 'Enterprise' },
+    { pattern: /\bwell[-\s]funded\b/i, label: 'Well-funded' },
+
+    // Private equity / Venture backed
+    { pattern: /\bventure[-\s]backed\b/i, label: 'Venture-backed' },
+    { pattern: /\bvc[-\s]backed\b/i, label: 'VC-backed' },
+    { pattern: /\bprivate\s+equity\b/i, label: 'Private Equity' },
+  ];
+
+  // Try to find the most specific match
+  for (const { pattern, label } of stagePatterns) {
+    const match = descText.match(pattern);
+    if (match) {
+      const stage = typeof label === 'function' ? label(match) : label;
+      console.log(`🔍 Found company stage: "${stage}"`);
+      return stage;
+    }
+  }
+
+  console.log('🔍 No company stage information found');
+  return '';
+}
+
+// Fetch company stage from external sources (Tracxn, etc.)
+async function fetchCompanyStage(companyName) {
+  console.log('🔍 Job Extractor: Fetching company stage for:', companyName);
+
+  if (!companyName || companyName.trim().length === 0) {
+    return '';
+  }
+
+  // TODO: Implement Tracxn or other API lookup
+  // For now, this is a placeholder that could be expanded to:
+  // 1. Call Tracxn API
+  // 2. Call Crunchbase API
+  // 3. Scrape company website
+  // 4. Use unified server endpoint for lookup
+
+  try {
+    // Placeholder for future API integration
+    console.log('🔍 API lookup not yet implemented');
+    return '';
+  } catch (error) {
+    console.error('🔍 Error fetching company stage:', error);
+    return '';
+  }
 }
 
 // Extract job description from the current page
