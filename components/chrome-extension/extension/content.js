@@ -1210,19 +1210,23 @@ async function fetchCompanyStage(companyName) {
     return '';
   }
 
-  // TODO: Implement Tracxn or other API lookup
-  // For now, this is a placeholder that could be expanded to:
-  // 1. Call Tracxn API
-  // 2. Call Crunchbase API
-  // 3. Scrape company website
-  // 4. Use unified server endpoint for lookup
-
   try {
-    // Placeholder for future API integration
-    console.log('🔍 API lookup not yet implemented');
-    return '';
+    console.log('🔍 Calling LinkedIn API to get company stage...');
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'getCompanyStage',
+      companyName: companyName
+    });
+
+    if (response.success && response.stage) {
+      console.log('🔍 Successfully fetched company stage from LinkedIn:', response.stage);
+      return response.stage;
+    } else {
+      console.log('🔍 No stage information found on LinkedIn');
+      return '';
+    }
   } catch (error) {
-    console.error('🔍 Error fetching company stage:', error);
+    console.error('🔍 Error fetching company stage from LinkedIn:', error);
     return '';
   }
 }

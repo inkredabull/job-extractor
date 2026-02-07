@@ -151,6 +151,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleLookupLinkedInCompany(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'getCompanyStage':
+      handleGetCompanyStage(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     case 'generateBlurb':
       handleGenerateBlurb(request, sendResponse);
       return true; // Keep message channel open for async response
@@ -1307,6 +1311,160 @@ async function handleLookupLinkedInCompany(request, sendResponse) {
     sendResponse({
       success: false,
       error: error.message || 'Failed to lookup company on LinkedIn'
+    });
+  }
+}
+
+// Handle getting company stage from LinkedIn
+async function handleGetCompanyStage(request, sendResponse) {
+  try {
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Job Extractor Background: Getting company stage from LinkedIn');
+    console.log('  → Company name:', request.companyName);
+
+    const companyName = request.companyName;
+
+    if (!companyName) {
+      console.log('  → Error: No company name provided');
+      console.log('═══════════════════════════════════════════════════════════');
+      sendResponse({
+        success: false,
+        error: 'Company name is required'
+      });
+      return;
+    }
+
+    // Step 1: Search for the company to get its ID
+    const searchUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(companyName)}`;
+    console.log('  → Searching LinkedIn:', searchUrl);
+
+    const searchResponse = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!searchResponse.ok) {
+      throw new Error(`LinkedIn search failed with status: ${searchResponse.status}`);
+    }
+
+    const searchHtml = await searchResponse.text();
+
+    // Extract company ID from search results
+    const companyIdRegex = /\/company\/([^\/\?"]+)\//g;
+    const matches = [...searchHtml.matchAll(companyIdRegex)];
+
+    if (matches.length === 0) {
+      console.log('  → No company found in search results');
+      console.log('═══════════════════════════════════════════════════════════');
+      sendResponse({
+        success: false,
+        error: `Could not find "${companyName}" on LinkedIn`
+      });
+      return;
+    }
+
+    const companyId = matches[0][1];
+    console.log('  → Found company ID:', companyId);
+
+    // Step 2: Fetch the company's about page
+    const aboutUrl = `https://www.linkedin.com/company/${companyId}/about/`;
+    console.log('  → Fetching company page:', aboutUrl);
+
+    const aboutResponse = await fetch(aboutUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!aboutResponse.ok) {
+      throw new Error(`LinkedIn company page failed with status: ${aboutResponse.status}`);
+    }
+
+    const aboutHtml = await aboutResponse.text();
+    console.log('  → Received company page, length:', aboutHtml.length, 'chars');
+
+    // Step 3: Extract company information that indicates stage
+    let stage = '';
+
+    // Look for company size (can indicate stage)
+    const sizePatterns = [
+      /(\d+[\-–]\d+)\s+employees/i,
+      /(\d+\+?)\s+employees/i,
+      /([\d,]+)\s+employees/i
+    ];
+
+    for (const pattern of sizePatterns) {
+      const match = aboutHtml.match(pattern);
+      if (match) {
+        const sizeStr = match[1].toLowerCase();
+        console.log('  → Found company size:', sizeStr);
+
+        // Interpret size to suggest stage
+        if (sizeStr.includes('-')) {
+          const parts = sizeStr.split(/[-–]/);
+          const maxSize = parseInt(parts[1].replace(/,/g, ''));
+          if (maxSize <= 50) {
+            stage = 'Early-stage Startup';
+          } else if (maxSize <= 200) {
+            stage = 'Growth-stage';
+          } else if (maxSize <= 1000) {
+            stage = 'Mid-size';
+          } else {
+            stage = 'Enterprise';
+          }
+        } else if (sizeStr.includes('+')) {
+          const num = parseInt(sizeStr.replace(/[,+]/g, ''));
+          if (num >= 10000) {
+            stage = 'Large Enterprise';
+          } else {
+            stage = 'Enterprise';
+          }
+        }
+        break;
+      }
+    }
+
+    // Look for explicit funding/stage mentions in the description
+    const stageKeywords = [
+      { pattern: /series\s+[a-e]/i, stage: (match) => match[0].toUpperCase() },
+      { pattern: /seed\s+funded/i, stage: 'Seed' },
+      { pattern: /publicly\s+traded/i, stage: 'Public' },
+      { pattern: /fortune\s+\d+/i, stage: 'Fortune 500' },
+      { pattern: /ipo/i, stage: 'Public/IPO' },
+      { pattern: /venture[-\s]backed/i, stage: 'Venture-backed' },
+      { pattern: /private\s+equity/i, stage: 'Private Equity' }
+    ];
+
+    for (const { pattern, stage: stageFn } of stageKeywords) {
+      const match = aboutHtml.match(pattern);
+      if (match) {
+        stage = typeof stageFn === 'function' ? stageFn(match) : stageFn;
+        console.log('  → Found stage keyword:', stage);
+        break;
+      }
+    }
+
+    console.log('  → Final stage determination:', stage || 'Not determined');
+    console.log('═══════════════════════════════════════════════════════════');
+
+    sendResponse({
+      success: true,
+      stage: stage,
+      companyId: companyId
+    });
+
+  } catch (error) {
+    console.error('  → Company stage lookup failed:', error);
+    console.log('═══════════════════════════════════════════════════════════');
+
+    sendResponse({
+      success: false,
+      error: error.message || 'Failed to get company stage from LinkedIn'
     });
   }
 }
