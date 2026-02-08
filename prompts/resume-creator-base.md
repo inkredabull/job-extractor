@@ -63,6 +63,7 @@ After the overview paragraph, add a blank line.
 Then include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that.
 Each bullet point should be between 75 and 90 characters.
 **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets on the same line as the overview.**
+**IMPORTANT: Aim for the UPPER end of the bullet point ranges to ensure adequate content density and avoid excessive white space on the page. A one-page resume should have substantial content, not large gaps.**
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.
