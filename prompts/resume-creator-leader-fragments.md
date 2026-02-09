@@ -25,8 +25,12 @@ Tailor the summary to the job description, including as much of the following po
 ### technologiesSection
 If it makes sense to include a "Technologies:" line selectively for each role, include it, highlighting those that are relevant.
 If it is included, do not make the line in italics.  Bold "Technologies:" but not the rest of the line.
-If it is not included, you MAY add a "Technologies:" section at the end of the resume ONLY if there are relevant technologies not already covered in the Skills section.
-**CRITICAL: Do NOT create a separate Technologies section if it would duplicate technologies already listed in the Skills section. Avoid redundancy.**
+
+**CRITICAL: Do NOT create a separate "TECHNOLOGIES" section at the end of the resume. All technologies should be:**
+1. Listed per-role as "Technologies:" lines, OR
+2. Incorporated into the Skills section
+
+**Never create a standalone Technologies section after Skills. Technologies are already covered in Skills.**
 
 ### skillsSpecificInstructions
 Separate skills with bullet points.

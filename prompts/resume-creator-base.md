@@ -16,13 +16,14 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 
 ## General Structure
 
-The general structure should be:
+The general structure MUST be (in this exact order):
 * Heading
-* Contact Information 
+* Contact Information
 * Summary
-* Roles
+* Roles (with optional Technologies lines per role)
+* "Complete work history available upon request." (in italics)
 * Skills
-* Education
+* Education (MANDATORY - must always be included)
 
 ## Heading
 
@@ -74,19 +75,21 @@ Be sure bullets reflect the verbiage used in the job description.
 
 {{technologiesSection}}
 
-Stipulate "Complete work history available upon request." in italics before a SKILLS section.
+After all roles, stipulate "*Complete work history available upon request.*" in italics.
 
 ## Skills
 
-Include a "SKILLS" section with a bulleted overview of relevant skills. 
+**MANDATORY**: Include a "SKILLS" section with a bulleted overview of relevant skills.
 {{skillsSpecificInstructions}}
-Bold the skill umbrella. 
+Bold the skill umbrella.
 Include at most five relevant skill areas and only include relevant skills.
 Each line of skills should be at maximum 95 characters long.
 
 ## Education
 
-Include an "EDUCATION" section after the SKILLS section. Use bullet points.
+**MANDATORY**: Include an "EDUCATION" section after the SKILLS section. This section MUST always be included.
+Use bullet points to list educational credentials from the CV.
+Do not omit this section under any circumstances.
 
 ## Misc
 

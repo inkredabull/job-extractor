@@ -41,8 +41,12 @@ When creating bullet points, if a bullet begins with a leadership-centric verb f
 ### technologiesSection
 If a role involved significant hands-on coding or architecture work, include a "Technologies:" line selectively for each role, highlighting relevant languages, frameworks, cloud platforms, and tools.
 If it is included, do not make the line in italics.  Bold "Technologies:" but not the rest of the line.
-If technologies are not included per-role, you MAY add a "Technologies:" section at the end of the resume ONLY if there are relevant technologies not already covered in the Skills section.
-**CRITICAL: Do NOT create a separate Technologies section if it would duplicate technologies already listed in the Skills section. Avoid redundancy.**
+
+**CRITICAL: Do NOT create a separate "TECHNOLOGIES" section at the end of the resume. All technologies should be:**
+1. Listed per-role as "Technologies:" lines, OR
+2. Incorporated into the Skills section (which already has "Technologies & Tools" as the first bullet group)
+
+**Never create a standalone Technologies section after Skills or Education. Technologies are already covered in the Skills section.**
 
 ### skillsSpecificInstructions
 First bullet group must be **Technologies & Tools**, listing relevant languages, frameworks, and systems.
