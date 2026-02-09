@@ -457,7 +457,10 @@ function outputAccumulatedResults() {
   console.log('='.repeat(80));
 
   // Copy CSV to clipboard using fallback method (works reliably in content scripts)
+  console.log('🔄 Attempting to copy CSV to clipboard...');
   const copyToClipboard = (text) => {
+    console.log('📋 copyToClipboard function called, text length:', text.length);
+
     const textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.style.position = 'fixed';
@@ -467,8 +470,11 @@ function outputAccumulatedResults() {
     textarea.focus();
     textarea.select();
 
+    console.log('📋 Textarea created and text selected');
+
     try {
       const successful = document.execCommand('copy');
+      console.log('📋 execCommand result:', successful);
       document.body.removeChild(textarea);
 
       if (successful) {
@@ -481,10 +487,11 @@ function outputAccumulatedResults() {
         );
         return true;
       } else {
+        console.error('❌ execCommand returned false');
         throw new Error('execCommand copy failed');
       }
     } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
+      console.error('❌ Failed to copy to clipboard:', err);
       document.body.removeChild(textarea);
       alert(
         `✅ Extraction Complete!\n\n` +
@@ -497,6 +504,7 @@ function outputAccumulatedResults() {
   };
 
   // Execute the copy
+  console.log('🚀 Calling copyToClipboard with result...');
   copyToClipboard(result);
 
   // Reset pagination state
