@@ -454,8 +454,37 @@ function outputAccumulatedResults() {
   console.log(result);
   console.log('='.repeat(80));
   console.log(`✅ Extraction complete! Total mutual connections found: ${paginationState.allResults.length}`);
-  console.log('Copy the CSV output above to use it in your spreadsheet.');
   console.log('='.repeat(80));
+
+  // Automatically copy CSV to clipboard
+  try {
+    navigator.clipboard.writeText(result).then(() => {
+      console.log('✅ CSV automatically copied to clipboard!');
+
+      // Show user-friendly notification
+      alert(
+        `✅ Mutual Connections Extracted!\n\n` +
+        `Found ${paginationState.allResults.length} mutual connections across ${paginationState.currentPage} page(s).\n\n` +
+        `CSV data has been automatically copied to your clipboard.\n\n` +
+        `You can now paste it directly into your spreadsheet.`
+      );
+    }).catch(err => {
+      console.error('Failed to copy to clipboard:', err);
+      alert(
+        `✅ Extraction Complete!\n\n` +
+        `Found ${paginationState.allResults.length} mutual connections.\n\n` +
+        `⚠️ Could not auto-copy to clipboard.\n` +
+        `Please manually copy the CSV output from the browser console.`
+      );
+    });
+  } catch (err) {
+    console.error('Clipboard API not available:', err);
+    alert(
+      `✅ Extraction Complete!\n\n` +
+      `Found ${paginationState.allResults.length} mutual connections.\n\n` +
+      `Please copy the CSV output from the browser console.`
+    );
+  }
 
   // Reset pagination state
   paginationState.isExtracting = false;
