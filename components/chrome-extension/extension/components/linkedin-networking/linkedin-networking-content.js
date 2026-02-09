@@ -10,6 +10,15 @@ let promptedProfiles = new Set();
 // Track if we've already processed a search page to avoid duplicates
 let searchPageProcessed = false;
 
+// Track pagination state for multi-page extraction
+let paginationState = {
+  isExtracting: false,
+  allResults: [],
+  currentPage: 1,
+  targetProfileUrl: '',
+  targetFirstName: ''
+};
+
 // Settings
 let linkedInNetworkingEnabled = false; // Disabled by default, requires opt-in
 
@@ -292,13 +301,21 @@ async function extractMutualConnectionNames() {
 
     console.log(`Extracted first name from URL: "${targetFirstName}"`);
 
-    // Try multiple selector strategies for mutual connections
-    var nameElements = [];
-    var result = 'Full,PersonName,PersonURL\n'; // CSV headers
+    // Initialize pagination state on first extraction
+    if (!paginationState.isExtracting) {
+      paginationState.isExtracting = true;
+      paginationState.allResults = [];
+      paginationState.currentPage = 1;
+      paginationState.targetProfileUrl = targetProfileUrl;
+      paginationState.targetFirstName = targetFirstName;
+    }
 
     // Wait for LinkedIn's dynamic content to load
     console.log('Waiting 1 second for LinkedIn content to load...');
     await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Extract connections from current page
+    var nameElements = [];
 
     // Strategy 1: Try to find mutual connection links in search results
     var selectors = [
@@ -337,27 +354,112 @@ async function extractMutualConnectionNames() {
 
     if (nameElements.length === 0) {
       console.log('Could not find mutual connections with any known selector');
+      // Output accumulated results if any
+      outputAccumulatedResults();
       return;
     }
 
+    // Add current page results to accumulated results
+    console.log(`Page ${paginationState.currentPage}: Found ${nameElements.length} connections`);
     nameElements.forEach((element) => {
       var mutualConnectionName = element.innerText.trim();
       if (mutualConnectionName && mutualConnectionName.length > 0) {
-        // Output format: mutual connection full name, target profile first name, target profile URL
-        var csvRow = `"${mutualConnectionName}","${targetFirstName}","${targetProfileUrl}"`;
-        result += csvRow + '\n';
+        paginationState.allResults.push(mutualConnectionName);
       }
     });
 
-    if (nameElements.length > 0) {
-      console.log('Complete CSV output:');
-      console.log(result);
-      console.log(`Total mutual connections found: ${nameElements.length}`);
+    // Check if there's a next page button
+    var nextPageButton = findNextPageButton();
+
+    if (nextPageButton) {
+      console.log(`Found next page button, navigating to page ${paginationState.currentPage + 1}...`);
+      paginationState.currentPage++;
+
+      // Click the next button and wait for page to load
+      nextPageButton.click();
+
+      // Wait for the next page to load, then continue extraction
+      setTimeout(() => {
+        extractMutualConnectionNames();
+      }, 3000);
+    } else {
+      // No more pages, output all accumulated results
+      console.log('No more pages found. Outputting all results...');
+      outputAccumulatedResults();
     }
 
   } catch (error) {
     console.error('Error extracting mutual connection names:', error);
+    outputAccumulatedResults();
   }
+}
+
+function findNextPageButton() {
+  // Try multiple selectors for LinkedIn's next page button
+  var nextButtonSelectors = [
+    'button[aria-label="Next"]',
+    'button[aria-label="next"]',
+    '.artdeco-pagination__button--next',
+    'button.artdeco-pagination__button.artdeco-pagination__button--next',
+    '[data-test-pagination-page-btn="next"]',
+    'button:has(> li-icon[type="chevron-right-icon"])'
+  ];
+
+  for (var selector of nextButtonSelectors) {
+    try {
+      var button = document.querySelector(selector);
+      if (button && !button.disabled && !button.classList.contains('artdeco-button--disabled')) {
+        console.log(`Found next button with selector: ${selector}`);
+        return button;
+      }
+    } catch (e) {
+      // Some selectors might fail, continue to next
+      continue;
+    }
+  }
+
+  // Also try finding by text content
+  var allButtons = document.querySelectorAll('button');
+  for (var button of allButtons) {
+    var buttonText = button.innerText || button.textContent || '';
+    if (buttonText.toLowerCase().includes('next') && !button.disabled) {
+      console.log('Found next button by text content');
+      return button;
+    }
+  }
+
+  console.log('No next page button found');
+  return null;
+}
+
+function outputAccumulatedResults() {
+  if (paginationState.allResults.length === 0) {
+    console.log('No results to output');
+    paginationState.isExtracting = false;
+    return;
+  }
+
+  // Build CSV output
+  var result = 'Full,PersonName,PersonURL\n'; // CSV headers
+
+  paginationState.allResults.forEach((mutualConnectionName) => {
+    var csvRow = `"${mutualConnectionName}","${paginationState.targetFirstName}","${paginationState.targetProfileUrl}"`;
+    result += csvRow + '\n';
+  });
+
+  console.log('='.repeat(80));
+  console.log(`COMPLETE CSV OUTPUT (${paginationState.currentPage} pages, ${paginationState.allResults.length} total connections):`);
+  console.log('='.repeat(80));
+  console.log(result);
+  console.log('='.repeat(80));
+  console.log(`✅ Extraction complete! Total mutual connections found: ${paginationState.allResults.length}`);
+  console.log('Copy the CSV output above to use it in your spreadsheet.');
+  console.log('='.repeat(80));
+
+  // Reset pagination state
+  paginationState.isExtracting = false;
+  paginationState.allResults = [];
+  paginationState.currentPage = 1;
 }
 
 // Auto-detect LinkedIn profile pages and find mutual connections
