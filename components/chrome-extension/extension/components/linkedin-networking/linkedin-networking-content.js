@@ -456,35 +456,48 @@ function outputAccumulatedResults() {
   console.log(`✅ Extraction complete! Total mutual connections found: ${paginationState.allResults.length}`);
   console.log('='.repeat(80));
 
-  // Automatically copy CSV to clipboard
-  try {
-    navigator.clipboard.writeText(result).then(() => {
-      console.log('✅ CSV automatically copied to clipboard!');
+  // Copy CSV to clipboard using fallback method (works reliably in content scripts)
+  const copyToClipboard = (text) => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-999999px';
+    textarea.style.top = '-999999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
 
-      // Show user-friendly notification
-      alert(
-        `✅ Mutual Connections Extracted!\n\n` +
-        `Found ${paginationState.allResults.length} mutual connections across ${paginationState.currentPage} page(s).\n\n` +
-        `CSV data has been automatically copied to your clipboard.\n\n` +
-        `You can now paste it directly into your spreadsheet.`
-      );
-    }).catch(err => {
+    try {
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      if (successful) {
+        console.log('✅ CSV automatically copied to clipboard!');
+        alert(
+          `✅ Mutual Connections Extracted!\n\n` +
+          `Found ${paginationState.allResults.length} mutual connections across ${paginationState.currentPage} page(s).\n\n` +
+          `CSV data has been automatically copied to your clipboard.\n\n` +
+          `You can now paste it directly into your spreadsheet.`
+        );
+        return true;
+      } else {
+        throw new Error('execCommand copy failed');
+      }
+    } catch (err) {
       console.error('Failed to copy to clipboard:', err);
+      document.body.removeChild(textarea);
       alert(
         `✅ Extraction Complete!\n\n` +
         `Found ${paginationState.allResults.length} mutual connections.\n\n` +
         `⚠️ Could not auto-copy to clipboard.\n` +
         `Please manually copy the CSV output from the browser console.`
       );
-    });
-  } catch (err) {
-    console.error('Clipboard API not available:', err);
-    alert(
-      `✅ Extraction Complete!\n\n` +
-      `Found ${paginationState.allResults.length} mutual connections.\n\n` +
-      `Please copy the CSV output from the browser console.`
-    );
-  }
+      return false;
+    }
+  };
+
+  // Execute the copy
+  copyToClipboard(result);
 
   // Reset pagination state
   paginationState.isExtracting = false;
