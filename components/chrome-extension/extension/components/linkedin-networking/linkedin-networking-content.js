@@ -248,6 +248,8 @@ function findAndClickMutualConnections() {
     localStorage.setItem('linkedin_target_profile_url', currentUrl);
     localStorage.setItem('linkedin_target_profile_name', nameToStore);
     localStorage.setItem('linkedin_extraction_timestamp', Date.now().toString());
+    // Set flag to indicate we're expecting a mutual connections page load
+    localStorage.setItem('linkedin_awaiting_mutual_connections', 'true');
 
     console.log(`Stored profile info - name: "${nameToStore}", URL: "${currentUrl}"`);
 
@@ -411,6 +413,14 @@ function checkForLinkedInProfile() {
     // This is a mutual connections search page - just extract the data ONCE
     console.log('LinkedIn mutual connections search page detected - waiting 4 seconds before extracting...');
     searchPageProcessed = true;
+
+    // Check if we just navigated here from clicking mutual connections link
+    const awaitingExtraction = localStorage.getItem('linkedin_awaiting_mutual_connections');
+    if (awaitingExtraction === 'true') {
+      console.log('Auto-triggered extraction detected - clearing flag and proceeding...');
+      localStorage.removeItem('linkedin_awaiting_mutual_connections');
+    }
+
     setTimeout(() => {
       extractMutualConnectionNames();
     }, 4000);
@@ -633,6 +643,7 @@ if (document.readyState === 'loading') {
     checkForLinkedInFeed();
   });
 } else {
+  // Page is already loaded, run checks immediately
   checkForLinkedInExtraction();
   checkForLinkedInProfile();
   checkForLinkedInFeed();
@@ -645,16 +656,44 @@ window.addEventListener('load', () => {
   checkForLinkedInFeed();
 });
 
+// Listen for navigation via History API (for SPA-style navigation)
+window.addEventListener('popstate', () => {
+  console.log('Navigation detected via popstate event');
+  setTimeout(() => {
+    checkForLinkedInExtraction();
+    checkForLinkedInProfile();
+    checkForLinkedInFeed();
+  }, 500);
+});
+
 // Monitor URL changes for SPA navigation
 let currentUrl = window.location.href;
 function checkUrlChange() {
   if (window.location.href !== currentUrl) {
-    currentUrl = window.location.href;
-    setTimeout(() => {
-      checkForLinkedInExtraction();
-      checkForLinkedInProfile();
-      checkForLinkedInFeed();
-    }, 1000);
+    const newUrl = window.location.href;
+    console.log('URL changed from', currentUrl, 'to', newUrl);
+    currentUrl = newUrl;
+
+    // If we're awaiting mutual connections extraction and just landed on the search page, run immediately
+    const awaitingExtraction = localStorage.getItem('linkedin_awaiting_mutual_connections');
+    const isMutualConnectionsPage = newUrl.includes('/search/results/') && newUrl.includes('facetConnectionOf');
+
+    if (awaitingExtraction === 'true' && isMutualConnectionsPage) {
+      console.log('Detected navigation to mutual connections page - triggering checks immediately');
+      // Run checks immediately without the usual delay
+      setTimeout(() => {
+        checkForLinkedInExtraction();
+        checkForLinkedInProfile();
+        checkForLinkedInFeed();
+      }, 500); // Reduced delay from 1000ms to 500ms
+    } else {
+      // Normal delay for other navigation
+      setTimeout(() => {
+        checkForLinkedInExtraction();
+        checkForLinkedInProfile();
+        checkForLinkedInFeed();
+      }, 1000);
+    }
   }
 }
 setInterval(checkUrlChange, 1000);
