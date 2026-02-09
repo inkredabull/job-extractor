@@ -8,7 +8,8 @@ let linkedInExtractionRunning = false;
 let promptedProfiles = new Set();
 
 // Track if we've already processed a search page to avoid duplicates
-let searchPageProcessed = false;
+// Store the URL of the processed search to make it URL-specific
+let processedSearchPageUrl = null;
 
 // Track pagination state for multi-page extraction
 let paginationState = {
@@ -488,7 +489,7 @@ function checkForLinkedInProfile() {
     }
 
     console.log('LinkedIn profile page detected - waiting 3 seconds before showing confirmation...');
-    searchPageProcessed = false; // Reset for new profile
+    processedSearchPageUrl = null; // Reset for new profile
 
     setTimeout(() => {
       // Mark this profile as prompted to avoid duplicate dialogs
@@ -511,21 +512,34 @@ function checkForLinkedInProfile() {
         console.log('User cancelled mutual connections extraction');
       }
     }, 3000);
-  } else if (isSearchPage && url.includes('facetConnectionOf') && !searchPageProcessed) {
-    // This is a mutual connections search page - just extract the data ONCE
-    console.log('LinkedIn mutual connections search page detected - waiting 4 seconds before extracting...');
-    searchPageProcessed = true;
+  } else if (isSearchPage && url.includes('facetConnectionOf')) {
+    // This is a mutual connections search page - extract if we haven't processed this specific URL yet
+
+    // Check if we've already processed this exact search URL
+    if (processedSearchPageUrl === url) {
+      console.log('Already processed this search page URL, skipping...');
+      return;
+    }
+
+    console.log('LinkedIn mutual connections search page detected - checking if extraction needed...');
 
     // Check if we just navigated here from clicking mutual connections link
     const awaitingExtraction = localStorage.getItem('linkedin_awaiting_mutual_connections');
     if (awaitingExtraction === 'true') {
       console.log('Auto-triggered extraction detected - clearing flag and proceeding...');
       localStorage.removeItem('linkedin_awaiting_mutual_connections');
-    }
 
-    setTimeout(() => {
-      extractMutualConnectionNames();
-    }, 4000);
+      // Mark this URL as processed
+      processedSearchPageUrl = url;
+
+      // Wait for LinkedIn's dynamic content to load before extraction
+      console.log('Waiting 2 seconds for content to load before extracting...');
+      setTimeout(() => {
+        extractMutualConnectionNames();
+      }, 2000);
+    } else {
+      console.log('No awaiting extraction flag found - user may have navigated here manually');
+    }
   }
 }
 
@@ -775,6 +789,14 @@ function checkUrlChange() {
     const newUrl = window.location.href;
     console.log('URL changed from', currentUrl, 'to', newUrl);
     currentUrl = newUrl;
+
+    // Reset processed search page when navigating away from search results
+    if (!newUrl.includes('/search/results/')) {
+      if (processedSearchPageUrl !== null) {
+        console.log('Navigated away from search results - resetting processed URL flag');
+        processedSearchPageUrl = null;
+      }
+    }
 
     // If we're awaiting mutual connections extraction and just landed on the search page, run immediately
     const awaitingExtraction = localStorage.getItem('linkedin_awaiting_mutual_connections');
