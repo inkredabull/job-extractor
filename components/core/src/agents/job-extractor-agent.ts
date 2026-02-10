@@ -1307,6 +1307,7 @@ Return only the synthesized job description text, no additional formatting or co
       const config = reminderService.getConfig();
 
       const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      const threeDaysFromToday = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Three days from today in YYYY-MM-DD format
       const jobTitle = `${jobData.title || 'Unknown Position'} at ${jobData.company || 'Unknown Company'}`;
 
       // Common tags for all reminders - include job ID
@@ -1416,7 +1417,7 @@ Outreach activities:
         list: config.list_name,
         priority: reminderPriority || config.default_priority,
         tags: commonTags,
-        dueDate: today,
+        dueDate: threeDaysFromToday,
         dueTime: '14:00' // Early afternoon reminder
       };
 
