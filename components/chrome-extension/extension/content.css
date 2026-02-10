@@ -564,6 +564,49 @@ html.job-extractor-gutter-open {
   color: #333;
 }
 
+/* Reminder checkbox styling */
+.reminder-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reminder-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  padding: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.reminder-checkbox-label:hover {
+  background-color: #f5f5f5;
+}
+
+.reminder-checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #1a73e8;
+  flex-shrink: 0;
+}
+
+.reminder-checkbox:checked {
+  background-color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.reminder-checkbox-label span {
+  user-select: none;
+  font-weight: 500;
+}
+
 .button-group {
   display: flex;
   gap: 12px;
