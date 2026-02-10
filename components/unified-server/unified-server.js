@@ -844,9 +844,9 @@ app.post('/extract', async (req, res) => {
 
       console.log(`  -> Executing command: ${command}`);
       
-      const output = execSync(command, { 
+      const output = execSync(command, {
         encoding: 'utf-8',
-        timeout: 60000, // 60 second timeout
+        timeout: 120000, // 2 minute timeout for slow websites and LLM processing
         cwd: projectDir
       });
       
@@ -1149,11 +1149,11 @@ app.post('/generate-blurb', async (req, res) => {
         }
       });
 
-      // Set timeout (cover letter generation can take a bit longer)
+      // Set timeout (cover letter generation with LLM calls can take 2-3 minutes)
       setTimeout(() => {
         child.kill();
-        reject(new Error('Command timed out after 60 seconds'));
-      }, 60000);
+        reject(new Error('Command timed out after 180 seconds'));
+      }, 180000);
     });
 
     // The output contains CLI logs + actual content
@@ -1204,7 +1204,7 @@ app.post('/generate-blurb', async (req, res) => {
 
     let errorMessage = error.message;
     if (error.message.includes('timeout')) {
-      errorMessage = 'Blurb generation timed out - this can take up to 60 seconds';
+      errorMessage = 'Blurb generation timed out - this can take up to 3 minutes for complex jobs';
     }
 
     res.status(500).json({
