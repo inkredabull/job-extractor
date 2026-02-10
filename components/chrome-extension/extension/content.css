@@ -568,62 +568,60 @@ html.job-extractor-gutter-open {
 .reminder-checkboxes {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   margin-top: 8px;
 }
 
 .reminder-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
   font-size: 14px;
   color: #333;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
   transition: background-color 0.2s;
 }
 
 .reminder-checkbox-label:hover {
-  background-color: #f0f7ff;
+  background-color: #f5f7fa;
 }
 
 .reminder-checkbox {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   appearance: none !important;
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
-  min-height: 20px !important;
-  max-width: 20px !important;
-  max-height: 20px !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
   margin: 0 !important;
   padding: 0 !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
-  border: 3px solid #1a73e8 !important;
-  border-radius: 4px !important;
+  border: 2px solid #999 !important;
+  border-radius: 3px !important;
   background-color: #ffffff !important;
   background-image: none !important;
   background: #ffffff !important;
   position: relative !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.15s ease !important;
   box-sizing: border-box !important;
   display: inline-block !important;
   vertical-align: middle !important;
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 1 !important;
-  box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.3) !important;
   outline: none !important;
 }
 
 .reminder-checkbox:hover {
-  border-color: #1557b0 !important;
-  background-color: #f0f7ff !important;
-  background: #f0f7ff !important;
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.4) !important;
+  border-color: #1a73e8 !important;
+  background-color: #f8fbff !important;
+  background: #f8fbff !important;
 }
 
 .reminder-checkbox:checked {
@@ -631,17 +629,16 @@ html.job-extractor-gutter-open {
   background: #1a73e8 !important;
   border-color: #1a73e8 !important;
   background-image: none !important;
-  box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.5) !important;
 }
 
 .reminder-checkbox:checked::after {
   content: '' !important;
   position: absolute !important;
   display: block !important;
-  left: 6px !important;
-  top: 2px !important;
-  width: 5px !important;
-  height: 10px !important;
+  left: 5px !important;
+  top: 1px !important;
+  width: 4px !important;
+  height: 9px !important;
   border: solid white !important;
   border-width: 0 2px 2px 0 !important;
   transform: rotate(45deg) !important;
