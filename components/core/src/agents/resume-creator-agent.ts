@@ -1226,15 +1226,55 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       
       // Clean up temporary markdown file
       fs.unlinkSync(markdownPath);
-      
+
+      // Update job JSON with resume URL if jobId is provided
+      if (jobId) {
+        this.updateJobWithResumeUrl(jobId, finalPath);
+      }
+
       return finalPath;
     } catch (error) {
       // Clean up temporary markdown file even if pandoc fails
       if (fs.existsSync(markdownPath)) {
         fs.unlinkSync(markdownPath);
       }
-      
+
       throw new Error(`Failed to generate PDF with pandoc: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private updateJobWithResumeUrl(jobId: string, resumePath: string): void {
+    try {
+      const jobDir = resolveFromProjectRoot('logs', jobId);
+
+      if (!fs.existsSync(jobDir)) {
+        console.warn(`⚠️  Job directory not found for ID: ${jobId}`);
+        return;
+      }
+
+      // Find the most recent job JSON file
+      const files = fs.readdirSync(jobDir);
+      const jobFiles = files
+        .filter(file => file.startsWith('job-') && file.endsWith('.json'))
+        .sort()
+        .reverse(); // Most recent first
+
+      if (jobFiles.length === 0) {
+        console.warn(`⚠️  No job JSON file found for ID: ${jobId}`);
+        return;
+      }
+
+      const jobFile = path.join(jobDir, jobFiles[0]);
+      const jobData = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
+
+      // Add or update the resumeUrl field
+      jobData.resumeUrl = resumePath;
+
+      // Save the updated job data
+      fs.writeFileSync(jobFile, JSON.stringify(jobData, null, 2), 'utf-8');
+      console.log(`📄 Resume URL saved to job JSON: ${resumePath}`);
+    } catch (error) {
+      console.warn(`⚠️  Failed to update job JSON with resume URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

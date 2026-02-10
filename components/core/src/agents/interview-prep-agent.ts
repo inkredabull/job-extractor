@@ -991,7 +991,7 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
 
       const cacheKey = this.generateCacheKey(type, cvFilePath, options);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      
+
       const cacheData = {
         timestamp: new Date().toISOString(),
         jobId,
@@ -1007,6 +1007,13 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
       const cachePath = path.join(jobDir, `interview-prep-${type}-${person}-${cacheKey}-${timestamp}.json`);
       fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
       console.log(`📝 Interview material cached to: ${cachePath}`);
+
+      // For cover-letter type, also save as a .txt file for easy access
+      if (type === 'cover-letter') {
+        const txtPath = path.join(jobDir, `blurb-${person}-${timestamp}.txt`);
+        fs.writeFileSync(txtPath, content, 'utf-8');
+        console.log(`📄 Blurb saved to: ${txtPath}`);
+      }
     } catch (error) {
       console.warn(`⚠️  Failed to cache interview material: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
