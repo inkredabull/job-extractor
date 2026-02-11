@@ -240,7 +240,7 @@ html.job-extractor-gutter-open {
 .generate-resume-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -249,18 +249,18 @@ html.job-extractor-gutter-open {
   cursor: pointer;
   transition: all 0.2s ease;
   margin: 10px 0;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .generate-resume-btn:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
 }
 
 .generate-resume-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
 }
 
 .generate-resume-btn:disabled {
@@ -507,7 +507,7 @@ html.job-extractor-gutter-open {
 .copy-blurb-btn {
   width: 100%;
   padding: 8px 12px;
-  background: #10b981;
+  background: #2563eb;
   color: white;
   border: none;
   border-radius: 6px;
@@ -518,21 +518,21 @@ html.job-extractor-gutter-open {
 }
 
 .copy-blurb-btn:hover {
-  background: #059669;
+  background: #1d4ed8;
 }
 
 .copy-blurb-btn:active {
-  background: #047857;
+  background: #1e40af;
 }
 
 .action-btn.score-btn {
-  background: #10b981;
+  background: #2563eb;
   color: white;
   flex: 1;
 }
 
 .action-btn.score-btn:hover:not(:disabled) {
-  background: #059669;
+  background: #1d4ed8;
 }
 
 .action-btn.report-btn {
