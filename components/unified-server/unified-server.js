@@ -1588,14 +1588,27 @@ app.post('/save-resume-drive-url', (req, res) => {
     // Change to the main project directory
     const projectDir = path.resolve(__dirname, '..', '..');
     const jobDir = path.join(projectDir, 'logs', jobId);
-    const jobFile = path.join(jobDir, `job-${jobId}.json`);
 
-    if (!fs.existsSync(jobFile)) {
+    if (!fs.existsSync(jobDir)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job directory not found for ID: ${jobId}`
+      });
+    }
+
+    // Find the job JSON file (it has a timestamp, not the job ID)
+    const files = fs.readdirSync(jobDir);
+    const jobFiles = files.filter(f => f.startsWith('job-') && f.endsWith('.json'));
+
+    if (jobFiles.length === 0) {
       return res.status(404).json({
         success: false,
         error: `Job file not found for ID: ${jobId}`
       });
     }
+
+    // Use the most recent job file
+    const jobFile = path.join(jobDir, jobFiles.sort().reverse()[0]);
 
     // Read existing job JSON
     const jobData = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
