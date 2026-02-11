@@ -1490,9 +1490,9 @@ app.post('/generate-resume', async (req, res) => {
     // Change to the main project directory
     const projectDir = path.resolve(__dirname, '..', '..');
 
-    // Run the CLI prep resume command
+    // Run the CLI resume command
     const output = await new Promise((resolve, reject) => {
-      const args = ['run', 'dev', '--workspace=@inkredabull/career-catalyst-core', '--', 'prep', 'resume', jobId];
+      const args = ['run', 'dev', '--workspace=@inkredabull/career-catalyst-core', '--', 'resume', jobId];
 
       console.log(`  -> Executing: npm ${args.join(' ')}`);
 
