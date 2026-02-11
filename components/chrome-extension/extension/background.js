@@ -1,8 +1,8 @@
-// Job Extractor Assistant - Background Script
+// Career Catalyst Assistant - Background Script
 
 // Installation handler
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('Job Extractor Assistant installed:', details.reason);
+  console.log('Career Catalyst Assistant installed:', details.reason);
 
   if (details.reason === 'install') {
     // Set default settings
@@ -114,7 +114,7 @@ function toggleJobTrackerPanel(tabId) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case 'log':
-      console.log('Job Extractor:', request.message);
+      console.log('Career Catalyst:', request.message);
       sendResponse({success: true});
       break;
 
@@ -172,7 +172,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleMCPServerCall(request, sendResponse) {
   try {
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('Job Extractor Background: Handling MCP server call');
+    console.log('Career Catalyst Background: Handling MCP server call');
     console.log('  → Question:', request.args.question);
     console.log('  → Question length:', request.args.question.length, 'chars');
 
@@ -246,7 +246,7 @@ STRENGTHS
 // Test if unified server is running
 async function testUnifiedServerConnection() {
   try {
-    console.log('Job Extractor Background: Testing unified server connection...');
+    console.log('Career Catalyst Background: Testing unified server connection...');
     const response = await fetch('http://localhost:3000/health', {
       method: 'GET',
       mode: 'cors',
@@ -256,12 +256,12 @@ async function testUnifiedServerConnection() {
       signal: AbortSignal.timeout(10000) // 10 second timeout
     });
     
-    console.log('Job Extractor Background: Health check response status:', response.status);
+    console.log('Career Catalyst Background: Health check response status:', response.status);
     const result = response.ok;
-    console.log('Job Extractor Background: Unified server connection test result:', result);
+    console.log('Career Catalyst Background: Unified server connection test result:', result);
     return result;
   } catch (error) {
-    console.error('Job Extractor Background: Unified server connection test failed:', error.message, error);
+    console.error('Career Catalyst Background: Unified server connection test failed:', error.message, error);
     return false;
   }
 }
@@ -497,9 +497,9 @@ function extractExperienceAreas(accomplishments) {
 // Handle extract job CLI execution
 async function handleExtractJob(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Handling extract job request for URL:', request.url);
+    console.log('Career Catalyst Background: Handling extract job request for URL:', request.url);
     if (request.html) {
-      console.log('Job Extractor Background: HTML content provided for extraction');
+      console.log('Career Catalyst Background: HTML content provided for extraction');
     }
 
     // Make request to local unified server to execute extract command
@@ -514,7 +514,7 @@ async function handleExtractJob(request, sendResponse) {
     });
 
   } catch (error) {
-    console.error('Job Extractor Background: Extract job failed:', error);
+    console.error('Career Catalyst Background: Extract job failed:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -525,7 +525,7 @@ async function handleExtractJob(request, sendResponse) {
 // Call local unified server to execute extract command
 async function callLocalUnifiedServerForExtract(url, html) {
   try {
-    console.log('Job Extractor Background: Calling unified server for extraction');
+    console.log('Career Catalyst Background: Calling unified server for extraction');
 
     // Prepare request body - use HTML extraction if HTML provided, otherwise URL extraction
     // IMPORTANT: For LLM extraction mode (preview/display), we skip reminders and post-workflow
@@ -540,9 +540,9 @@ async function callLocalUnifiedServerForExtract(url, html) {
       createReminders: false // Don't create reminders during preview extraction
     };
 
-    console.log(`Job Extractor Background: Extraction type: ${html ? 'HTML' : 'URL'}`);
+    console.log(`Career Catalyst Background: Extraction type: ${html ? 'HTML' : 'URL'}`);
     if (html) {
-      console.log(`Job Extractor Background: HTML content size: ${html.length} chars`);
+      console.log(`Career Catalyst Background: HTML content size: ${html.length} chars`);
     }
 
     const response = await fetch('http://localhost:3000/extract', {
@@ -555,14 +555,14 @@ async function callLocalUnifiedServerForExtract(url, html) {
       signal: AbortSignal.timeout(60000) // 60 second timeout for extraction
     });
 
-    console.log('Job Extractor Background: Unified server response status:', response.status);
+    console.log('Career Catalyst Background: Unified server response status:', response.status);
 
     if (!response.ok) {
       throw new Error(`Unified server responded with status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Job Extractor Background: Unified server response data:', data);
+    console.log('Career Catalyst Background: Unified server response data:', data);
 
     if (!data.success) {
       throw new Error(data.error || 'Unified server extraction failed');
@@ -575,7 +575,7 @@ async function callLocalUnifiedServerForExtract(url, html) {
     };
 
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call unified server:', error);
+    console.error('Career Catalyst Background: Failed to call unified server:', error);
 
     // Provide a helpful error message
     if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
@@ -591,7 +591,7 @@ async function callLocalUnifiedServerForExtract(url, html) {
 // Handle extract from JSON functionality
 async function handleExtractFromJson(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Handling extract from JSON request');
+    console.log('Career Catalyst Background: Handling extract from JSON request');
     console.log('Job data:', request.jobData);
     console.log('Reminder priority:', request.reminderPriority);
     console.log('Selected reminders:', request.selectedReminders);
@@ -607,7 +607,7 @@ async function handleExtractFromJson(request, sendResponse) {
     });
     
   } catch (error) {
-    console.error('Job Extractor Background: Extract from JSON failed:', error);
+    console.error('Career Catalyst Background: Extract from JSON failed:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -618,7 +618,7 @@ async function handleExtractFromJson(request, sendResponse) {
 // Handle load job from logs request
 async function handleLoadJobFromLogs(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Loading job from logs for ID:', request.jobId);
+    console.log('Career Catalyst Background: Loading job from logs for ID:', request.jobId);
 
     if (!request.jobId) {
       sendResponse({
@@ -647,14 +647,14 @@ async function handleLoadJobFromLogs(request, sendResponse) {
       throw new Error(data.error || 'Failed to load job from logs');
     }
 
-    console.log('Job Extractor Background: Successfully loaded job from logs');
+    console.log('Career Catalyst Background: Successfully loaded job from logs');
     sendResponse({
       success: true,
       jobData: data.jobData
     });
 
   } catch (error) {
-    console.error('Job Extractor Background: Failed to load job from logs:', error);
+    console.error('Career Catalyst Background: Failed to load job from logs:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -665,7 +665,7 @@ async function handleLoadJobFromLogs(request, sendResponse) {
 // Handle generate blurb request
 async function handleGenerateBlurb(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Handling generate blurb request');
+    console.log('Career Catalyst Background: Handling generate blurb request');
     console.log('Job ID:', request.jobId);
     if (request.companyWebsite) {
       console.log('Company Website:', request.companyWebsite);
@@ -690,7 +690,7 @@ async function handleGenerateBlurb(request, sendResponse) {
     });
 
   } catch (error) {
-    console.error('Job Extractor Background: Generate blurb failed:', error);
+    console.error('Career Catalyst Background: Generate blurb failed:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -701,7 +701,7 @@ async function handleGenerateBlurb(request, sendResponse) {
 // Call unified server to generate blurb
 async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '', person = 'third') {
   try {
-    console.log('Job Extractor Background: Calling unified server for blurb generation');
+    console.log('Career Catalyst Background: Calling unified server for blurb generation');
 
     const requestBody = {
       jobId: jobId,
@@ -726,12 +726,12 @@ async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '', person
     }
 
     const data = await response.json();
-    console.log('Job Extractor Background: Blurb generated successfully');
+    console.log('Career Catalyst Background: Blurb generated successfully');
 
     return data;
 
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call unified server for blurb:', error);
+    console.error('Career Catalyst Background: Failed to call unified server for blurb:', error);
     throw new Error(`Failed to generate blurb: ${error.message}`);
   }
 }
@@ -739,7 +739,7 @@ async function callUnifiedServerGenerateBlurb(jobId, companyWebsite = '', person
 // Handle generate score request
 async function handleGenerateScore(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Handling generate score request');
+    console.log('Career Catalyst Background: Handling generate score request');
     console.log('Job ID:', request.jobId);
 
     if (!request.jobId) {
@@ -760,7 +760,7 @@ async function handleGenerateScore(request, sendResponse) {
     });
 
   } catch (error) {
-    console.error('Job Extractor Background: Generate score failed:', error);
+    console.error('Career Catalyst Background: Generate score failed:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -771,7 +771,7 @@ async function handleGenerateScore(request, sendResponse) {
 // Call unified server to generate score
 async function callUnifiedServerGenerateScore(jobId) {
   try {
-    console.log('Job Extractor Background: Calling unified server for score generation');
+    console.log('Career Catalyst Background: Calling unified server for score generation');
 
     const response = await fetch('http://localhost:3000/generate-score', {
       method: 'POST',
@@ -786,12 +786,12 @@ async function callUnifiedServerGenerateScore(jobId) {
     }
 
     const data = await response.json();
-    console.log('Job Extractor Background: Score generated successfully');
+    console.log('Career Catalyst Background: Score generated successfully');
 
     return data;
 
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call unified server for score:', error);
+    console.error('Career Catalyst Background: Failed to call unified server for score:', error);
     throw new Error(`Failed to generate score: ${error.message}`);
   }
 }
@@ -799,7 +799,7 @@ async function callUnifiedServerGenerateScore(jobId) {
 // Call local unified server with JSON data
 async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5, selectedReminders = null) {
   try {
-    console.log('Job Extractor Background: Calling unified server for JSON extraction');
+    console.log('Career Catalyst Background: Calling unified server for JSON extraction');
 
     const requestBody = {
       type: 'json',
@@ -823,14 +823,14 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5, sel
       signal: AbortSignal.timeout(90000) // 90 second timeout for JSON processing (allows time for reminders)
     });
     
-    console.log('Job Extractor Background: Unified server response status:', response.status);
+    console.log('Career Catalyst Background: Unified server response status:', response.status);
     
     if (!response.ok) {
       throw new Error(`Unified server responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Job Extractor Background: Unified server response data:', data);
+    console.log('Career Catalyst Background: Unified server response data:', data);
     
     if (!data.success) {
       throw new Error(data.error || 'Unified server JSON extraction failed');
@@ -843,7 +843,7 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5, sel
     };
     
   } catch (error) {
-    console.error('Job Extractor Background: Failed to call unified server with JSON:', error);
+    console.error('Career Catalyst Background: Failed to call unified server with JSON:', error);
     
     // Provide a helpful error message
     if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
@@ -859,7 +859,7 @@ async function callLocalUnifiedServerWithJson(jobData, reminderPriority = 5, sel
 // Handle opening Teal tab and filling form
 async function handleOpenTealAndFill(request, sendResponse) {
   try {
-    console.log('Job Extractor Background: Opening Teal tab and filling form');
+    console.log('Career Catalyst Background: Opening Teal tab and filling form');
     console.log('Job info:', request.jobInfo);
     
     // Create new tab for Teal
@@ -876,7 +876,7 @@ async function handleOpenTealAndFill(request, sendResponse) {
         
         // Add delay before injection to ensure tab is fully loaded
         setTimeout(() => {
-          console.log('Job Extractor Background: Attempting to inject form filling script...');
+          console.log('Career Catalyst Background: Attempting to inject form filling script...');
           
           // Inject the Teal form-filling script
           chrome.scripting.executeScript({
@@ -884,13 +884,13 @@ async function handleOpenTealAndFill(request, sendResponse) {
             func: fillTealForm,
             args: [request.jobInfo]
           }).then((results) => {
-            console.log('Job Extractor Background: Form filling script injected successfully');
-            console.log('Job Extractor Background: Injection results:', results);
+            console.log('Career Catalyst Background: Form filling script injected successfully');
+            console.log('Career Catalyst Background: Injection results:', results);
             if (results && results[0] && results[0].error) {
-              console.error('Job Extractor Background: Script execution error:', results[0].error);
+              console.error('Career Catalyst Background: Script execution error:', results[0].error);
             }
           }).catch((error) => {
-            console.error('Job Extractor Background: Failed to inject script:', error);
+            console.error('Career Catalyst Background: Failed to inject script:', error);
             console.error('Error details:', {
               message: error.message,
               stack: error.stack,
@@ -907,7 +907,7 @@ async function handleOpenTealAndFill(request, sendResponse) {
     });
     
   } catch (error) {
-    console.error('Job Extractor Background: Failed to open Teal tab:', error);
+    console.error('Career Catalyst Background: Failed to open Teal tab:', error);
     sendResponse({
       success: false,
       error: error.message
@@ -1237,7 +1237,7 @@ async function callUnifiedServerForLinkedInReminder(reminderData) {
 // Handle LinkedIn company lookup
 async function handleLookupLinkedInCompany(request, sendResponse) {
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('Job Extractor Background: Looking up LinkedIn company');
+  console.log('Career Catalyst Background: Looking up LinkedIn company');
   console.log('  → Company name:', request.companyName);
 
   try {
@@ -1319,7 +1319,7 @@ async function handleLookupLinkedInCompany(request, sendResponse) {
 async function handleGetCompanyStage(request, sendResponse) {
   try {
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('Job Extractor Background: Getting company stage from LinkedIn');
+    console.log('Career Catalyst Background: Getting company stage from LinkedIn');
     console.log('  → Company name:', request.companyName);
 
     const companyName = request.companyName;
@@ -1469,4 +1469,4 @@ async function handleGetCompanyStage(request, sendResponse) {
   }
 }
 
-console.log('Job Extractor Assistant: Background script loaded');
+console.log('Career Catalyst Assistant: Background script loaded');

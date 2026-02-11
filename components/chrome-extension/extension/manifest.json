@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Job Extractor Assistant",
+  "name": "Career Catalyst Assistant",
   "version": "1.0.0",
   "description": "Chrome extension for job application assistance and CV-aware responses",
   "icons": {

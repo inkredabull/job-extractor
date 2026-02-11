@@ -271,7 +271,7 @@ app.post('/teal-track', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Job Extractor CLI Server running on http://localhost:${PORT}`);
+  console.log(`Career Catalyst CLI Server running on http://localhost:${PORT}`);
   console.log('Ready to accept extract requests from Chrome extension');
 });
 

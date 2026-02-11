@@ -95,7 +95,7 @@ export class OutreachAgent {
       
       console.log(`✅ LinkedIn page opened in Chrome`);
       console.log('🤖 Chrome extension will inject and run the extraction script');
-      console.log('🔄 Job Extractor Assistant automatically enabled for LinkedIn automation');
+      console.log('🔄 Career Catalyst Assistant automatically enabled for LinkedIn automation');
       console.log('📊 Connection extraction and profile opening will begin automatically...');
       console.log('\n💡 The script will:');
       console.log('   • Extract all visible connections from the page');

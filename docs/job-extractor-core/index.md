@@ -1,4 +1,4 @@
-# Job Extractor Core
+# Career Catalyst Core
 
 The main CLI tool and agent system for job extraction, scoring, resume creation, and interview preparation.
 

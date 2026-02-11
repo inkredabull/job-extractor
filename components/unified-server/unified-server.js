@@ -1346,7 +1346,7 @@ app.get('/report/:jobId', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log('🚀 Unified Job Extractor Server');
+  console.log('🚀 Unified Career Catalyst Server');
   console.log('=' .repeat(50));
   console.log(`🌐 Server running on http://localhost:${PORT}`);
   console.log(`🧠 LLM mode: ${cvEngine.useLLM ? 'ENABLED (Claude 3.5)' : 'DISABLED (Pattern matching)'}`);

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Job Extractor Chrome Extension is now organized into separate components with clear separation of concerns.
+The Career Catalyst Chrome Extension is now organized into separate components with clear separation of concerns.
 
 ## Component Structure
 

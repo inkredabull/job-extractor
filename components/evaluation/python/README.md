@@ -1,6 +1,6 @@
-# Job Extractor Evaluation (Python Package)
+# Career Catalyst Evaluation (Python Package)
 
-LangSmith-powered evaluation and monitoring for Job Extractor agents.
+LangSmith-powered evaluation and monitoring for Career Catalyst agents.
 
 ## Installation
 
@@ -85,5 +85,5 @@ This package provides:
 
 Integrates with:
 - LangSmith for evaluation tracking and monitoring
-- Job Extractor core package for data access
+- Career Catalyst core package for data access
 - Project-wide .env configuration

@@ -1,7 +1,7 @@
 """
-Job Extractor Evaluation Package
+Career Catalyst Evaluation Package
 
-LangSmith-powered evaluation and monitoring for Job Extractor agents.
+LangSmith-powered evaluation and monitoring for Career Catalyst agents.
 """
 
 __version__ = "1.0.0"

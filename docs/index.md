@@ -1,6 +1,6 @@
-# Job Extractor Monorepo
+# Career Catalyst Monorepo
 
-Welcome to the Job Extractor monorepo - an AI-powered career toolkit that delivers **10x improvement in job search efficiency**.
+Welcome to the Career Catalyst monorepo - an AI-powered career toolkit that delivers **10x improvement in job search efficiency**.
 
 ## Components
 

@@ -1,6 +1,6 @@
-# Job Extractor Chrome Extension
+# Career Catalyst Chrome Extension
 
-A Chrome extension companion for the Job Extractor CLI tool that provides a right-side gutter panel for job application assistance.
+A Chrome extension companion for the Career Catalyst CLI tool that provides a right-side gutter panel for job application assistance.
 
 ## Features
 
@@ -33,7 +33,7 @@ A Chrome extension companion for the Job Extractor CLI tool that provides a righ
 ### Opening/Closing the Panel
 
 **Method 1: Browser Icon Click**
-- Click the 🎯 Job Extractor Assistant icon in your browser toolbar
+- Click the 🎯 Career Catalyst Assistant icon in your browser toolbar
 - The panel will toggle open/closed directly (no popup required)
 
 **Method 2: Keyboard Shortcut**
@@ -93,7 +93,7 @@ extension/
 
 ### Future Integration
 
-This extension is designed to integrate with the Job Extractor CLI tool's functionality:
+This extension is designed to integrate with the Career Catalyst CLI tool's functionality:
 
 - **Real-time job analysis** from the CLI's extraction agents
 - **Application form assistance** using the CLI's form filling capabilities

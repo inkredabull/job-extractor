@@ -1,7 +1,7 @@
 /**
  * @job-extractor/evaluation
  *
- * LangSmith evaluation and monitoring for Job Extractor agents.
+ * LangSmith evaluation and monitoring for Career Catalyst agents.
  *
  * This package provides both TypeScript and Python interfaces for evaluating
  * job extraction quality using LangSmith.

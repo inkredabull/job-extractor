@@ -1,13 +1,13 @@
 [project]
 name = "job-extractor-eval"
 version = "1.0.0"
-description = "LangSmith evaluation framework for Job Extractor"
+description = "LangSmith evaluation framework for Career Catalyst"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 keywords = ["langsmith", "evaluation", "llm", "job-extractor"]
 authors = [
-  {name = "Job Extractor Contributors"}
+  {name = "Career Catalyst Contributors"}
 ]
 classifiers = [
   "Development Status :: 4 - Beta",

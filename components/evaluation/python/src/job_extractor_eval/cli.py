@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI interface for Job Extractor evaluation.
+CLI interface for Career Catalyst evaluation.
 
 Usage:
     python -m job_extractor_eval.cli <job_id>

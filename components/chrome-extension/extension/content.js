@@ -1,11 +1,11 @@
-// Job Extractor Assistant - Content Script
+// Career Catalyst Assistant - Content Script
 // VERSION: 2026-01-21-19:30 - Debug scoring report check
 console.log('Content script loaded - VERSION: 2026-01-21-19:30');
 let gutterElement = null;
 let isGutterOpen = false;
 let extractedJobDescription = '';
 
-// Global toggle for Job Extractor Assistant
+// Global toggle for Career Catalyst Assistant
 let jobExtractorEnabled = true;
 
 // Debounce utility function
@@ -27,7 +27,7 @@ function resetExtractionModeToLocal() {
   const extractionModeSelect = document.getElementById('extraction-mode');
   if (extractionModeSelect) {
     extractionModeSelect.value = 'local';
-    console.log('Job Extractor: Extraction mode reset to local (default)');
+    console.log('Career Catalyst: Extraction mode reset to local (default)');
   }
 }
 
@@ -35,7 +35,7 @@ function resetExtractionModeToLocal() {
 window.toggleJobExtractor = function(enabled) {
   if (typeof enabled === 'boolean') {
     jobExtractorEnabled = enabled;
-    console.log(`Job Extractor Assistant ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`Career Catalyst Assistant ${enabled ? 'ENABLED' : 'DISABLED'}`);
     
     if (!enabled && gutterElement) {
       closeGutter();
@@ -43,7 +43,7 @@ window.toggleJobExtractor = function(enabled) {
   } else {
     // Toggle current state if no parameter provided
     jobExtractorEnabled = !jobExtractorEnabled;
-    console.log(`Job Extractor Assistant ${jobExtractorEnabled ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`Career Catalyst Assistant ${jobExtractorEnabled ? 'ENABLED' : 'DISABLED'}`);
     
     if (!jobExtractorEnabled && gutterElement) {
       closeGutter();
@@ -55,7 +55,7 @@ window.toggleJobExtractor = function(enabled) {
 
 // Expose status check function
 window.getJobExtractorStatus = function() {
-  console.log(`Job Extractor Assistant is currently ${jobExtractorEnabled ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`Career Catalyst Assistant is currently ${jobExtractorEnabled ? 'ENABLED' : 'DISABLED'}`);
   return jobExtractorEnabled;
 };
 
@@ -139,7 +139,7 @@ function createGutter() {
   gutterElement.innerHTML = `
     <div class="gutter-header">
       <div class="header-top">
-        <h3>🎯 Job Extractor Assistant</h3>
+        <h3>🎯 Career Catalyst Assistant</h3>
         <button id="close-gutter">×</button>
       </div>
       <div class="header-job-id">
@@ -405,10 +405,10 @@ function createGutter() {
   // Re-extract when user explicitly changes extraction mode
   document.getElementById('extraction-mode').addEventListener('change', async (e) => {
     const mode = e.target.value;
-    console.log('Job Extractor: Extraction mode changed to:', mode);
+    console.log('Career Catalyst: Extraction mode changed to:', mode);
 
     // Re-run extraction when mode changes
-    console.log('Job Extractor: Re-extracting job information with new mode');
+    console.log('Career Catalyst: Re-extracting job information with new mode');
     await extractJobInformation();
   });
 
@@ -422,14 +422,14 @@ function createGutter() {
   // Server extraction and tracking only happen when user explicitly requests them
   // Wait 2 seconds to allow dynamic content to render
   setTimeout(() => {
-    console.log('Job Extractor: Running automatic local extraction (free)');
+    console.log('Career Catalyst: Running automatic local extraction (free)');
     extractJobInformationLocal();
   }, 2000);
 
   // Analyze page content for questions
   analyzePageContent();
   
-  console.log('Job Extractor: Gutter created');
+  console.log('Career Catalyst: Gutter created');
 }
 
 // Helper function to disable/enable form fields during extraction
@@ -484,7 +484,7 @@ function setFormFieldsDisabled(disabled) {
 
 // Extract comprehensive job information from the current page
 async function extractJobInformation() {
-  console.log('🔍 Job Extractor: Starting job information extraction');
+  console.log('🔍 Career Catalyst: Starting job information extraction');
   console.log('🔍 Current page URL:', window.location.href);
   console.log('🔍 Page title:', document.title);
 
@@ -493,7 +493,7 @@ async function extractJobInformation() {
   const existingJobId = jobIdField?.value?.trim();
 
   if (existingJobId) {
-    console.log('🔍 Job Extractor: Job ID already set, loading from logs:', existingJobId);
+    console.log('🔍 Career Catalyst: Job ID already set, loading from logs:', existingJobId);
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'loadJobFromLogs',
@@ -501,14 +501,14 @@ async function extractJobInformation() {
       });
 
       if (response && response.success && response.jobData) {
-        console.log('🔍 Job Extractor: Loaded job data from logs');
+        console.log('🔍 Career Catalyst: Loaded job data from logs');
         populateFieldsFromJobData(response.jobData, existingJobId);
         return;
       } else {
-        console.warn('🔍 Job Extractor: Failed to load from logs, will re-extract');
+        console.warn('🔍 Career Catalyst: Failed to load from logs, will re-extract');
       }
     } catch (error) {
-      console.error('🔍 Job Extractor: Error loading from logs:', error);
+      console.error('🔍 Career Catalyst: Error loading from logs:', error);
     }
   }
 
@@ -516,12 +516,12 @@ async function extractJobInformation() {
   const extractionModeSelect = document.getElementById('extraction-mode');
   const extractionMode = extractionModeSelect ? extractionModeSelect.value : 'local';
 
-  console.log('🔍 Job Extractor: Extraction mode:', extractionMode);
+  console.log('🔍 Career Catalyst: Extraction mode:', extractionMode);
 
   if (extractionMode === 'server') {
     // Use server-side LLM extraction (costs API tokens but more accurate)
     try {
-      console.log('🔍 Job Extractor: Using server-side LLM extraction');
+      console.log('🔍 Career Catalyst: Using server-side LLM extraction');
 
       // Disable form fields during extraction
       setFormFieldsDisabled(true);
@@ -529,7 +529,7 @@ async function extractJobInformation() {
       // Call background script to perform robust extraction using URL
       // Note: URL-based extraction works better than HTML-based for LinkedIn
       // because the full page HTML (1MB+) is too large for effective LLM processing
-      console.log('🔍 Job Extractor: Using URL-based extraction for better results');
+      console.log('🔍 Career Catalyst: Using URL-based extraction for better results');
       const response = await chrome.runtime.sendMessage({
         action: 'extractJob',
         url: window.location.href
@@ -537,17 +537,17 @@ async function extractJobInformation() {
       });
 
       if (response && response.success && response.jobData) {
-        console.log('🔍 Job Extractor: Server extraction successful');
-        console.log('🔍 Job Extractor: Job data:', response.jobData);
-        console.log('🔍 Job Extractor: Job ID:', response.jobId);
+        console.log('🔍 Career Catalyst: Server extraction successful');
+        console.log('🔍 Career Catalyst: Job data:', response.jobData);
+        console.log('🔍 Career Catalyst: Job ID:', response.jobId);
         populateFieldsFromJobData(response.jobData, response.jobId);
       } else {
-        console.error('🔍 Job Extractor: Server extraction failed, falling back to local extraction');
+        console.error('🔍 Career Catalyst: Server extraction failed, falling back to local extraction');
         extractJobInformationLocal();
       }
     } catch (error) {
-      console.error('🔍 Job Extractor: Error during server extraction:', error);
-      console.log('🔍 Job Extractor: Falling back to local extraction');
+      console.error('🔍 Career Catalyst: Error during server extraction:', error);
+      console.log('🔍 Career Catalyst: Falling back to local extraction');
       extractJobInformationLocal();
     } finally {
       // Re-enable form fields after extraction
@@ -555,7 +555,7 @@ async function extractJobInformation() {
     }
   } else {
     // Use local regex extraction (default, fast and free)
-    console.log('🔍 Job Extractor: Using local regex extraction');
+    console.log('🔍 Career Catalyst: Using local regex extraction');
     extractJobInformationLocal();
   }
 }
@@ -627,7 +627,7 @@ function populateFieldsFromJobData(jobData, jobId) {
     }
   }
 
-  console.log('Job Extractor: Job information populated:', {
+  console.log('Career Catalyst: Job information populated:', {
     title: jobData.title,
     company: jobData.company,
     location: jobData.location,
@@ -642,7 +642,7 @@ function populateFieldsFromJobData(jobData, jobId) {
 
 // Local regex-based extraction (fast and free)
 function extractJobInformationLocal() {
-  console.log('🔍 Job Extractor: Using local regex-based extraction');
+  console.log('🔍 Career Catalyst: Using local regex-based extraction');
 
   // Extract job title
   const jobTitle = extractJobTitle();
@@ -707,7 +707,7 @@ function extractJobInformationLocal() {
     companyStageField.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  console.log('Job Extractor: Basic extraction completed');
+  console.log('Career Catalyst: Basic extraction completed');
 }
 
 // Extract job title from the current page
@@ -745,7 +745,7 @@ function extractJobTitle() {
 
 // Extract company name from the current page
 function extractCompanyName() {
-  console.log('🔍 Job Extractor: Extracting company name');
+  console.log('🔍 Career Catalyst: Extracting company name');
   
   // Priority 1: Look for company in job description or visible text content
   const descText = extractedJobDescription || document.body.innerText || '';
@@ -870,7 +870,7 @@ function extractCompanyName() {
 
 // Extract job location from the current page
 function extractJobLocation() {
-  console.log('Job Extractor: Extracting job location from page');
+  console.log('Career Catalyst: Extracting job location from page');
   
   // Priority 1: Try specific location selectors first
   const locationSelectors = [
@@ -888,7 +888,7 @@ function extractJobLocation() {
     const element = document.querySelector(selector);
     if (element && element.textContent.trim()) {
       const cleaned = cleanText(element.textContent);
-      console.log(`Job Extractor: Found location via selector "${selector}": "${cleaned}"`);
+      console.log(`Career Catalyst: Found location via selector "${selector}": "${cleaned}"`);
       // Filter out obvious non-location text
       if (cleaned && 
           cleaned.length > 0 && 
@@ -914,12 +914,12 @@ function extractJobLocation() {
                           data.jobLocation.address.addressRegion ||
                           data.jobLocation.address.name;
           if (location) {
-            console.log(`Job Extractor: Found location in JSON-LD: "${location}"`);
+            console.log(`Career Catalyst: Found location in JSON-LD: "${location}"`);
             return cleanText(location);
           }
         }
         if (typeof data.jobLocation === 'string') {
-          console.log(`Job Extractor: Found location string in JSON-LD: "${data.jobLocation}"`);
+          console.log(`Career Catalyst: Found location string in JSON-LD: "${data.jobLocation}"`);
           return cleanText(data.jobLocation);
         }
       }
@@ -959,7 +959,7 @@ function extractJobLocation() {
     const match = textContent.match(pattern);
     if (match && match[1]) {
       const locationText = cleanText(match[1].trim());
-      console.log(`Job Extractor: Found location via pattern: "${locationText}"`);
+      console.log(`Career Catalyst: Found location via pattern: "${locationText}"`);
       if (locationText && 
           locationText.length > 1 && 
           locationText.length < 50 &&
@@ -1003,20 +1003,20 @@ function extractJobLocation() {
     );
     if (found) {
       const cleaned = cleanText(found);
-      console.log(`Job Extractor: Found location via keyword "${keyword}": "${cleaned}"`);
+      console.log(`Career Catalyst: Found location via keyword "${keyword}": "${cleaned}"`);
       if (cleaned && cleaned.length > 0 && cleaned.length < 40) {
         return cleaned;
       }
     }
   }
   
-  console.log('Job Extractor: No location found');
+  console.log('Career Catalyst: No location found');
   return '';
 }
 
 // Extract salary range from the current page
 function extractSalaryRange() {
-  console.log('🔍 Job Extractor: Extracting salary range');
+  console.log('🔍 Career Catalyst: Extracting salary range');
   
   // Get all text content to search for salary patterns
   const pageText = document.body.innerText || '';
@@ -1105,7 +1105,7 @@ function parseSalaryValue(value) {
 
 // Extract "Reports to:" information from job description
 function extractReportsTo() {
-  console.log('🔍 Job Extractor: Extracting reports-to information');
+  console.log('🔍 Career Catalyst: Extracting reports-to information');
 
   const descText = extractedJobDescription || document.body.innerText || '';
 
@@ -1153,7 +1153,7 @@ function extractReportsTo() {
 
 // Extract company stage from job description
 function extractCompanyStage() {
-  console.log('🔍 Job Extractor: Extracting company stage');
+  console.log('🔍 Career Catalyst: Extracting company stage');
 
   const descText = extractedJobDescription || document.body.innerText || '';
   const lowerText = descText.toLowerCase();
@@ -1204,7 +1204,7 @@ function extractCompanyStage() {
 
 // Fetch company stage from external sources (Tracxn, etc.)
 async function fetchCompanyStage(companyName) {
-  console.log('🔍 Job Extractor: Fetching company stage for:', companyName);
+  console.log('🔍 Career Catalyst: Fetching company stage for:', companyName);
 
   if (!companyName || companyName.trim().length === 0) {
     return '';
@@ -1234,7 +1234,7 @@ async function fetchCompanyStage(companyName) {
 // Extract job description from the current page
 function extractJobDescription() {
   try {
-    console.log('Job Extractor: Extracting job description from page');
+    console.log('Career Catalyst: Extracting job description from page');
     
     // Strategy 1: Look for JSON-LD structured data first (similar to CLI tool)
     const jsonLdElements = document.querySelectorAll('script[type="application/ld+json"]');
@@ -1243,7 +1243,7 @@ function extractJobDescription() {
         const data = JSON.parse(element.textContent);
         if (data['@type'] === 'JobPosting' && data.description) {
           extractedJobDescription = cleanText(data.description);
-          console.log('Job Extractor: Found job description in JSON-LD');
+          console.log('Career Catalyst: Found job description in JSON-LD');
           return;
         }
       } catch (e) {
@@ -1288,7 +1288,7 @@ function extractJobDescription() {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim().length > 100) {
         extractedJobDescription = cleanText(element.textContent);
-        console.log(`Job Extractor: Found job description using selector: ${selector}`);
+        console.log(`Career Catalyst: Found job description using selector: ${selector}`);
         return;
       }
     }
@@ -1305,7 +1305,7 @@ function extractJobDescription() {
         
         if (textBlocks.length > 0) {
           extractedJobDescription = cleanText(textBlocks[0]);
-          console.log('Job Extractor: Found job description in main content area');
+          console.log('Career Catalyst: Found job description in main content area');
           return;
         }
       }
@@ -1320,16 +1320,16 @@ function extractJobDescription() {
     
     if (allParagraphs.length > 0) {
       extractedJobDescription = cleanText(allParagraphs[0]);
-      console.log('Job Extractor: Found job description using fallback method');
+      console.log('Career Catalyst: Found job description using fallback method');
       return;
     }
     
     // If nothing found, set a helpful message
     extractedJobDescription = 'No job description could be automatically extracted from this page. Please paste the job description manually.';
-    console.log('Job Extractor: No job description found');
+    console.log('Career Catalyst: No job description found');
     
   } catch (error) {
-    console.error('Job Extractor: Error extracting job description:', error);
+    console.error('Career Catalyst: Error extracting job description:', error);
     extractedJobDescription = 'Error extracting job description. Please paste manually.';
   }
 }
@@ -1389,9 +1389,9 @@ async function handleLLMQuery() {
     let isRealResponse = false;
     if (!response) {
       response = generateMockResponse(query);
-      console.log('Job Extractor: Using fallback mock response');
+      console.log('Career Catalyst: Using fallback mock response');
     } else {
-      console.log('Job Extractor: Using CV-aware response');
+      console.log('Career Catalyst: Using CV-aware response');
       isRealResponse = true;
     }
     
@@ -1407,7 +1407,7 @@ async function handleLLMQuery() {
       <div class="response-text">${response}</div>
     `;
     
-    console.log('Job Extractor: Mock LLM API call successful');
+    console.log('Career Catalyst: Mock LLM API call successful');
     
   } catch (error) {
     // Display error state
@@ -1417,7 +1417,7 @@ async function handleLLMQuery() {
         <strong>Error:</strong> Failed to connect to AI service
       </div>
     `;
-    console.error('Job Extractor: LLM API call failed', error);
+    console.error('Career Catalyst: LLM API call failed', error);
   }
   
   // Reset button state
@@ -1523,7 +1523,7 @@ async function handleTealTracking() {
       </div>
     `;
     statusDiv.className = 'teal-status error';
-    console.error('Job Extractor: Teal tracking failed', error);
+    console.error('Career Catalyst: Teal tracking failed', error);
   }
   
   // Reset button state
@@ -1581,9 +1581,9 @@ async function handleTrackFromForm() {
     if (document.getElementById('reminder-prep')?.checked) selectedReminders.push('prep');
     if (document.getElementById('reminder-followup')?.checked) selectedReminders.push('followup');
 
-    console.log('Job Extractor: Tracking job from form fields:', jobInfo);
-    console.log('Job Extractor: Reminder priority:', reminderPriority);
-    console.log('Job Extractor: Selected reminders:', selectedReminders);
+    console.log('Career Catalyst: Tracking job from form fields:', jobInfo);
+    console.log('Career Catalyst: Reminder priority:', reminderPriority);
+    console.log('Career Catalyst: Selected reminders:', selectedReminders);
 
     // Send JSON payload to extract functionality server-side
     const extractResponse = await chrome.runtime.sendMessage({
@@ -1638,7 +1638,7 @@ async function handleTrackFromForm() {
     }
     
   } catch (error) {
-    console.error('Job Extractor: Track from form failed', error);
+    console.error('Career Catalyst: Track from form failed', error);
     alert(`Error: ${error.message}`);
   } finally {
     // Reset button state
@@ -1821,10 +1821,10 @@ async function handleGenerateBlurb() {
     const personRadio = document.querySelector('input[name="blurb-person"]:checked');
     const person = personRadio?.value || 'third';
 
-    console.log('Job Extractor: Generating blurb for job ID:', jobId);
-    console.log('Job Extractor: Perspective:', person);
+    console.log('Career Catalyst: Generating blurb for job ID:', jobId);
+    console.log('Career Catalyst: Perspective:', person);
     if (companyWebsite) {
-      console.log('Job Extractor: Using company website:', companyWebsite);
+      console.log('Career Catalyst: Using company website:', companyWebsite);
     }
 
     // Send message to background script to call unified server
@@ -1874,7 +1874,7 @@ async function handleGenerateBlurb() {
     }
 
   } catch (error) {
-    console.error('Job Extractor: Generate blurb failed', error);
+    console.error('Career Catalyst: Generate blurb failed', error);
     alert(`Error generating blurb: ${error.message}`);
   } finally {
     // Reset button state
@@ -1907,7 +1907,7 @@ function updateConnectionsSection(companyName) {
 // Handle LinkedIn connections search
 async function handleSearchConnections() {
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('Job Extractor: Initiating LinkedIn connections search');
+  console.log('Career Catalyst: Initiating LinkedIn connections search');
 
   const companyNameField = document.getElementById('company-name');
   const companyName = companyNameField ? companyNameField.value.trim() : '';
@@ -2019,8 +2019,8 @@ async function handleExtractJob() {
   try {
     // Get the full page HTML for robust extraction
     const pageHtml = document.documentElement.outerHTML;
-    console.log('Job Extractor: Sending page HTML for robust extraction');
-    console.log('Job Extractor: HTML size:', pageHtml.length, 'chars');
+    console.log('Career Catalyst: Sending page HTML for robust extraction');
+    console.log('Career Catalyst: HTML size:', pageHtml.length, 'chars');
 
     // Send message to background script to execute CLI command with HTML
     const response = await chrome.runtime.sendMessage({
@@ -2066,7 +2066,7 @@ async function handleExtractJob() {
       </div>
     `;
     statusDiv.className = 'extract-status error';
-    console.error('Job Extractor: Extract job failed', error);
+    console.error('Career Catalyst: Extract job failed', error);
   }
   
   // Reset button state
@@ -2100,13 +2100,13 @@ function analyzePageContent() {
         questionsList.appendChild(li);
       });
       questionsDiv.style.display = 'block';
-      console.log(`Job Extractor: Found ${questions.length} questions on page`);
+      console.log(`Career Catalyst: Found ${questions.length} questions on page`);
     } else {
       questionsDiv.style.display = 'none';
-      console.log('Job Extractor: No questions found on page');
+      console.log('Career Catalyst: No questions found on page');
     }
   } catch (error) {
-    console.error('Job Extractor: Error analyzing page content:', error);
+    console.error('Career Catalyst: Error analyzing page content:', error);
   }
 }
 
@@ -2287,7 +2287,7 @@ function populateQuestionInput(question) {
   if (input) {
     input.value = question;
     input.focus();
-    console.log('Job Extractor: Question populated into input:', question);
+    console.log('Career Catalyst: Question populated into input:', question);
   }
 }
 
@@ -2295,7 +2295,7 @@ function populateQuestionInput(question) {
 async function generateCVAwareResponse(query) {
   try {
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('Job Extractor Content: Initiating CV-aware response request');
+    console.log('Career Catalyst Content: Initiating CV-aware response request');
     console.log('  → Question:', query);
     console.log('  → Question length:', query.length, 'chars');
 
@@ -2376,7 +2376,7 @@ function openGutter() {
     isGutterOpen = true;
   }, 10);
   
-  console.log('Job Extractor: Gutter opened');
+  console.log('Career Catalyst: Gutter opened');
 }
 
 // Close the gutter
@@ -2395,7 +2395,7 @@ function closeGutter() {
   }, 300);
   
   isGutterOpen = false;
-  console.log('Job Extractor: Gutter closed');
+  console.log('Career Catalyst: Gutter closed');
 }
 
 // Toggle gutter
@@ -2436,7 +2436,7 @@ document.addEventListener('keydown', function(e) {
     if (jobExtractorEnabled) {
       toggleGutter();
     } else {
-      console.log('Job Extractor Assistant is disabled. Use toggleJobExtractor(true) to enable.');
+      console.log('Career Catalyst Assistant is disabled. Use toggleJobExtractor(true) to enable.');
     }
   }
 });
@@ -2530,10 +2530,10 @@ function runLinkedInConnectionExtraction() {
 // Auto-detect LinkedIn company people pages and run extraction
 function checkForLinkedInExtraction() {
   if (detectLinkedInCompanyPeople()) {
-    // Auto-enable Job Extractor when on LinkedIn company people page (outreach command)
+    // Auto-enable Career Catalyst when on LinkedIn company people page (outreach command)
     if (!jobExtractorEnabled) {
       jobExtractorEnabled = true;
-      console.log('🔄 Job Extractor Assistant automatically enabled for outreach command');
+      console.log('🔄 Career Catalyst Assistant automatically enabled for outreach command');
     }
     
     if (!linkedInExtractionRunning) {
@@ -3341,7 +3341,7 @@ function checkForLinkedInFeed() {
 //   checkForLinkedInFeed();
 // }, 2000);
 
-console.log('Job Extractor Assistant: Content script loaded');
+console.log('Career Catalyst Assistant: Content script loaded');
 console.log('💡 Console functions available:');
 console.log('  • toggleJobExtractor(true/false) - Enable/disable automation');
 console.log('  • getJobExtractorStatus() - Check current status');
