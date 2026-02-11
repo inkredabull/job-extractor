@@ -125,3 +125,7 @@ data/
 macos-reminder-config.yaml
 auto-workflow-config.yaml
 migration/
+
+# Temporary and working files
+temp-*.scpt
+*-suggestions.md
