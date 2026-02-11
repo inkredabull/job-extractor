@@ -562,20 +562,23 @@ function checkForLinkedInProfile() {
         console.log('User cancelled mutual connections extraction');
       }
     }, 3000);
-  } else if (isSearchPage && url.includes('facetConnectionOf')) {
-    // This is a mutual connections search page - extract if we haven't processed this specific URL yet
-
-    // Check if we've already processed this exact search URL
-    if (processedSearchPageUrl === url) {
-      console.log('Already processed this search page URL, skipping...');
-      return;
-    }
-
-    console.log('LinkedIn mutual connections search page detected - checking if extraction needed...');
-
-    // Check if we just navigated here from clicking mutual connections link
+  } else if (isSearchPage) {
+    // Check if we're awaiting mutual connections extraction
     const awaitingExtraction = localStorage.getItem('linkedin_awaiting_mutual_connections');
+
+    console.log('🔍 DEBUG: On search page');
+    console.log('🔍 DEBUG: URL:', url);
+    console.log('🔍 DEBUG: Awaiting extraction flag:', awaitingExtraction);
+    console.log('🔍 DEBUG: Already processed URL:', processedSearchPageUrl);
+
     if (awaitingExtraction === 'true') {
+      // Check if we've already processed this exact search URL
+      if (processedSearchPageUrl === url) {
+        console.log('Already processed this search page URL, skipping...');
+        return;
+      }
+
+      console.log('LinkedIn mutual connections search page detected - auto-triggering extraction...');
       console.log('Auto-triggered extraction detected - clearing flag and proceeding...');
       localStorage.removeItem('linkedin_awaiting_mutual_connections');
 

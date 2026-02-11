@@ -41,7 +41,8 @@
         "https://www.linkedin.com/in/*",
         "https://www.linkedin.com/company/*",
         "https://www.linkedin.com/feed/*",
-        "https://www.linkedin.com/search/results/people/*"
+        "https://www.linkedin.com/search/results/people/*",
+        "https://www.linkedin.com/search/results/people?*"
       ],
       "js": ["components/linkedin-networking/linkedin-networking-content.js"],
       "run_at": "document_idle"
