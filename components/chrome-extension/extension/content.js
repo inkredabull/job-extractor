@@ -1880,6 +1880,10 @@ async function updateResumeSection(jobId) {
   const urlDisplay = document.getElementById('resume-url-display');
   const resumeLink = document.getElementById('resume-link');
   const generateBtn = document.getElementById('generate-resume-btn');
+  const driveSection = document.getElementById('resume-drive-section');
+  const driveDisplay = document.getElementById('resume-drive-display');
+  const driveLink = document.getElementById('resume-drive-link');
+  const driveUrlInput = document.getElementById('resume-drive-url');
 
   if (!jobId) {
     console.log('[updateResumeSection] No job ID provided');
@@ -1887,6 +1891,8 @@ async function updateResumeSection(jobId) {
     statusDiv.style.display = 'block';
     urlDisplay.style.display = 'none';
     generateBtn.style.display = 'none';
+    driveSection.style.display = 'none';
+    driveDisplay.style.display = 'none';
     return;
   }
 
@@ -1894,14 +1900,10 @@ async function updateResumeSection(jobId) {
   statusText.textContent = '⏳ Checking for resume...';
   statusDiv.style.display = 'block';
 
-  const driveSection = document.getElementById('resume-drive-section');
-  const driveDisplay = document.getElementById('resume-drive-display');
-  const driveLink = document.getElementById('resume-drive-link');
-  const driveUrlInput = document.getElementById('resume-drive-url');
-
   const resumeData = await checkResumeExists(jobId);
   console.log(`[updateResumeSection] Resume data =`, resumeData);
 
+  // Handle local resume display
   if (resumeData.exists) {
     // Resume exists - show local link
     statusDiv.style.display = 'none';
@@ -1911,26 +1913,27 @@ async function updateResumeSection(jobId) {
     // Set the local resume link
     const fullPath = `file:///Users/inkredabull/Code/inkredabull/career-catalyst/${resumeData.resumePath}`;
     resumeLink.href = fullPath;
-
-    // Show Google Drive section
-    if (resumeData.driveUrl) {
-      // Drive URL exists - show link
-      driveSection.style.display = 'none';
-      driveDisplay.style.display = 'block';
-      driveLink.href = resumeData.driveUrl;
-    } else {
-      // No Drive URL - show input
-      driveSection.style.display = 'block';
-      driveDisplay.style.display = 'none';
-      driveUrlInput.value = '';
-    }
   } else {
     // No resume - show generate button
     statusDiv.style.display = 'none';
     urlDisplay.style.display = 'none';
     generateBtn.style.display = 'block';
+  }
+
+  // Handle Google Drive section (independent of local resume)
+  if (resumeData.driveUrl) {
+    // Drive URL exists - show link
+    console.log(`[updateResumeSection] Showing Drive URL: ${resumeData.driveUrl}`);
     driveSection.style.display = 'none';
+    driveDisplay.style.display = 'block';
+    driveLink.href = resumeData.driveUrl;
+    driveLink.textContent = 'Open Resume on Google Drive';
+  } else {
+    // No Drive URL - show input
+    console.log('[updateResumeSection] No Drive URL, showing input');
+    driveSection.style.display = 'block';
     driveDisplay.style.display = 'none';
+    driveUrlInput.value = '';
   }
 }
 
@@ -1972,6 +1975,29 @@ async function handleGenerateResume() {
   }
 }
 
+// Parse Google Drive FILE_ID from various URL formats
+function parseGoogleDriveFileId(url) {
+  try {
+    // Handle format: https://drive.google.com/open?id=FILE_ID&usp=...
+    if (url.includes('/open?id=')) {
+      const match = url.match(/[?&]id=([^&]+)/);
+      if (match) return match[1];
+    }
+
+    // Handle format: https://drive.google.com/file/d/FILE_ID/view
+    // Also handles /edit, /preview, etc.
+    if (url.includes('/file/d/')) {
+      const match = url.match(/\/file\/d\/([^/]+)/);
+      if (match) return match[1];
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error parsing Google Drive URL:', error);
+    return null;
+  }
+}
+
 // Handle saving Google Drive resume URL
 async function handleSaveResumeDriveUrl() {
   const jobIdField = document.getElementById('job-id');
@@ -1995,11 +2021,23 @@ async function handleSaveResumeDriveUrl() {
     return;
   }
 
+  // Extract FILE_ID and convert to standard format
+  const fileId = parseGoogleDriveFileId(driveUrl);
+  if (!fileId) {
+    alert('Could not parse Google Drive file ID from URL. Please check the URL format.');
+    return;
+  }
+
+  // Convert to standard format
+  const standardUrl = `https://drive.google.com/file/d/${fileId}/view`;
+  console.log(`[handleSaveResumeDriveUrl] Parsed FILE_ID: ${fileId}`);
+  console.log(`[handleSaveResumeDriveUrl] Standard URL: ${standardUrl}`);
+
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'saveResumeDriveUrl',
       jobId: jobId,
-      driveUrl: driveUrl
+      driveUrl: standardUrl
     });
 
     if (response.success) {

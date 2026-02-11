@@ -1389,15 +1389,21 @@ app.get('/check-resume/:jobId', (req, res) => {
     console.log(`  -> Resume found: ${relativePath}`);
 
     // Check for Google Drive URL in job JSON
-    const jobFile = path.join(jobDir, `job-${jobId}.json`);
+    // Job files are named job-{timestamp}.json, not job-{jobId}.json
     let driveUrl = null;
-    if (fs.existsSync(jobFile)) {
+    const jobFiles = files.filter(f => f.startsWith('job-') && f.endsWith('.json'));
+    if (jobFiles.length > 0) {
+      // Use the most recent job file
+      const jobFile = path.join(jobDir, jobFiles.sort().reverse()[0]);
       try {
         const jobData = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
         driveUrl = jobData.resumeGoogleDriveUrl || null;
+        console.log(`  -> Drive URL from job JSON: ${driveUrl || 'not set'}`);
       } catch (error) {
         console.log(`  -> Could not read Drive URL from job JSON: ${error.message}`);
       }
+    } else {
+      console.log(`  -> No job JSON file found in ${jobDir}`);
     }
 
     res.json({
