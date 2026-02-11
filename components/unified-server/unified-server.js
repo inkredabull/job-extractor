@@ -1344,6 +1344,150 @@ app.get('/report/:jobId', (req, res) => {
   }
 });
 
+// Check if resume exists for a job
+app.get('/check-resume/:jobId', (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Check resume request for job: ${req.params.jobId}`);
+
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+    const jobDir = path.join(projectDir, 'logs', jobId);
+
+    if (!fs.existsSync(jobDir)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job ID ${jobId} not found`
+      });
+    }
+
+    // Look for tailored resume files
+    const files = fs.readdirSync(jobDir);
+    const resumeFiles = files.filter(f => f.startsWith('tailored-') && f.endsWith('.md'));
+
+    if (resumeFiles.length === 0) {
+      return res.json({
+        success: true,
+        exists: false,
+        resumePath: null
+      });
+    }
+
+    // Get the most recent resume file
+    const mostRecentResume = resumeFiles.sort().reverse()[0];
+    const relativePath = `logs/${jobId}/${mostRecentResume}`;
+
+    console.log(`  -> Resume found: ${relativePath}`);
+
+    res.json({
+      success: true,
+      exists: true,
+      resumePath: relativePath
+    });
+
+  } catch (error) {
+    console.error('  -> Check resume failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Generate resume for a job
+app.post('/generate-resume', async (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Generate resume request`);
+
+  try {
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    console.log(`  -> Generating resume for job: ${jobId}`);
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+
+    // Run the CLI prep resume command
+    const output = await new Promise((resolve, reject) => {
+      const args = ['run', 'dev', '--workspace=@inkredabull/career-catalyst-core', '--', 'prep', 'resume', jobId];
+
+      console.log(`  -> Executing: npm ${args.join(' ')}`);
+
+      const resumeProcess = spawn('npm', args, {
+        cwd: projectDir,
+        shell: true
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      resumeProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        stdout += output;
+        output.split('\n').filter(line => line.trim()).forEach(line => {
+          console.log(`     [RESUME] ${line}`);
+        });
+      });
+
+      resumeProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      resumeProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(stderr || `Resume generation failed with exit code ${code}`));
+        }
+      });
+
+      // Set timeout for resume generation (can take a while with LLM)
+      setTimeout(() => {
+        resumeProcess.kill();
+        reject(new Error('Resume generation timed out after 180 seconds'));
+      }, 180000);
+    });
+
+    console.log(`  -> ✅ Resume generated successfully for job: ${jobId}`);
+
+    // Check for the generated resume file
+    const jobDir = path.join(projectDir, 'logs', jobId);
+    const files = fs.readdirSync(jobDir);
+    const resumeFiles = files.filter(f => f.startsWith('tailored-') && f.endsWith('.md'));
+    const mostRecentResume = resumeFiles.sort().reverse()[0];
+    const relativePath = mostRecentResume ? `logs/${jobId}/${mostRecentResume}` : null;
+
+    res.json({
+      success: true,
+      jobId: jobId,
+      resumePath: relativePath
+    });
+
+  } catch (error) {
+    console.error('  -> Resume generation failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 Unified Career Catalyst Server');
@@ -1358,6 +1502,8 @@ app.listen(PORT, () => {
   console.log(`  • POST /generate-score   - Generate job scoring report`);
   console.log(`  • GET  /report/:jobId    - View scoring report HTML`);
   console.log(`  • POST /generate-blurb   - Generate cover letter blurb`);
+  console.log(`  • GET  /check-resume/:jobId - Check if resume exists`);
+  console.log(`  • POST /generate-resume  - Generate tailored resume`);
   console.log(`  • POST /linkedin-reminder - Create reminder for saved LinkedIn posts`);
   console.log(`  • POST /teal-track       - Deprecated (use Chrome extension)`);
   console.log('');

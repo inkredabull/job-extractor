@@ -163,6 +163,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleGenerateScore(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'checkResume':
+      handleCheckResume(request, sendResponse);
+      return true; // Keep message channel open for async response
+
+    case 'generateResume':
+      handleGenerateResume(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -793,6 +801,122 @@ async function callUnifiedServerGenerateScore(jobId) {
   } catch (error) {
     console.error('Career Catalyst Background: Failed to call unified server for score:', error);
     throw new Error(`Failed to generate score: ${error.message}`);
+  }
+}
+
+// Handle check resume request
+async function handleCheckResume(request, sendResponse) {
+  try {
+    console.log('Career Catalyst Background: Checking for resume');
+    console.log('Job ID:', request.jobId);
+
+    if (!request.jobId) {
+      sendResponse({
+        success: false,
+        error: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Check if resume files exist in logs directory
+    const resumeCheck = await checkResumeInLogs(request.jobId);
+
+    sendResponse({
+      success: true,
+      exists: resumeCheck.exists,
+      resumePath: resumeCheck.path
+    });
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Check resume failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Check if resume exists in logs directory
+async function checkResumeInLogs(jobId) {
+  try {
+    // Call unified server to check for resume
+    const response = await fetch(`http://localhost:3000/check-resume/${jobId}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      exists: data.exists,
+      path: data.resumePath
+    };
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Failed to check resume:', error);
+    return { exists: false, path: null };
+  }
+}
+
+// Handle generate resume request
+async function handleGenerateResume(request, sendResponse) {
+  try {
+    console.log('Career Catalyst Background: Handling generate resume request');
+    console.log('Job ID:', request.jobId);
+
+    if (!request.jobId) {
+      sendResponse({
+        success: false,
+        error: 'Job ID is required'
+      });
+      return;
+    }
+
+    // Call unified server to generate resume
+    const resumeResponse = await callUnifiedServerGenerateResume(request.jobId);
+
+    sendResponse({
+      success: true,
+      jobId: resumeResponse.jobId,
+      resumePath: resumeResponse.resumePath
+    });
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Generate resume failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Call unified server to generate resume
+async function callUnifiedServerGenerateResume(jobId) {
+  try {
+    console.log('Career Catalyst Background: Calling unified server for resume generation');
+
+    const response = await fetch('http://localhost:3000/generate-resume', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId: jobId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Career Catalyst Background: Resume generated successfully');
+
+    return data;
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Failed to call unified server for resume:', error);
+    throw new Error(`Failed to generate resume: ${error.message}`);
   }
 }
 

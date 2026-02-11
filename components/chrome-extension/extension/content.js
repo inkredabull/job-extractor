@@ -320,6 +320,21 @@ function createGutter() {
           <label for="company-stage">Stage of the Company:</label>
           <input type="text" id="company-stage" class="job-input" placeholder="Will be looked up from company data..." disabled>
         </div>
+
+        <div class="form-field">
+          <label for="resume-url">Resume:</label>
+          <div id="resume-container">
+            <div id="resume-status" class="resume-status">
+              <span id="resume-status-text">Track a job to check for resume</span>
+            </div>
+            <div id="resume-url-display" style="display: none;">
+              <a id="resume-link" href="#" target="_blank" class="resume-link">📄 View Resume</a>
+            </div>
+            <button id="generate-resume-btn" class="generate-resume-btn" style="display: none;">
+              Generate Tailored Resume
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Job Scoring Section -->
@@ -371,6 +386,9 @@ function createGutter() {
 
   // Add generate blurb button functionality
   document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
+
+  // Add generate resume button functionality
+  document.getElementById('generate-resume-btn').addEventListener('click', handleGenerateResume);
 
   // Add search connections button functionality
   document.getElementById('search-connections').addEventListener('click', handleSearchConnections);
@@ -1630,8 +1648,9 @@ async function handleTrackFromForm() {
       console.log('📝 Job data and reminder saved successfully!');
       alert('Job data and reminder saved successfully!');
 
-      // Update the scoring section after successful tracking
+      // Update the scoring and resume sections after successful tracking
       await updateScoringSection(extractResponse.jobId);
+      await updateResumeSection(extractResponse.jobId);
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);
@@ -1789,6 +1808,101 @@ async function handleGenerateScore() {
     console.error('Error generating score:', error);
     alert(`Error generating score: ${error.message}`);
     generateBtn.textContent = originalText;
+    generateBtn.disabled = false;
+  }
+}
+
+// Check if resume exists for a job
+async function checkResumeExists(jobId) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'checkResume',
+      jobId: jobId
+    });
+    return response.exists ? response.resumePath : null;
+  } catch (error) {
+    console.error('Error checking resume:', error);
+    return null;
+  }
+}
+
+// Update resume section UI based on job ID
+async function updateResumeSection(jobId) {
+  console.log('[updateResumeSection] Called with jobId:', jobId);
+  const statusText = document.getElementById('resume-status-text');
+  const statusDiv = document.getElementById('resume-status');
+  const urlDisplay = document.getElementById('resume-url-display');
+  const resumeLink = document.getElementById('resume-link');
+  const generateBtn = document.getElementById('generate-resume-btn');
+
+  if (!jobId) {
+    console.log('[updateResumeSection] No job ID provided');
+    statusText.textContent = 'Track a job to check for resume';
+    statusDiv.style.display = 'block';
+    urlDisplay.style.display = 'none';
+    generateBtn.style.display = 'none';
+    return;
+  }
+
+  console.log(`[updateResumeSection] Checking resume for job ${jobId}`);
+  statusText.textContent = '⏳ Checking for resume...';
+  statusDiv.style.display = 'block';
+
+  const resumePath = await checkResumeExists(jobId);
+  console.log(`[updateResumeSection] Resume path = ${resumePath}`);
+
+  if (resumePath) {
+    // Resume exists - show link
+    statusDiv.style.display = 'none';
+    urlDisplay.style.display = 'block';
+    generateBtn.style.display = 'none';
+
+    // Set the resume link to open the file
+    const fullPath = `file:///Users/inkredabull/Code/inkredabull/career-catalyst/${resumePath}`;
+    resumeLink.href = fullPath;
+    resumeLink.textContent = `📄 View Resume (${resumePath.split('/').pop()})`;
+  } else {
+    // No resume - show generate button
+    statusDiv.style.display = 'none';
+    urlDisplay.style.display = 'none';
+    generateBtn.style.display = 'block';
+  }
+}
+
+// Handle generate resume functionality
+async function handleGenerateResume() {
+  const generateBtn = document.getElementById('generate-resume-btn');
+  const jobIdField = document.getElementById('job-id');
+  const jobId = jobIdField?.value?.trim();
+
+  if (!jobId) {
+    alert('No Job ID found. Please track a job first.');
+    return;
+  }
+
+  // Show loading state
+  generateBtn.textContent = '⏳ Generating resume...';
+  generateBtn.disabled = true;
+
+  try {
+    // Call the backend to generate resume
+    const response = await chrome.runtime.sendMessage({
+      action: 'generateResume',
+      jobId: jobId
+    });
+
+    if (response.success) {
+      console.log('✅ Resume generated successfully');
+      alert('Resume generated successfully!');
+      // Update the resume section to show the new resume
+      await updateResumeSection(jobId);
+    } else {
+      throw new Error(response.error || 'Failed to generate resume');
+    }
+  } catch (error) {
+    console.error('Error generating resume:', error);
+    alert(`Error generating resume: ${error.message}`);
+    generateBtn.textContent = 'Generate Tailored Resume';
     generateBtn.disabled = false;
   }
 }
