@@ -171,6 +171,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleGenerateResume(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'checkBlurb':
+      handleCheckBlurb(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     default:
       sendResponse({success: false, error: 'Unknown action'});
   }
@@ -857,6 +861,62 @@ async function checkResumeInLogs(jobId) {
   } catch (error) {
     console.error('Career Catalyst Background: Failed to check resume:', error);
     return { exists: false, path: null };
+  }
+}
+
+// Handle check blurb request
+async function handleCheckBlurb(request, sendResponse) {
+  try {
+    console.log('Career Catalyst Background: Checking for blurb');
+    console.log('Job ID:', request.jobId, 'Person:', request.person);
+
+    if (!request.jobId || !request.person) {
+      sendResponse({
+        success: false,
+        error: 'Job ID and person are required'
+      });
+      return;
+    }
+
+    // Check if blurb files exist in logs directory
+    const blurbCheck = await checkBlurbInLogs(request.jobId, request.person);
+
+    sendResponse({
+      success: true,
+      exists: blurbCheck.exists,
+      blurbContent: blurbCheck.content
+    });
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Check blurb failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Check if blurb exists in logs directory
+async function checkBlurbInLogs(jobId, person) {
+  try {
+    // Call unified server to check for blurb
+    const response = await fetch(`http://localhost:3000/check-blurb/${jobId}/${person}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      exists: data.exists,
+      content: data.blurbContent
+    };
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Failed to check blurb:', error);
+    return { exists: false, content: null };
   }
 }
 

@@ -176,23 +176,39 @@ function createGutter() {
           <input type="text" id="company-website" class="job-input" placeholder="e.g., https://company.com" title="Used to research company values for blurb generation">
         </div>
 
-        <div class="form-field">
-          <label>Perspective:</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="blurb-person" value="first">
-              <span>First Person (I/my)</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="blurb-person" value="third" checked>
-              <span>Third Person (Anthony/his)</span>
-            </label>
+        <!-- Third Person Blurb Section -->
+        <div class="blurb-section">
+          <h5 class="blurb-section-title">Third Person Perspective</h5>
+          <div id="third-person-blurb-container">
+            <div id="third-person-blurb-status" class="blurb-status">
+              <span id="third-person-blurb-status-text">Track a job to check for blurb</span>
+            </div>
+            <div id="third-person-blurb-display" style="display: none;">
+              <div id="third-person-blurb-content" class="blurb-content"></div>
+              <button id="copy-third-person-blurb" class="copy-blurb-btn">📋 Copy to Clipboard</button>
+            </div>
+            <button id="generate-third-person-blurb" class="action-btn blurb-btn" style="display: none;">
+              📝 Generate Third Person Blurb
+            </button>
           </div>
         </div>
 
-        <button id="generate-blurb" class="action-btn blurb-btn">
-          📝 Generate Blurb
-        </button>
+        <!-- First Person Blurb Section -->
+        <div class="blurb-section">
+          <h5 class="blurb-section-title">First Person Perspective</h5>
+          <div id="first-person-blurb-container">
+            <div id="first-person-blurb-status" class="blurb-status">
+              <span id="first-person-blurb-status-text">Track a job to check for blurb</span>
+            </div>
+            <div id="first-person-blurb-display" style="display: none;">
+              <div id="first-person-blurb-content" class="blurb-content"></div>
+              <button id="copy-first-person-blurb" class="copy-blurb-btn">📋 Copy to Clipboard</button>
+            </div>
+            <button id="generate-first-person-blurb" class="action-btn blurb-btn" style="display: none;">
+              📝 Generate First Person Blurb
+            </button>
+          </div>
+        </div>
 
         <div id="llm-response" class="response-section" style="display: none;">
           <div class="response-header">
@@ -384,8 +400,13 @@ function createGutter() {
   // Add generate score button functionality
   document.getElementById('generate-score').addEventListener('click', handleGenerateScore);
 
-  // Add generate blurb button functionality
-  document.getElementById('generate-blurb').addEventListener('click', handleGenerateBlurb);
+  // Add generate blurb button functionality for both persons
+  document.getElementById('generate-third-person-blurb').addEventListener('click', () => handleGenerateBlurb('third'));
+  document.getElementById('generate-first-person-blurb').addEventListener('click', () => handleGenerateBlurb('first'));
+
+  // Add copy blurb button functionality
+  document.getElementById('copy-third-person-blurb').addEventListener('click', () => handleCopyBlurb('third'));
+  document.getElementById('copy-first-person-blurb').addEventListener('click', () => handleCopyBlurb('first'));
 
   // Add generate resume button functionality
   document.getElementById('generate-resume-btn').addEventListener('click', handleGenerateResume);
@@ -1648,9 +1669,11 @@ async function handleTrackFromForm() {
       console.log('📝 Job data and reminder saved successfully!');
       alert('Job data and reminder saved successfully!');
 
-      // Update the scoring and resume sections after successful tracking
+      // Update the scoring, resume, and blurb sections after successful tracking
       await updateScoringSection(extractResponse.jobId);
       await updateResumeSection(extractResponse.jobId);
+      await updateBlurbSection(extractResponse.jobId, 'third');
+      await updateBlurbSection(extractResponse.jobId, 'first');
     } else {
       console.error('❌ Failed to save job data:', extractResponse.error);
       alert(`Failed to save job data: ${extractResponse.error}`);
@@ -1908,10 +1931,11 @@ async function handleGenerateResume() {
 }
 
 // Handle generate blurb functionality
-async function handleGenerateBlurb() {
-  const blurbBtn = document.getElementById('generate-blurb');
-  const responseDiv = document.getElementById('llm-response');
-  const responseContent = responseDiv.querySelector('.response-content');
+async function handleGenerateBlurb(person) {
+  const blurbBtn = document.getElementById(`generate-${person}-person-blurb`);
+  const blurbDisplay = document.getElementById(`${person}-person-blurb-display`);
+  const blurbContent = document.getElementById(`${person}-person-blurb-content`);
+  const blurbStatus = document.getElementById(`${person}-person-blurb-status`);
 
   // Show loading state
   blurbBtn.textContent = '⏳ Generating blurb...';
@@ -1931,10 +1955,6 @@ async function handleGenerateBlurb() {
     const companyWebsiteField = document.getElementById('company-website');
     const companyWebsite = companyWebsiteField?.value?.trim() || '';
 
-    // Get the selected person (first or third)
-    const personRadio = document.querySelector('input[name="blurb-person"]:checked');
-    const person = personRadio?.value || 'third';
-
     console.log('Career Catalyst: Generating blurb for job ID:', jobId);
     console.log('Career Catalyst: Perspective:', person);
     if (companyWebsite) {
@@ -1950,40 +1970,19 @@ async function handleGenerateBlurb() {
     });
 
     if (response.success) {
-      console.log('✅ Successfully generated blurb:', response.blurb.substring(0, 100) + '...');
+      console.log(`✅ Successfully generated ${person}-person blurb:`, response.blurb.substring(0, 100) + '...');
 
-      // Display the blurb in the response section
-      responseDiv.style.display = 'block';
-      responseContent.innerHTML = `
-        <div style="margin-bottom: 10px;">
-          <strong>Third-Person Blurb (${response.characterCount} characters):</strong>
-        </div>
-        <div style="background: #f8fafc; padding: 12px; border-radius: 4px; white-space: pre-wrap; font-family: inherit; line-height: 1.6;">
-          ${response.blurb.replace(/\n/g, '<br>')}
-        </div>
-        <div style="margin-top: 10px;">
-          <button id="copy-blurb" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
-            📋 Copy to Clipboard
-          </button>
-        </div>
-      `;
+      // Hide status and button, show blurb content
+      blurbStatus.style.display = 'none';
+      blurbBtn.style.display = 'none';
+      blurbDisplay.style.display = 'block';
 
-      // Add copy functionality
-      document.getElementById('copy-blurb').addEventListener('click', function() {
-        navigator.clipboard.writeText(response.blurb);
-        this.textContent = '✓ Copied!';
-        setTimeout(() => {
-          this.textContent = '📋 Copy to Clipboard';
-        }, 2000);
-      });
-
-      blurbBtn.textContent = '✓ Blurb Generated';
-      setTimeout(() => {
-        blurbBtn.textContent = '📝 Generate Blurb';
-      }, 3000);
+      // Display the blurb
+      blurbContent.textContent = response.blurb;
+      blurbContent.setAttribute('data-character-count', response.characterCount);
 
     } else {
-      console.error('❌ Failed to generate blurb:', response.error);
+      console.error(`❌ Failed to generate ${person}-person blurb:`, response.error);
       alert(`Failed to generate blurb: ${response.error}`);
     }
 
@@ -1994,8 +1993,78 @@ async function handleGenerateBlurb() {
     // Reset button state
     blurbBtn.disabled = false;
     if (blurbBtn.textContent.includes('⏳')) {
-      blurbBtn.textContent = '📝 Generate Blurb';
+      blurbBtn.textContent = `📝 Generate ${person === 'third' ? 'Third' : 'First'} Person Blurb`;
     }
+  }
+}
+
+// Handle copy blurb to clipboard
+function handleCopyBlurb(person) {
+  const copyBtn = document.getElementById(`copy-${person}-person-blurb`);
+  const blurbContent = document.getElementById(`${person}-person-blurb-content`);
+
+  const text = blurbContent.textContent;
+  navigator.clipboard.writeText(text);
+
+  const originalText = copyBtn.textContent;
+  copyBtn.textContent = '✓ Copied!';
+  setTimeout(() => {
+    copyBtn.textContent = originalText;
+  }, 2000);
+}
+
+// Check if a blurb exists for a given job ID and person
+async function checkBlurbExists(jobId, person) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'checkBlurb',
+      jobId: jobId,
+      person: person
+    });
+
+    return response.exists ? response.blurbContent : null;
+  } catch (error) {
+    console.error('Error checking blurb:', error);
+    return null;
+  }
+}
+
+// Update blurb section UI based on job ID and person
+async function updateBlurbSection(jobId, person) {
+  console.log(`[updateBlurbSection] Called with jobId: ${jobId}, person: ${person}`);
+  const statusText = document.getElementById(`${person}-person-blurb-status-text`);
+  const statusDiv = document.getElementById(`${person}-person-blurb-status`);
+  const blurbDisplay = document.getElementById(`${person}-person-blurb-display`);
+  const blurbContent = document.getElementById(`${person}-person-blurb-content`);
+  const generateBtn = document.getElementById(`generate-${person}-person-blurb`);
+
+  if (!jobId) {
+    console.log(`[updateBlurbSection] No job ID provided for ${person}-person`);
+    statusText.textContent = 'Track a job to check for blurb';
+    statusDiv.style.display = 'block';
+    blurbDisplay.style.display = 'none';
+    generateBtn.style.display = 'none';
+    return;
+  }
+
+  console.log(`[updateBlurbSection] Checking ${person}-person blurb for job ${jobId}`);
+  statusText.textContent = '⏳ Checking for blurb...';
+  statusDiv.style.display = 'block';
+
+  const blurbText = await checkBlurbExists(jobId, person);
+  console.log(`[updateBlurbSection] Blurb exists = ${blurbText ? 'yes' : 'no'}`);
+
+  if (blurbText) {
+    // Blurb exists - show content
+    statusDiv.style.display = 'none';
+    generateBtn.style.display = 'none';
+    blurbDisplay.style.display = 'block';
+    blurbContent.textContent = blurbText;
+  } else {
+    // No blurb - show generate button
+    statusDiv.style.display = 'none';
+    blurbDisplay.style.display = 'none';
+    generateBtn.style.display = 'block';
   }
 }
 

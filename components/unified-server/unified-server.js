@@ -1403,6 +1403,73 @@ app.get('/check-resume/:jobId', (req, res) => {
   }
 });
 
+// Check if blurb exists for a job and person
+app.get('/check-blurb/:jobId/:person', (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Check blurb request for job: ${req.params.jobId}, person: ${req.params.person}`);
+
+  try {
+    const { jobId, person } = req.params;
+
+    if (!jobId || !person) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID and person are required'
+      });
+    }
+
+    if (person !== 'first' && person !== 'third') {
+      return res.status(400).json({
+        success: false,
+        error: 'Person must be "first" or "third"'
+      });
+    }
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+    const jobDir = path.join(projectDir, 'logs', jobId);
+
+    if (!fs.existsSync(jobDir)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job ID ${jobId} not found`
+      });
+    }
+
+    // Look for blurb files for the specified person
+    const files = fs.readdirSync(jobDir);
+    const blurbFiles = files.filter(f => f.startsWith(`blurb-${person}-`) && f.endsWith('.txt'));
+
+    if (blurbFiles.length === 0) {
+      return res.json({
+        success: true,
+        exists: false,
+        blurbContent: null
+      });
+    }
+
+    // Get the most recent blurb file
+    const mostRecentBlurb = blurbFiles.sort().reverse()[0];
+    const blurbPath = path.join(jobDir, mostRecentBlurb);
+    const blurbContent = fs.readFileSync(blurbPath, 'utf-8');
+
+    console.log(`  -> Blurb found: ${mostRecentBlurb} (${blurbContent.length} characters)`);
+
+    res.json({
+      success: true,
+      exists: true,
+      blurbContent: blurbContent
+    });
+
+  } catch (error) {
+    console.error('  -> Check blurb failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Generate resume for a job
 app.post('/generate-resume', async (req, res) => {
   const timestamp = new Date().toISOString();

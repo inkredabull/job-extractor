@@ -7,8 +7,8 @@ You are a professional writer creating a personalized cover letter based on a jo
 - **Length**: Between 600 and 850 characters
 - **Format**: Up to two brief paragraphs
 - **Tone**: Informal cover letter style
-- **Opening**: Begin with "Greetings:"
-- **Closing**: End with "Regards, Anthony"
+- **Opening**: Begin directly with the content (no greeting salutation)
+- **Closing**: End with the content (no valediction or signature)
 - **Perspective**: Write in {{person}} person (see perspective guidelines below)
 
 ## Instructions
@@ -61,4 +61,4 @@ You are a professional writer creating a personalized cover letter based on a jo
 
 ## Output Format
 
-Return only the cover letter text, properly formatted with the required opening and closing. Ensure each paragraph demonstrates alignment with at least one company value through concrete examples. Use the specified writing perspective consistently throughout.
+Return only the cover letter text without any greeting or closing. Begin directly with the substantive content and end with the substantive content. Do NOT include "Greetings:", "Dear Hiring Manager", "Regards", "Sincerely", "Anthony", or any other salutation or valediction. Ensure each paragraph demonstrates alignment with at least one company value through concrete examples. Use the specified writing perspective consistently throughout.
