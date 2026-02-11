@@ -451,10 +451,13 @@ function createGutter() {
     await extractJobInformation();
   });
 
-  // Add job ID field change listener to update scoring section
+  // Add job ID field change listener to update scoring, resume, and blurb sections
   document.getElementById('job-id').addEventListener('input', debounce(async (e) => {
     const jobId = e.target.value.trim();
     await updateScoringSection(jobId);
+    await updateResumeSection(jobId);
+    await updateBlurbSection(jobId, 'third');
+    await updateBlurbSection(jobId, 'first');
   }, 500)); // Debounce to avoid too many requests while typing
 
   // Run automatic LOCAL extraction after page content loads (free, no API calls, no reminders)
