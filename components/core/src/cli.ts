@@ -470,8 +470,8 @@ program
       // Process job description with required terms extraction and index update
       await agent.processJobDescription(jobId, result.data.description);
 
-      // Automatically score the job unless --no-score is specified
-      if (options.score !== false) {
+      // Automatically score the job unless --no-score or --skip-post-workflow is specified
+      if (options.score !== false && !options.skipPostWorkflow) {
         console.log('');
         
         // Check if job already has a score >= 65
