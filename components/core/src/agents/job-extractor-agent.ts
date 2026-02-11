@@ -1418,7 +1418,8 @@ Outreach activities:
         priority: reminderPriority || config.default_priority,
         tags: commonTags,
         dueDate: threeDaysFromToday,
-        dueTime: '14:00' // Early afternoon reminder
+        dueTime: '14:00', // Early afternoon reminder
+        url: `https://mail.google.com/mail/u/0/#search/in%3Asent+from%3Ame+subject%3A${encodeURIComponent(jobData.company || 'Unknown Company')}`
       };
 
       // Create all reminders as separate top-level reminders
