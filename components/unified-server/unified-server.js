@@ -1388,10 +1388,23 @@ app.get('/check-resume/:jobId', (req, res) => {
 
     console.log(`  -> Resume found: ${relativePath}`);
 
+    // Check for Google Drive URL in job JSON
+    const jobFile = path.join(jobDir, `job-${jobId}.json`);
+    let driveUrl = null;
+    if (fs.existsSync(jobFile)) {
+      try {
+        const jobData = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
+        driveUrl = jobData.resumeGoogleDriveUrl || null;
+      } catch (error) {
+        console.log(`  -> Could not read Drive URL from job JSON: ${error.message}`);
+      }
+    }
+
     res.json({
       success: true,
       exists: true,
-      resumePath: relativePath
+      resumePath: relativePath,
+      driveUrl: driveUrl
     });
 
   } catch (error) {
@@ -1548,6 +1561,61 @@ app.post('/generate-resume', async (req, res) => {
 
   } catch (error) {
     console.error('  -> Resume generation failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Save Google Drive resume URL to job JSON
+app.post('/save-resume-drive-url', (req, res) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Save resume Drive URL request`);
+
+  try {
+    const { jobId, driveUrl } = req.body;
+
+    if (!jobId || !driveUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID and Drive URL are required'
+      });
+    }
+
+    console.log(`  -> Saving Drive URL for job: ${jobId}`);
+
+    // Change to the main project directory
+    const projectDir = path.resolve(__dirname, '..', '..');
+    const jobDir = path.join(projectDir, 'logs', jobId);
+    const jobFile = path.join(jobDir, `job-${jobId}.json`);
+
+    if (!fs.existsSync(jobFile)) {
+      return res.status(404).json({
+        success: false,
+        error: `Job file not found for ID: ${jobId}`
+      });
+    }
+
+    // Read existing job JSON
+    const jobData = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
+
+    // Add or update the Google Drive URL
+    jobData.resumeGoogleDriveUrl = driveUrl;
+    jobData.updatedAt = new Date().toISOString();
+
+    // Write back to file
+    fs.writeFileSync(jobFile, JSON.stringify(jobData, null, 2));
+
+    console.log(`  -> ✅ Drive URL saved successfully for job: ${jobId}`);
+
+    res.json({
+      success: true,
+      jobId: jobId
+    });
+
+  } catch (error) {
+    console.error('  -> Save Drive URL failed:', error);
     res.status(500).json({
       success: false,
       error: error.message

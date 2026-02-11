@@ -270,6 +270,45 @@ html.job-extractor-gutter-open {
   box-shadow: none;
 }
 
+.save-drive-url-btn, .edit-drive-url-btn {
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-drive-url-btn:hover, .edit-drive-url-btn:hover {
+  background: #1d4ed8;
+}
+
+.save-drive-url-btn:active, .edit-drive-url-btn:active {
+  background: #1e40af;
+}
+
+.resume-drive-link {
+  display: inline-block;
+  padding: 10px 14px;
+  background: #eff6ff;
+  color: #1e40af;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #bfdbfe;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+.resume-drive-link:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
 /* People I Know Section */
 .people-section .status-icon {
   margin-left: auto;

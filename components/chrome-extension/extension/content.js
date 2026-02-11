@@ -344,7 +344,15 @@ function createGutter() {
               <span id="resume-status-text">Track a job to check for resume</span>
             </div>
             <div id="resume-url-display" style="display: none;">
-              <a id="resume-link" href="#" target="_blank" class="resume-link">📄 View Resume</a>
+              <a id="resume-link" href="#" target="_blank" class="resume-link">📄 View Local Resume (Markdown)</a>
+            </div>
+            <div id="resume-drive-section" style="display: none; margin-top: 10px;">
+              <input type="text" id="resume-drive-url" class="job-input" placeholder="Paste Google Drive PDF link here..." style="margin-bottom: 8px;">
+              <button id="save-resume-drive-url" class="save-drive-url-btn">💾 Save Google Drive Link</button>
+            </div>
+            <div id="resume-drive-display" style="display: none; margin-top: 10px;">
+              <a id="resume-drive-link" href="#" target="_blank" class="resume-drive-link">📄 View Resume PDF (Google Drive)</a>
+              <button id="edit-resume-drive-url" class="edit-drive-url-btn">✏️ Edit Link</button>
             </div>
             <button id="generate-resume-btn" class="generate-resume-btn" style="display: none;">
               Generate Tailored Resume
@@ -410,6 +418,10 @@ function createGutter() {
 
   // Add generate resume button functionality
   document.getElementById('generate-resume-btn').addEventListener('click', handleGenerateResume);
+
+  // Add resume Google Drive link functionality
+  document.getElementById('save-resume-drive-url').addEventListener('click', handleSaveResumeDriveUrl);
+  document.getElementById('edit-resume-drive-url').addEventListener('click', handleEditResumeDriveUrl);
 
   // Add search connections button functionality
   document.getElementById('search-connections').addEventListener('click', handleSearchConnections);
@@ -1845,10 +1857,18 @@ async function checkResumeExists(jobId) {
       action: 'checkResume',
       jobId: jobId
     });
-    return response.exists ? response.resumePath : null;
+    return {
+      exists: response.exists,
+      resumePath: response.resumePath,
+      driveUrl: response.driveUrl
+    };
   } catch (error) {
     console.error('Error checking resume:', error);
-    return null;
+    return {
+      exists: false,
+      resumePath: null,
+      driveUrl: null
+    };
   }
 }
 
@@ -1874,24 +1894,43 @@ async function updateResumeSection(jobId) {
   statusText.textContent = '⏳ Checking for resume...';
   statusDiv.style.display = 'block';
 
-  const resumePath = await checkResumeExists(jobId);
-  console.log(`[updateResumeSection] Resume path = ${resumePath}`);
+  const driveSection = document.getElementById('resume-drive-section');
+  const driveDisplay = document.getElementById('resume-drive-display');
+  const driveLink = document.getElementById('resume-drive-link');
+  const driveUrlInput = document.getElementById('resume-drive-url');
 
-  if (resumePath) {
-    // Resume exists - show link
+  const resumeData = await checkResumeExists(jobId);
+  console.log(`[updateResumeSection] Resume data =`, resumeData);
+
+  if (resumeData.exists) {
+    // Resume exists - show local link
     statusDiv.style.display = 'none';
     urlDisplay.style.display = 'block';
     generateBtn.style.display = 'none';
 
-    // Set the resume link to open the file
-    const fullPath = `file:///Users/inkredabull/Code/inkredabull/career-catalyst/${resumePath}`;
+    // Set the local resume link
+    const fullPath = `file:///Users/inkredabull/Code/inkredabull/career-catalyst/${resumeData.resumePath}`;
     resumeLink.href = fullPath;
-    resumeLink.textContent = `📄 View Resume (${resumePath.split('/').pop()})`;
+
+    // Show Google Drive section
+    if (resumeData.driveUrl) {
+      // Drive URL exists - show link
+      driveSection.style.display = 'none';
+      driveDisplay.style.display = 'block';
+      driveLink.href = resumeData.driveUrl;
+    } else {
+      // No Drive URL - show input
+      driveSection.style.display = 'block';
+      driveDisplay.style.display = 'none';
+      driveUrlInput.value = '';
+    }
   } else {
     // No resume - show generate button
     statusDiv.style.display = 'none';
     urlDisplay.style.display = 'none';
     generateBtn.style.display = 'block';
+    driveSection.style.display = 'none';
+    driveDisplay.style.display = 'none';
   }
 }
 
@@ -1931,6 +1970,64 @@ async function handleGenerateResume() {
     generateBtn.textContent = 'Generate Tailored Resume';
     generateBtn.disabled = false;
   }
+}
+
+// Handle saving Google Drive resume URL
+async function handleSaveResumeDriveUrl() {
+  const jobIdField = document.getElementById('job-id');
+  const jobId = jobIdField?.value?.trim();
+  const driveUrlInput = document.getElementById('resume-drive-url');
+  const driveUrl = driveUrlInput?.value?.trim();
+
+  if (!jobId) {
+    alert('No Job ID found. Please track a job first.');
+    return;
+  }
+
+  if (!driveUrl) {
+    alert('Please enter a Google Drive URL.');
+    return;
+  }
+
+  // Validate it's a Google Drive URL
+  if (!driveUrl.includes('drive.google.com')) {
+    alert('Please enter a valid Google Drive URL.');
+    return;
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'saveResumeDriveUrl',
+      jobId: jobId,
+      driveUrl: driveUrl
+    });
+
+    if (response.success) {
+      console.log('✅ Google Drive URL saved successfully');
+      // Update the resume section to show the saved URL
+      await updateResumeSection(jobId);
+    } else {
+      throw new Error(response.error || 'Failed to save Google Drive URL');
+    }
+  } catch (error) {
+    console.error('Error saving Google Drive URL:', error);
+    alert(`Error saving URL: ${error.message}`);
+  }
+}
+
+// Handle editing Google Drive resume URL
+function handleEditResumeDriveUrl() {
+  const driveDisplay = document.getElementById('resume-drive-display');
+  const driveSection = document.getElementById('resume-drive-section');
+  const driveLink = document.getElementById('resume-drive-link');
+  const driveUrlInput = document.getElementById('resume-drive-url');
+
+  // Hide display, show input
+  driveDisplay.style.display = 'none';
+  driveSection.style.display = 'block';
+
+  // Pre-fill with current URL
+  driveUrlInput.value = driveLink.href;
 }
 
 // Handle generate blurb functionality

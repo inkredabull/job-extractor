@@ -171,6 +171,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleGenerateResume(request, sendResponse);
       return true; // Keep message channel open for async response
 
+    case 'saveResumeDriveUrl':
+      handleSaveResumeDriveUrl(request, sendResponse);
+      return true; // Keep message channel open for async response
+
     case 'checkBlurb':
       handleCheckBlurb(request, sendResponse);
       return true; // Keep message channel open for async response
@@ -828,7 +832,8 @@ async function handleCheckResume(request, sendResponse) {
     sendResponse({
       success: true,
       exists: resumeCheck.exists,
-      resumePath: resumeCheck.path
+      resumePath: resumeCheck.path,
+      driveUrl: resumeCheck.driveUrl
     });
 
   } catch (error) {
@@ -855,12 +860,13 @@ async function checkResumeInLogs(jobId) {
     const data = await response.json();
     return {
       exists: data.exists,
-      path: data.resumePath
+      path: data.resumePath,
+      driveUrl: data.driveUrl || null
     };
 
   } catch (error) {
     console.error('Career Catalyst Background: Failed to check resume:', error);
-    return { exists: false, path: null };
+    return { exists: false, path: null, driveUrl: null };
   }
 }
 
@@ -945,6 +951,52 @@ async function handleGenerateResume(request, sendResponse) {
 
   } catch (error) {
     console.error('Career Catalyst Background: Generate resume failed:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Handle save resume Drive URL request
+async function handleSaveResumeDriveUrl(request, sendResponse) {
+  try {
+    console.log('Career Catalyst Background: Saving resume Drive URL');
+    console.log('Job ID:', request.jobId);
+    console.log('Drive URL:', request.driveUrl);
+
+    if (!request.jobId || !request.driveUrl) {
+      sendResponse({
+        success: false,
+        error: 'Job ID and Drive URL are required'
+      });
+      return;
+    }
+
+    // Call unified server to save the URL
+    const response = await fetch('http://localhost:3000/save-resume-drive-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jobId: request.jobId,
+        driveUrl: request.driveUrl
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    sendResponse({
+      success: true,
+      jobId: data.jobId
+    });
+
+  } catch (error) {
+    console.error('Career Catalyst Background: Save Drive URL failed:', error);
     sendResponse({
       success: false,
       error: error.message
