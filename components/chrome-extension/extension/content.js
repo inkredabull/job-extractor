@@ -247,12 +247,12 @@ function createGutter() {
           <label for="company-name">Company:</label>
           <input type="text" id="company-name" class="job-input" placeholder="Company name will be extracted automatically...">
         </div>
-        
+
         <div class="form-field">
           <label for="job-location">Location:</label>
           <input type="text" id="job-location" class="job-input" placeholder="Job location will be extracted automatically...">
         </div>
-        
+
         <div class="form-field salary-range">
           <label>Salary Range:</label>
           <div class="salary-inputs">
@@ -261,7 +261,7 @@ function createGutter() {
             <input type="text" id="max-salary" class="job-input salary-input" placeholder="Max (e.g., 160000)">
           </div>
         </div>
-        
+
         <div class="form-field">
           <label for="job-url">Job URL:</label>
           <input type="text" id="job-url" class="job-input" placeholder="Current page URL">
@@ -271,7 +271,40 @@ function createGutter() {
           <label for="job-description">Description:</label>
           <textarea id="job-description" class="job-description-textarea" placeholder="Job description will be extracted automatically..."></textarea>
         </div>
-        
+
+        <div class="form-field">
+          <label for="reports-to">Reports to:</label>
+          <input type="text" id="reports-to" class="job-input" placeholder="Will be extracted from job description..." disabled>
+        </div>
+
+        <div class="form-field">
+          <label for="company-stage">Stage of the Company:</label>
+          <input type="text" id="company-stage" class="job-input" placeholder="Will be looked up from company data..." disabled>
+        </div>
+
+        <div class="form-field">
+          <label for="resume-url">Resume:</label>
+          <div id="resume-container">
+            <div id="resume-status" class="resume-status">
+              <span id="resume-status-text">Track a job to check for resume</span>
+            </div>
+            <div id="resume-url-display" style="display: none;">
+              <a id="resume-link" href="#" target="_blank" class="resume-link">📄 View Local Resume (Markdown)</a>
+            </div>
+            <div id="resume-drive-section" style="display: none; margin-top: 10px;">
+              <input type="text" id="resume-drive-url" class="job-input" placeholder="Paste Google Drive PDF link here..." style="margin-bottom: 8px;">
+              <button id="save-resume-drive-url" class="save-drive-url-btn">💾 Save Google Drive Link</button>
+            </div>
+            <div id="resume-drive-display" style="display: none; margin-top: 10px;">
+              <a id="resume-drive-link" href="#" target="_blank" class="resume-drive-link">📄 View Resume PDF (Google Drive)</a>
+              <button id="edit-resume-drive-url" class="edit-drive-url-btn">✏️ Edit Link</button>
+            </div>
+            <button id="generate-resume-btn" class="generate-resume-btn" style="display: none;">
+              Generate Tailored Resume
+            </button>
+          </div>
+        </div>
+
         <!-- TEAL INTEGRATION COMMENTED OUT - Don't remove, just disabled
         <div class="form-field">
           <label class="radio-label">
@@ -319,45 +352,6 @@ function createGutter() {
 
         <div class="button-group">
           <button id="track-job-info" class="track-btn">Track</button>
-        </div>
-      </div>
-
-      <!-- Info About the Role Section -->
-      <div class="section role-info-section">
-        <h4 class="section-header">📋 Info About the Role</h4>
-        <p class="section-description">Role-specific details extracted from description</p>
-
-        <div class="form-field">
-          <label for="reports-to">Reports to:</label>
-          <input type="text" id="reports-to" class="job-input" placeholder="Will be extracted from job description..." disabled>
-        </div>
-
-        <div class="form-field">
-          <label for="company-stage">Stage of the Company:</label>
-          <input type="text" id="company-stage" class="job-input" placeholder="Will be looked up from company data..." disabled>
-        </div>
-
-        <div class="form-field">
-          <label for="resume-url">Resume:</label>
-          <div id="resume-container">
-            <div id="resume-status" class="resume-status">
-              <span id="resume-status-text">Track a job to check for resume</span>
-            </div>
-            <div id="resume-url-display" style="display: none;">
-              <a id="resume-link" href="#" target="_blank" class="resume-link">📄 View Local Resume (Markdown)</a>
-            </div>
-            <div id="resume-drive-section" style="display: none; margin-top: 10px;">
-              <input type="text" id="resume-drive-url" class="job-input" placeholder="Paste Google Drive PDF link here..." style="margin-bottom: 8px;">
-              <button id="save-resume-drive-url" class="save-drive-url-btn">💾 Save Google Drive Link</button>
-            </div>
-            <div id="resume-drive-display" style="display: none; margin-top: 10px;">
-              <a id="resume-drive-link" href="#" target="_blank" class="resume-drive-link">📄 View Resume PDF (Google Drive)</a>
-              <button id="edit-resume-drive-url" class="edit-drive-url-btn">✏️ Edit Link</button>
-            </div>
-            <button id="generate-resume-btn" class="generate-resume-btn" style="display: none;">
-              Generate Tailored Resume
-            </button>
-          </div>
         </div>
       </div>
 
