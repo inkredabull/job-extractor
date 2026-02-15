@@ -4,12 +4,30 @@
 - Reorder and emphasize relevant hands-on technical experience, deliverables, and shipped products
 - Highlight built systems, coded solutions, deployed features, and measurable technical impact before leadership activities
 - Be sure to include metrics to quantify product performance, delivery speed, technical scope, and business impact
+- **CRITICAL**: Avoid "overqualified" signals - Frame experience as hands-on builder, not senior leader or architect, especially for Forward Deployed or customer-facing roles
 
 ### summaryGuidance
 Tailor the summary to the job description, including as much of the following points as can be organically incorporated:
 - hands-on software builder and technical problem-solver who ships end-user-facing products quickly
 - strong at architecting, coding, optimizing, and deploying solutions while collaborating cross-functionally
 - capable of leading when needed, but focused on building and delivering value
+
+**CRITICAL - Avoid "Overqualified" Signals:**
+For Forward Deployed, customer-facing, or hands-on builder roles, AVOID phrases that signal seniority, strategic oversight, or management focus:
+- ❌ "Senior technical leader"
+- ❌ "AI systems architect"
+- ❌ "Technical leadership"
+- ❌ "Strategic oversight"
+
+Instead, emphasize hands-on execution and customer-facing deployment:
+- ✅ "Full-stack engineer specializing in..."
+- ✅ "Hands-on engineer building..."
+- ✅ "Engineer deploying production-grade..."
+- ✅ Focus on: live environments, customer-facing deployment, prototype to production, scrappy iteration
+
+**Example transformation:**
+- Bad: "Senior technical leader and AI systems architect..."
+- Good: "Full-stack engineer specializing in deploying production-grade AI systems in live environments. Experienced building LLM-powered workflows, RAG pipelines, and agentic tools from prototype to customer-facing deployment."
 
 ### rolesSpecificInstructions
 Do not revise titles of roles; keep as-is.
