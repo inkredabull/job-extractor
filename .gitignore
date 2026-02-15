@@ -119,6 +119,7 @@ jspm_packages/
 !jest.config.js
 !requirements.txt
 !examples/**/*.py
+!.claude/settings.json
 data/
 
 # Personal configuration files
