@@ -90,15 +90,17 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
       if (critique && (isFirstGeneration || source === 'cli')) {
         // Run the critique-and-improve workflow when:
         // 1. It's the first generation and critique is enabled, OR
-        // 2. Called from CLI with critique enabled (default behavior for CLI) 
+        // 2. Called from CLI with critique enabled (default behavior for CLI)
         let workflowReason = 'unknown';
         if (isFirstGeneration) workflowReason = 'first-time generation';
         else if (source === 'cli') workflowReason = 'CLI invocation with critique enabled';
-        
+
         console.log(`🎯 Running critique-and-improve workflow for ${workflowReason}...`);
-        
+
         // Generate initial resume
-        const initialResult = await this.generateInitialResume(jobId, cvFilePath, outputPath, jobData);
+        // Force regeneration when called from CLI (not first generation) to apply updated prompts
+        const forceRegenerate = source === 'cli' && !isFirstGeneration;
+        const initialResult = await this.generateInitialResume(jobId, cvFilePath, outputPath, jobData, forceRegenerate);
         if (!initialResult.success) {
           return initialResult;
         }
@@ -202,22 +204,27 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     }
   }
 
-  private async generateInitialResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing): Promise<ResumeResult> {
+  private async generateInitialResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing, forceRegenerate: boolean = false): Promise<ResumeResult> {
     const job = jobData || this.loadJobData(jobId);
-    
+
     let tailoredContent: { markdownContent: string; changes: string[] };
-    
-    // Check for existing tailored content first (for --regen with critique)
-    const cachedContent = this.loadMostRecentTailoredContent(jobId);
+
+    // Only use cached content if not forcing regeneration
+    // When forceRegenerate is true, always generate fresh content to apply updated prompts
+    const cachedContent = forceRegenerate ? null : this.loadMostRecentTailoredContent(jobId);
     if (cachedContent) {
       console.log(`📋 Using existing tailored content for critique workflow`);
       tailoredContent = cachedContent;
     } else {
-      console.log(`🔄 Generating initial resume content for job ${jobId}`);
+      if (forceRegenerate) {
+        console.log(`🔄 Force regenerating resume content with current prompts for job ${jobId}`);
+      } else {
+        console.log(`🔄 Generating initial resume content for job ${jobId}`);
+      }
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
       const scopedCvContent = this.scopeCVContent(cvContent);
       tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
-      
+
       // Cache the newly generated content
       this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
     }

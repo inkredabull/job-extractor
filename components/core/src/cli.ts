@@ -899,7 +899,7 @@ program
   .description('Generate a tailored resume PDF for a specific job')
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
-  .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
+  .option('--regen', 'Quick PDF rebuild from cached markdown (fast, no new content). Without this flag, generates fresh content using current prompts.')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work). If not specified, mode will be auto-detected from job description.')
   .option('--split', 'Use split experience format with Relevant and Related sections (default is standard single section)')
   .option('--sonnet', 'Use Claude Sonnet without caching for highest quality (slower, ~5-10x more expensive). Default uses Haiku with caching for speed.')
