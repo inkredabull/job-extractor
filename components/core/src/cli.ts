@@ -539,6 +539,10 @@ program
           console.log('');
           console.log(jobId);
         }
+      } else {
+        // When post-workflow is skipped, still output the job ID for parsing
+        console.log('');
+        console.log(jobId);
       }
 
       // Format output for display
