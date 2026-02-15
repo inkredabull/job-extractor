@@ -5,6 +5,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusDiv = document.getElementById('status');
   const openJobTrackerBtn = document.getElementById('open-job-tracker');
 
+  // Accordion functionality
+  const sectionHeaders = document.querySelectorAll('.section-header');
+
+  // Load accordion state from storage
+  chrome.storage.local.get(['accordionState'], (result) => {
+    const accordionState = result.accordionState || {};
+
+    sectionHeaders.forEach(header => {
+      const sectionId = header.getAttribute('data-section');
+      const content = document.querySelector(`.section-content[data-section="${sectionId}"]`);
+
+      // Default to expanded if no state saved
+      if (accordionState[sectionId] === 'collapsed') {
+        header.classList.add('collapsed');
+        content.classList.add('collapsed');
+      }
+
+      // Add click handler
+      header.addEventListener('click', () => {
+        const isCollapsed = header.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+
+        // Save state
+        chrome.storage.local.get(['accordionState'], (result) => {
+          const currentState = result.accordionState || {};
+          currentState[sectionId] = isCollapsed ? 'collapsed' : 'expanded';
+          chrome.storage.local.set({ accordionState: currentState });
+        });
+      });
+    });
+  });
+
   // Load current settings
   chrome.storage.sync.get(['linkedInNetworkingEnabled'], (result) => {
     linkedInToggle.checked = result.linkedInNetworkingEnabled || false;
