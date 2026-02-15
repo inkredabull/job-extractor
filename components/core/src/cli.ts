@@ -10,6 +10,7 @@ import { OutreachAgent } from './agents/outreach-agent';
 import { MetricsAgent } from './agents/metrics-agent';
 import { ApplicationAgent } from './agents/application-agent';
 import { WhoGotHiredAgent } from './agents/whogothired-agent';
+import { ModeDetectorAgent } from './agents/mode-detector-agent';
 import { StatementType, AboutMeSection } from './types';
 import { getConfig, getAnthropicConfig } from './config';
 import * as crypto from 'crypto';
@@ -865,13 +866,41 @@ program
     }
   });
 
+// Helper function to load job data from logs
+async function loadJobData(jobId: string) {
+  const logsDir = path.join(process.cwd(), 'logs');
+  const jobDir = path.join(logsDir, jobId);
+
+  // Try to find job file in subdirectory first
+  try {
+    const files = await fs.readdir(jobDir);
+    const jobFile = files.find(f => f.startsWith('job-') && f.endsWith('.json'));
+    if (jobFile) {
+      const content = await fs.readFile(path.join(jobDir, jobFile), 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch {
+    // Directory doesn't exist, try logs root
+  }
+
+  // Fallback: search logs root for matching job ID
+  const files = await fs.readdir(logsDir);
+  const jobFile = files.find(f => f.startsWith(`job-${jobId}`) && f.endsWith('.json'));
+  if (jobFile) {
+    const content = await fs.readFile(path.join(logsDir, jobFile), 'utf-8');
+    return JSON.parse(content);
+  }
+
+  throw new Error(`Job data not found for job ID: ${jobId}`);
+}
+
 program
   .command('resume')
   .description('Generate a tailored resume PDF for a specific job')
   .argument('<jobId>', 'Job ID to tailor resume for (from the log filename)')
   .option('-o, --output <file>', 'Output path for the generated PDF')
   .option('--regen', 'Regenerate PDF from existing tailored markdown (no critique, no judge validation, no new content generation)')
-  .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work)', 'leader')
+  .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work). If not specified, mode will be auto-detected from job description.')
   .option('--split', 'Use split experience format with Relevant and Related sections (default is standard single section)')
   .option('--sonnet', 'Use Claude Sonnet without caching for highest quality (slower, ~5-10x more expensive). Default uses Haiku with caching for speed.')
   .option('--generate', 'Generate a detailed job description if missing or generic')
@@ -898,7 +927,32 @@ program
         process.exit(1);
       }
 
-      const mode = (options.mode || 'leader') as 'leader' | 'builder';
+      let mode: 'leader' | 'builder';
+      let modeSource: 'manual' | 'auto' = 'manual';
+
+      // Auto-detect mode if not explicitly provided
+      if (!options.mode) {
+        try {
+          console.log('🔍 Analyzing job description to determine optimal resume mode...');
+          const jobData = await loadJobData(jobId);
+          const modeDetector = new ModeDetectorAgent(anthropicConfig.anthropicApiKey);
+          const detection = await modeDetector.detectMode(jobData);
+
+          mode = detection.mode;
+          modeSource = 'auto';
+
+          console.log(`✨ Auto-detected mode: ${mode} (confidence: ${detection.confidence}%)`);
+          console.log(`📝 Reasoning: ${detection.reasoning}`);
+          console.log('');
+        } catch (error) {
+          console.warn('⚠️  Mode detection failed, defaulting to leader mode');
+          console.warn(`   Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          mode = 'leader';
+        }
+      } else {
+        mode = options.mode as 'leader' | 'builder';
+      }
+
       const experienceFormat = options.split ? 'split' : 'standard';
       const useFastMode = !options.sonnet; // Default to fast mode (Haiku + caching) unless --sonnet specified
 
@@ -906,7 +960,8 @@ program
       // Standard format typically uses 3-4 roles
       const maxRoles = options.split ? 7 : anthropicConfig.maxRoles;
 
-      console.log(`🎯 Resume Mode: ${mode} (${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'})`);
+      const modeLabel = modeSource === 'auto' ? '🤖 Auto-detected' : '👤 Manual';
+      console.log(`🎯 Resume Mode: ${mode} (${modeLabel}) - ${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'}`);
       if (options.split) {
         console.log(`📊 Experience Format: split (Relevant vs Related sections, using ${maxRoles} roles)`);
       }
