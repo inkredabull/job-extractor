@@ -6,3 +6,4 @@ export { ResumeCreatorAgent } from './resume-creator-agent';
 export { ResumeCriticAgent } from './resume-critic-agent';
 export { ApplicationAgent } from './application-agent';
 export { WhoGotHiredAgent } from './whogothired-agent';
+export { ModeDetectorAgent } from './mode-detector-agent';
