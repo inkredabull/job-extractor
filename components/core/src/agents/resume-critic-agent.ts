@@ -36,11 +36,26 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
       // Load the job data for context
       const jobData = this.loadJobData(jobId);
 
-      // Extract text content from the PDF (for now, we'll simulate this)
-      const resumeContent = this.extractResumeContent(resumePath);
+      // Load additional context documents
+      const themes = this.loadThemes(jobId);
+      const recommendations = this.loadRecommendations(jobId);
+      const companyValues = this.loadCompanyValues(jobId);
+      const domainContext = this.detectDomain(jobData.description);
+
+      // Extract text content from the PDF
+      const resumeContent = await this.extractResumeContent(resumePath);
 
       // Generate the critique using Claude
-      const critique = await this.generateCritique(jobData, resumeContent, resumePath, jobId);
+      const critique = await this.generateCritique(
+        jobData,
+        resumeContent,
+        resumePath,
+        jobId,
+        themes,
+        recommendations,
+        companyValues,
+        domainContext
+      );
 
       // Log the critique
       this.logCritique(critique);
@@ -141,11 +156,11 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
 
   private loadJobData(jobId: string): JobListing {
     const jobDir = resolveFromProjectRoot('logs', jobId);
-    
+
     if (!fs.existsSync(jobDir)) {
       throw new Error(`Job directory not found for ID: ${jobId}`);
     }
-    
+
     const files = fs.readdirSync(jobDir);
     const jobFile = files.find(file => file.startsWith('job-') && file.endsWith('.json'));
     if (!jobFile) {
@@ -155,6 +170,199 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
     const jobPath = path.join(jobDir, jobFile);
     const jobData = fs.readFileSync(jobPath, 'utf-8');
     return JSON.parse(jobData);
+  }
+
+  private loadThemes(jobId: string): string | null {
+    try {
+      const jobDir = resolveFromProjectRoot('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const themesFile = files.find(file => file.startsWith('themes-') && file.endsWith('.json'));
+
+      if (!themesFile) {
+        return null;
+      }
+
+      const themesPath = path.join(jobDir, themesFile);
+      const themesData = JSON.parse(fs.readFileSync(themesPath, 'utf-8'));
+
+      if (themesData.themes && Array.isArray(themesData.themes)) {
+        // Format themes for the critique prompt
+        const formattedThemes = themesData.themes
+          .map((theme: any, index: number) =>
+            `${index + 1}. **${theme.name}** (${theme.importance.toUpperCase()})\n   ${theme.definition}\n   *Evidence to look for:* ${theme.cvEvidence || 'Relevant experience in CV'}`
+          )
+          .join('\n\n');
+
+        return formattedThemes;
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to load themes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    return null;
+  }
+
+  private loadRecommendations(jobId: string): string | null {
+    try {
+      const jobDir = resolveFromProjectRoot('logs', jobId);
+      const recommendationsPath = path.join(jobDir, 'recommendations.txt');
+
+      if (!fs.existsSync(recommendationsPath)) {
+        return null;
+      }
+
+      const recommendations = fs.readFileSync(recommendationsPath, 'utf-8');
+      return recommendations.trim();
+    } catch (error) {
+      console.warn(`⚠️  Failed to load recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    return null;
+  }
+
+  private loadCompanyValues(jobId: string): string | null {
+    try {
+      const jobDir = resolveFromProjectRoot('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const valuesFile = files.find(file => file.startsWith('company-values-') && file.endsWith('.json'));
+
+      if (!valuesFile) {
+        return null;
+      }
+
+      const valuesPath = path.join(jobDir, valuesFile);
+      const valuesData = JSON.parse(fs.readFileSync(valuesPath, 'utf-8'));
+
+      if (valuesData.values && Array.isArray(valuesData.values)) {
+        const formattedValues = valuesData.values
+          .map((value: any) => `- **${value.name}**: ${value.description}`)
+          .join('\n');
+
+        return formattedValues;
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to load company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    return null;
+  }
+
+  private detectDomain(jobDescription: string): {
+    domain: string;
+    signals: string[];
+    expectedVocabulary: string[];
+    toneExpectations: string[];
+  } {
+    const description = jobDescription.toLowerCase();
+
+    // Healthcare / Regulated detection
+    const healthcareSignals = ['hipaa', 'soc2', 'compliance', 'clinical', 'patient data', 'pii', 'regulated', 'audit', 'phi', 'fhir', 'ehr', 'healthcare'];
+    const foundHealthcareSignals = healthcareSignals.filter(signal => description.includes(signal));
+
+    if (foundHealthcareSignals.length > 0) {
+      return {
+        domain: 'Healthcare / Regulated',
+        signals: foundHealthcareSignals,
+        expectedVocabulary: [
+          'clinical/operational reliability (not "incident reduction")',
+          'enterprise readiness (not "auth implementation")',
+          'augmenting clinician/practitioner workflows (not "AI features")',
+          'predictable delivery in regulated contexts (not "fast iteration")',
+          'partnered with Product/Design (not "I built")',
+          'architected for enterprise security (not "scaled infrastructure")',
+          'operational rigor for mission-critical usage (not "reduced bugs")'
+        ],
+        toneExpectations: [
+          'Product-minded operator building durable systems',
+          'Reliability, durability, trust over speed',
+          'User empathy for clinicians, operators, support teams',
+          'Product partnership language',
+          'Quality and correctness over velocity'
+        ]
+      };
+    }
+
+    // Fintech detection
+    const fintechSignals = ['fintech', 'financial', 'payments', 'banking', 'pci', 'financial data', 'transactions'];
+    const foundFintechSignals = fintechSignals.filter(signal => description.includes(signal));
+
+    if (foundFintechSignals.length > 0) {
+      return {
+        domain: 'Fintech / Regulated',
+        signals: foundFintechSignals,
+        expectedVocabulary: [
+          'enterprise readiness',
+          'compliance framework',
+          'predictable delivery in regulated contexts',
+          'architected for enterprise security',
+          'operational rigor'
+        ],
+        toneExpectations: [
+          'Product-minded operator',
+          'Reliability and trust over speed',
+          'Compliance-first mindset'
+        ]
+      };
+    }
+
+    // Enterprise / Scale Stage detection
+    const enterpriseSignals = ['enterprise customers', 'scale', 'maturity', 'predictability', 'b2b', 'saas'];
+    const foundEnterpriseSignals = enterpriseSignals.filter(signal => description.includes(signal));
+
+    if (foundEnterpriseSignals.length > 0) {
+      return {
+        domain: 'Enterprise / Scale Stage',
+        signals: foundEnterpriseSignals,
+        expectedVocabulary: [
+          'product-minded operator',
+          'building durable systems',
+          'predictability',
+          'operational rigor'
+        ],
+        toneExpectations: [
+          'From "0→1 founder" to "product-minded operator"',
+          'Predictability, partnership, operational rigor',
+          'Cross-functional collaboration'
+        ]
+      };
+    }
+
+    // Startup / Builder detection
+    const startupSignals = ['startup', 'early stage', '0 to 1', 'founder', 'scrappy', 'move fast'];
+    const foundStartupSignals = startupSignals.filter(signal => description.includes(signal));
+
+    if (foundStartupSignals.length > 0) {
+      return {
+        domain: 'Startup / Early Stage',
+        signals: foundStartupSignals,
+        expectedVocabulary: [
+          'hands-on builder',
+          'shipped quickly',
+          'end-to-end ownership',
+          'prototype to production'
+        ],
+        toneExpectations: [
+          'Hands-on execution',
+          'Speed and iteration',
+          'Scrappy problem-solving'
+        ]
+      };
+    }
+
+    return {
+      domain: 'General',
+      signals: [],
+      expectedVocabulary: [],
+      toneExpectations: []
+    };
   }
 
   private async extractResumeContent(resumePath: string): Promise<string> {
@@ -170,50 +378,140 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
     }
   }
 
-  private async generateCritique(job: JobListing, resumeContent: string, resumePath: string, jobId: string): Promise<ResumeCritique> {
-    const prompt = `You are an expert resume critic and career coach. Analyze the following resume that was tailored for a specific job posting and provide detailed feedback.
+  private async generateCritique(
+    job: JobListing,
+    resumeContent: string,
+    resumePath: string,
+    jobId: string,
+    themes: string | null,
+    recommendations: string | null,
+    companyValues: string | null,
+    domainContext: { domain: string; signals: string[]; expectedVocabulary: string[]; toneExpectations: string[] }
+  ): Promise<ResumeCritique> {
+    // Build the "More Context" section
+    let moreContextSection = '';
 
-JOB POSTING CONTEXT:
-Title: ${job.title}
-Company: ${job.company}
-Location: ${job.location}
-Description: ${job.description}
-${job.salary ? `Salary: ${job.salary.min} - ${job.salary.max} ${job.salary.currency}` : ''}
+    if (themes) {
+      moreContextSection += `\n## PRIORITY THEMES (Critical Requirements to Address)\n${themes}\n`;
+    }
 
-RESUME CONTENT:
+    if (companyValues) {
+      moreContextSection += `\n## COMPANY VALUES (Must Demonstrate Alignment)\n${companyValues}\n`;
+    }
+
+    if (recommendations) {
+      moreContextSection += `\n## PREVIOUS RECOMMENDATIONS (From Earlier Critiques)\n${recommendations}\n`;
+    }
+
+    // Build domain-specific guidance
+    let domainGuidanceSection = '';
+    if (domainContext.signals.length > 0) {
+      domainGuidanceSection = `
+## DOMAIN ADAPTATION SIGNALS
+
+**Detected Industry:** ${domainContext.domain}
+**Job Description Keywords Found:** ${domainContext.signals.join(', ')}
+
+**CRITICAL - Expected Vocabulary Transformations:**
+${domainContext.expectedVocabulary.map(v => `- ${v}`).join('\n')}
+
+**CRITICAL - Tone Expectations:**
+${domainContext.toneExpectations.map(t => `- ${t}`).join('\n')}
+
+**Evaluate the resume specifically for:**
+1. Does it use domain-appropriate vocabulary? (e.g., "clinical reliability" not "incident reduction" for healthcare)
+2. Does the tone match the domain? (e.g., "product-minded operator" not "0→1 cowboy CTO" for regulated environments)
+3. Are compliance/reliability experiences surfaced appropriately for regulated domains?
+4. Does it emphasize partnership language ("with Product/Design") vs solo builder language ("I built") where appropriate?
+`;
+    }
+
+    const prompt = `You are an expert resume critic and career coach. Analyze the following resume that was tailored for a specific job posting and provide detailed, actionable feedback.
+
+# JOB POSTING
+
+**Title:** ${job.title}
+**Company:** ${job.company}
+**Location:** ${job.location}
+
+**Description:**
+${job.description}
+
+${job.salary ? `**Salary:** ${job.salary.min} - ${job.salary.max} ${job.salary.currency}` : ''}
+
+# RESUME CONTENT
+
 ${resumeContent}
+
+${moreContextSection}
+
+${domainGuidanceSection}
+
+# EVALUATION CRITERIA
+
+Your critique must evaluate these dimensions:
+
+1. **Job Alignment (40%)**: How well does the resume align with the specific job requirements and priority themes?
+   - Are the priority themes from the job analysis clearly addressed?
+   - Are domain-specific keywords present (e.g., HIPAA, SOC2, FHIR for healthcare)?
+   - Does the resume speak directly to the role's core challenges?
+
+2. **Domain Vocabulary & Tone (25%)**: Does the resume use appropriate vocabulary and tone for the industry?
+   - For regulated/healthcare: Does it emphasize reliability, compliance, partnership over speed and solo building?
+   - For enterprise: Does it sound like "product-minded operator" not "0→1 founder"?
+   - Are the vocabulary transformations applied correctly?
+
+3. **Content Quality (20%)**: Are achievements quantified and compelling?
+   - Are metrics specific and impactful?
+   - Are accomplishments framed in terms of business/user impact?
+
+4. **Company Values Alignment (15%)**: Does the resume demonstrate alignment with company values?
+   - Are examples chosen that reflect the company's stated values?
+   - Is the cultural fit evident?
+
+# TASK
+
+Provide a detailed critique with:
+
+**Strengths:** Identify 3-5 specific things the resume does well
+**Weaknesses:** Identify 3-5 specific gaps, misalignments, or issues
+**Recommendations:** Provide 5-10 ACTIONABLE, SPECIFIC recommendations
+
+Make recommendations CONCRETE and TACTICAL:
+- ❌ BAD: "Improve healthcare experience"
+- ✅ GOOD: "Add FHIR integration work from Axiom project to Summary. Currently missing despite being a critical requirement."
+- ❌ BAD: "Use better vocabulary"
+- ✅ GOOD: "Replace 'incident reduction' with 'clinical reliability' in Osmind bullet to match healthcare domain expectations"
+- ❌ BAD: "Show more partnership"
+- ✅ GOOD: "Reframe Summary from 'Built AI systems' to 'Partnered with Product/Design to deliver AI-powered clinical workflows' to avoid sounding too senior/solo"
+
+**CRITICAL:** If priority themes are present, explicitly call out which themes are well-addressed and which are missing or weak.
+
+# OUTPUT FORMAT
 
 CRITICAL: You must respond with ONLY valid JSON. No other text, explanations, or formatting. Your response must be parseable JSON that exactly matches this schema:
 
 {
   "overallRating": <number between 1-10>,
   "strengths": [
-    "<specific strength 1>",
-    "<specific strength 2>",
-    "<specific strength 3>"
+    "<specific strength with evidence from resume>",
+    "<specific strength with evidence from resume>",
+    ...
   ],
   "weaknesses": [
-    "<specific weakness 1>",
-    "<specific weakness 2>",
-    "<specific weakness 3>"
+    "<specific weakness with concrete example>",
+    "<specific weakness with concrete example>",
+    ...
   ],
   "recommendations": [
-    "<actionable recommendation 1>",
-    "<actionable recommendation 2>",
-    "<actionable recommendation 3>"
+    "<actionable, tactical recommendation with specific location/change>",
+    "<actionable, tactical recommendation with specific location/change>",
+    ...
   ],
-  "detailedAnalysis": "<2-3 paragraph detailed analysis covering alignment with job requirements, presentation quality, content effectiveness, and areas for improvement>"
+  "detailedAnalysis": "<2-3 paragraph detailed analysis covering: (1) alignment with priority themes and job requirements, (2) domain vocabulary and tone appropriateness, (3) company values demonstration, (4) content quality and presentation, (5) specific missing elements or opportunities>"
 }
 
-EVALUATION CRITERIA:
-- Job Alignment (40%): How well does the resume align with the specific job requirements?
-- Content Quality (25%): Are achievements quantified? Are descriptions compelling?
-- Presentation (20%): Is the resume well-structured and professional?
-- Keyword Optimization (15%): Does it include relevant keywords from the job posting?
-
-Focus on specific improvements, missing keywords, achievement quantification, narrative clarity, and technical formatting. Be constructive and provide actionable recommendations.
-
-REMEMBER: Response must be valid JSON only. No additional text or explanations outside the JSON structure.`;
+REMEMBER: Response must be valid JSON only. No markdown, no code blocks, no additional text.`;
 
     const response = await this.makeClaudeRequest(prompt);
     
