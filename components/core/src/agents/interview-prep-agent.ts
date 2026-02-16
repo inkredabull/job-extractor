@@ -260,10 +260,10 @@ Format as:
 
   private getFallbackPrompt(type: StatementType): string {
     const basePrompt = `You are a professional writer helping create a ${type.replace('-', ' ')} based on a job posting and work history. Be sure to use concise, inspiring, founder-caliber high-impact framing; lead with the 'so what' early.`;
-    
+
     switch (type) {
       case 'cover-letter':
-        return `${basePrompt}\n\nCreate a cover letter between 300-425 characters in a SINGLE paragraph. Begin with "Greetings:" on its own line (not indented) and end with "Regards, Anthony". Use informal tone.`;
+        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters in up to two brief paragraphs. Use informal tone. Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely"). Begin and end directly with substantive content.`;
       case 'endorsement':
         return `${basePrompt}\n\nCreate an endorsement between 375-500 characters in third person. Use first name only when referencing the candidate.`;
       case 'about-me':
@@ -835,25 +835,25 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
   private getTypeSpecificInstructions(type: StatementType, options: StatementOptions): string {
     switch (type) {
       case 'cover-letter':
-        let instructions = 'Length: 300-425 characters. SINGLE paragraph only. Begin with "Greetings:" on its own line (not indented) and end with "Regards, Anthony". Informal tone.';
+        let instructions = 'Length: 600-850 characters. Up to two brief paragraphs. Informal tone. Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely", signature). Begin and end directly with substantive content.';
         if (options.emphasis) {
           instructions += `\n\nEMPHASIS: ${options.emphasis}`;
         }
         return instructions;
-        
+
       case 'endorsement':
         return 'Length: 375-500 characters. Third person. Use first name only. Tell stories about strengths and value.';
-        
+
       case 'about-me':
         let aboutInstructions = 'Rich Text Format (RTF) with two-level nested bullet list. Informal tone. Max 900 characters. Include desire for small team (5-7 people) and ability to have impact.';
         if (options.companyInfo) {
           aboutInstructions += `\n\nInclude: "I'm excited about ${options.companyInfo} because..."`;
         }
         return aboutInstructions;
-        
+
       case 'general':
         return 'Length: 250-425 characters. Third person. Use first name only. Reference examples from entire work history, including end user work and data center/on-premise deployment experience.';
-        
+
       default:
         return '';
     }
