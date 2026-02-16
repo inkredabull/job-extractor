@@ -267,7 +267,10 @@ Format as:
 
     switch (type) {
       case 'cover-letter':
-        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters in up to two brief paragraphs. Use informal tone. ${personInstruction} Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely"). Begin and end directly with substantive content.`;
+        const letterLength = perspective === 'third'
+          ? 'between 400-500 characters in a SINGLE concise paragraph'
+          : 'between 600-850 characters in up to two brief paragraphs';
+        return `${basePrompt}\n\nCreate a cover letter ${letterLength}. Use informal tone. ${personInstruction} Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely"). Begin and end directly with substantive content.`;
       case 'endorsement':
         return `${basePrompt}\n\nCreate an endorsement between 375-500 characters in third person. Use first name only when referencing the candidate.`;
       case 'about-me':
@@ -837,9 +840,14 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
   }
 
   private getTypeSpecificInstructions(type: StatementType, options: StatementOptions): string {
+    const person = options.person || 'first';
+
     switch (type) {
       case 'cover-letter':
-        let instructions = 'Length: 600-850 characters. Up to two brief paragraphs. Informal tone. Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely", signature). Begin and end directly with substantive content.';
+        const letterSpec = person === 'third'
+          ? 'Length: 400-500 characters. SINGLE concise paragraph only.'
+          : 'Length: 600-850 characters. Up to two brief paragraphs.';
+        let instructions = `${letterSpec} Informal tone. Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely", signature). Begin and end directly with substantive content.`;
         if (options.emphasis) {
           instructions += `\n\nEMPHASIS: ${options.emphasis}`;
         }
