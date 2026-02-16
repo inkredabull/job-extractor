@@ -12,6 +12,8 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 - Use keywords from the job description where appropriate
 - Maintain all factual information - DO NOT fabricate anything
 
+{{themesSection}}
+
 {{recommendationsSection}}{{companyValuesSection}}
 
 ## General Structure

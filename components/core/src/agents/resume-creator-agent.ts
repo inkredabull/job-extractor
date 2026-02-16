@@ -784,11 +784,11 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private loadCompanyValues(jobId?: string): string | null {
     if (!jobId) return null;
-    
+
     try {
       const jobDir = resolveFromProjectRoot('logs', jobId);
       const companyValuesFile = path.join(jobDir, 'company-values.txt');
-      
+
       if (fs.existsSync(companyValuesFile)) {
         const content = fs.readFileSync(companyValuesFile, 'utf-8').trim();
         if (content.length > 0) {
@@ -799,7 +799,43 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     } catch (error) {
       console.warn(`⚠️  Failed to load company values: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
+
+    return null;
+  }
+
+  private loadThemes(jobId?: string): string | null {
+    if (!jobId) return null;
+
+    try {
+      const jobDir = resolveFromProjectRoot('logs', jobId);
+      if (!fs.existsSync(jobDir)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(jobDir);
+      const themesFile = files.find(file => file.startsWith('themes-') && file.endsWith('.json'));
+
+      if (!themesFile) {
+        return null;
+      }
+
+      const themesPath = path.join(jobDir, themesFile);
+      const themesData = JSON.parse(fs.readFileSync(themesPath, 'utf-8'));
+
+      if (themesData.themes && Array.isArray(themesData.themes)) {
+        console.log('🎯 Loaded priority themes for targeted resume generation');
+
+        // Format themes for the prompt
+        const formattedThemes = themesData.themes
+          .map((theme: any, index: number) => `${index + 1}. **${theme.name}** (${theme.importance.toUpperCase()})\n   ${theme.definition}`)
+          .join('\n\n');
+
+        return formattedThemes;
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to load themes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
     return null;
   }
 
@@ -833,6 +869,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
     maxRoles: number;
     recommendationsSection: string;
     companyValuesSection: string;
+    themesSection?: string;
   }): string {
     try {
       // Load base template
@@ -888,7 +925,8 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         .replace(/{{job\.description}}/g, this.escapeForPrompt(variables.job.description))
         .replace(/{{cvContent}}/g, this.formatCVForPrompt(variables.cvContent))
         .replace(/{{recommendationsSection}}/g, variables.recommendationsSection)
-        .replace(/{{companyValuesSection}}/g, variables.companyValuesSection);
+        .replace(/{{companyValuesSection}}/g, variables.companyValuesSection)
+        .replace(/{{themesSection}}/g, variables.themesSection || '');
       
       // Then remove markdown headers and formatting to get clean prompt
       prompt = prompt
@@ -976,6 +1014,9 @@ header-includes: |
     // Load company values if available
     const companyValues = this.loadCompanyValues(jobId);
 
+    // Load priority themes if available
+    const themes = this.loadThemes(jobId);
+
     // Build the recommendations section for the prompt
     let recommendationsSection = '';
     if (recommendations.length > 0) {
@@ -1007,6 +1048,25 @@ ${companyValues}
 Ensure the resume highlights experiences and achievements that demonstrate alignment with these values.`;
     }
 
+    // Build the themes section for the prompt
+    let themesSection = '';
+    if (themes) {
+      themesSection = `
+
+## PRIORITY THEMES (CRITICAL)
+
+These are the most important themes extracted from the job description. Your resume MUST demonstrate competency in these areas by highlighting relevant experiences:
+
+${themes}
+
+**CRITICAL**: For each high-importance theme, ensure the resume includes:
+1. Specific examples from the CV that demonstrate this theme
+2. Concrete metrics or outcomes related to this theme
+3. Technical details, tools, or methodologies that prove competency in this area
+
+If the theme mentions specific technologies, standards, or domains (e.g., FHIR, HIPAA, data modeling, API design), prioritize those keywords and related experiences from the CV.`;
+    }
+
     // Format CV content for caching
     const formattedCV = `Current CV Content:\n${this.formatCVForPrompt(cvContent)}`;
 
@@ -1019,7 +1079,8 @@ Ensure the resume highlights experiences and achievements that demonstrate align
       cvContent: cvContentPlaceholder,
       maxRoles: this.maxRoles,
       recommendationsSection,
-      companyValuesSection
+      companyValuesSection,
+      themesSection
     });
 
     // Write prompt to log file in job subdirectory
