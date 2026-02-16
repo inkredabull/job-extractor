@@ -248,26 +248,30 @@ Format as:
     return JSON.parse(jobData);
   }
 
-  private loadPromptTemplate(type: StatementType): string {
+  private loadPromptTemplate(type: StatementType, person?: 'first' | 'third'): string {
     try {
       const promptPath = path.resolve('prompts', `statement-${type}.md`);
       return fs.readFileSync(promptPath, 'utf-8');
     } catch (error) {
       console.warn(`⚠️  Failed to load prompt template for ${type}, using fallback`);
-      return this.getFallbackPrompt(type);
+      return this.getFallbackPrompt(type, person);
     }
   }
 
-  private getFallbackPrompt(type: StatementType): string {
+  private getFallbackPrompt(type: StatementType, person?: 'first' | 'third'): string {
     const basePrompt = `You are a professional writer helping create a ${type.replace('-', ' ')} based on a job posting and work history. Be sure to use concise, inspiring, founder-caliber high-impact framing; lead with the 'so what' early.`;
+    const perspective = person || 'first';
+    const personInstruction = perspective === 'third'
+      ? 'Write in third person using "Anthony", "he", "his", "him".'
+      : 'Write in first person using "I", "my", "me".';
 
     switch (type) {
       case 'cover-letter':
-        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters in up to two brief paragraphs. Use informal tone. Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely"). Begin and end directly with substantive content.`;
+        return `${basePrompt}\n\nCreate a cover letter between 600-850 characters in up to two brief paragraphs. Use informal tone. ${personInstruction} Do NOT include any greeting (like "Greetings:", "Dear...") or closing (like "Regards", "Sincerely"). Begin and end directly with substantive content.`;
       case 'endorsement':
         return `${basePrompt}\n\nCreate an endorsement between 375-500 characters in third person. Use first name only when referencing the candidate.`;
       case 'about-me':
-        return `${basePrompt}\n\nCreate talking points as a two-level nested bullet list for "Tell me about yourself" response. Maximum 900 characters.`;
+        return `${basePrompt}\n\nCreate talking points as a two-level nested bullet list for "Tell me about yourself" response. Maximum 900 characters. ${personInstruction}`;
       case 'general':
         return `${basePrompt}\n\nCreate a general statement between 250-425 characters in third person. Reference examples from entire work history.`;
       default:
@@ -287,7 +291,7 @@ Format as:
     }
     
     // For other types, use the original monolithic approach
-    let promptTemplate = this.loadPromptTemplate(type);
+    let promptTemplate = this.loadPromptTemplate(type, options.person);
 
     // Load company values if available
     const companyValues = await this.loadCompanyValues(this.currentJobId, options.companyUrl);
