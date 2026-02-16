@@ -157,11 +157,17 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
     return JSON.parse(jobData);
   }
 
-  private extractResumeContent(resumePath: string): string {
-    // For now, we'll return a placeholder since PDF text extraction requires additional dependencies
-    // In a real implementation, you would use pdf-parse or similar library
-    const filename = path.basename(resumePath);
-    return `[Resume content from ${filename} - PDF text extraction would be implemented here with a library like pdf-parse]`;
+  private async extractResumeContent(resumePath: string): Promise<string> {
+    try {
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ url: resumePath });
+      const result = await parser.getText();
+      return result.text;
+    } catch (error) {
+      console.warn(`⚠️  Failed to extract PDF text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const filename = path.basename(resumePath);
+      return `[Resume content from ${filename} - PDF text extraction failed]`;
+    }
   }
 
   private async generateCritique(job: JobListing, resumeContent: string, resumePath: string, jobId: string): Promise<ResumeCritique> {

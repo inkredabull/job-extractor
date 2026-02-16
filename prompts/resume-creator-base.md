@@ -12,6 +12,42 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 - Use keywords from the job description where appropriate
 - Maintain all factual information - DO NOT fabricate anything
 
+## Domain Adaptation & Vocabulary
+
+**CRITICAL**: Adapt your language to match the domain and maturity stage of the company:
+
+### Regulated / High-Trust Environments (Healthcare, Fintech, Legal, Government)
+If the job description mentions: HIPAA, SOC2, compliance, clinical, patient data, PII, regulated, audit, etc.
+
+**Language shifts:**
+- "incident reduction" → "clinical/operational reliability"
+- "auth implementation" → "enterprise readiness" or "compliance framework"
+- "AI features" → "augmenting [practitioner/clinician/operator] workflows"
+- "fast iteration" → "predictable delivery in regulated contexts"
+- "I built" → "partnered with Product/Design to deliver" or "led cross-functional effort"
+- "scaled infrastructure" → "architected for enterprise security expectations"
+- "reduced bugs" → "established operational rigor for mission-critical usage"
+
+**Emphasize:**
+- Compliance experience (HIPAA, SOC2, PII handling, audit support)
+- Reliability, durability, trust over speed
+- User empathy for end users (clinicians, operators, support teams)
+- Product partnership ("with Product and Design" language)
+- Quality and correctness over velocity
+
+**Surface from CV:**
+- Any healthcare-adjacent experience
+- Compliance certifications or training
+- Work with sensitive data (PII, PHI, financial)
+- Audit or regulatory experience
+- High-stakes reliability work
+
+### Enterprise / Scale Stage
+If the job description emphasizes: enterprise customers, scale, maturity, predictability
+
+**Tone shift:** From "0→1 founder" to "product-minded operator building durable systems"
+**Emphasize:** Predictability, partnership, operational rigor, cross-functional collaboration
+
 {{themesSection}}
 
 {{recommendationsSection}}{{companyValuesSection}}
