@@ -1474,8 +1474,10 @@ Outreach activities:
       // Don't fail the entire extraction if reminder creation fails
       // But DO log the error so users know why reminders weren't created
       if (error instanceof Error && error.message.includes('Cannot find module')) {
-        console.warn('⚠️  macOS Reminder package not found - skipping reminder creation');
-        console.warn('   Install with: npm install @inkredabull/macos-reminder');
+        console.warn('⚠️  macOS Reminder package not found or not built - skipping reminder creation');
+        console.warn('   To enable reminders:');
+        console.warn('   1. cd ../macos-reminder && npm install && npm run build');
+        console.warn('   2. Or install from npm: npm install @inkredabull/macos-reminder');
         return;
       }
       console.warn('⚠️  Failed to create job reminders:', error instanceof Error ? error.message : 'Unknown error');
