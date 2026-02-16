@@ -1297,6 +1297,9 @@ Return only the synthesized job description text, no additional formatting or co
    */
   private async createJobReminder(jobData: JobListing, jobId: string, sourceUrl?: string, reminderPriority?: number, selectedReminders?: string[]): Promise<void> {
     try {
+      console.log(`📋 Attempting to create reminders for job ${jobId}...`);
+      console.log(`   Selected reminders: ${selectedReminders ? selectedReminders.join(', ') : 'all'}`);
+
       // Dynamically import the MacOSReminderService to make it optional
       // @ts-ignore - Optional dependency, may not be available
       const { MacOSReminderService } = await import('@inkredabull/macos-reminder');
@@ -1469,12 +1472,16 @@ Outreach activities:
       }
     } catch (error) {
       // Don't fail the entire extraction if reminder creation fails
-      // Silently skip if the package is not available
+      // But DO log the error so users know why reminders weren't created
       if (error instanceof Error && error.message.includes('Cannot find module')) {
-        // Package not installed, skip reminder creation silently
+        console.warn('⚠️  macOS Reminder package not found - skipping reminder creation');
+        console.warn('   Install with: npm install @inkredabull/macos-reminder');
         return;
       }
       console.warn('⚠️  Failed to create job reminders:', error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof Error && error.stack) {
+        console.warn('   Stack trace:', error.stack.split('\n').slice(0, 3).join('\n'));
+      }
     }
   }
 

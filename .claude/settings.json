@@ -14,7 +14,8 @@
       "Bash(gh pr list:*)",
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(ls:*)"
     ]
   }
 }

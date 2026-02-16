@@ -1684,18 +1684,27 @@ process.on('SIGINT', () => {
 // Async background job processing function
 async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
   console.log(`🔄 Starting async background processing for job ${jobId} (priority: ${priority})`);
-  
+
   try {
+    // Check if criteria.json exists before attempting to score
+    const criteriaPath = path.join(projectDir, 'criteria.json');
+    if (!fs.existsSync(criteriaPath)) {
+      console.log(`  -> ⚠️  No criteria.json found, skipping job scoring`);
+      console.log(`  -> Create criteria.json in project root to enable automatic scoring`);
+      console.log(`✅ Async background processing completed (no scoring) for job ${jobId}`);
+      return;
+    }
+
     // Step 1: Score the job
     console.log(`  -> Scoring job ${jobId}...`);
     const scoreOutput = await new Promise((resolve, reject) => {
       const scoreArgs = ['ts-node', 'components/core/src/cli.ts', 'score', jobId];
-      
+
       const scoreChild = spawn('npx', scoreArgs, {
         cwd: projectDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
-      
+
       let stdout = '';
       let stderr = '';
 
@@ -1725,7 +1734,7 @@ async function triggerAsyncJobProcessing(jobId, priority, projectDir) {
           reject(new Error(`Job scoring failed with code ${code}: ${stderr}`));
         }
       });
-      
+
       // Set timeout for scoring
       setTimeout(() => {
         scoreChild.kill();
