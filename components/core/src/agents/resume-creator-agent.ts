@@ -630,6 +630,15 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   }
 
   private scopeCVContent(cvContent: string): string {
+    // CHANGED: With intelligent role selection, Claude needs to see ALL roles
+    // to make informed decisions about which are most relevant.
+    // The prompt now handles role selection intelligently, so we pass the full CV.
+    console.log(`📝 Providing full CV work history for intelligent role selection`);
+    return cvContent;
+
+    // OLD BEHAVIOR (pre-filtered to maxRoles):
+    // This prevented Claude from seeing older but potentially relevant roles.
+    /*
     if (this.maxRoles <= 0) return cvContent;
 
     // Try to identify role/experience sections and limit them
@@ -716,10 +725,11 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         scopedLines.push(line);
       }
     }
-    
+
     const scopedContent = scopedLines.join('\n');
     console.log(`📝 Scoped CV to ${this.maxRoles} most recent roles`);
     return scopedContent;
+    */
   }
 
   private isLikelyRoleHeader(line: string): boolean {
