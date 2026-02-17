@@ -155,6 +155,73 @@ If the job description is for AI agents, LLM, GenAI, or machine learning roles:
 - Fine-tuning or model training
 - Production LLM deployments with scale metrics
 
+## Intelligent Role Selection & Format Decision
+
+**CRITICAL: You must intelligently decide both HOW MANY roles to include and WHETHER to use split format.**
+
+### Step 1: Analyze All Roles for Relevance
+
+For each role in the CV, assess:
+1. **Direct alignment** - Does this role directly match the job's core requirements?
+   - Same or similar technologies/skills
+   - Comparable scope and seniority level
+   - Similar industry or domain
+
+2. **Transferable value** - Does this role demonstrate relevant but adjacent capabilities?
+   - Complementary technologies or approaches
+   - Different scope but demonstrates relevant skills
+   - Earlier career showing progression toward target role
+
+3. **Career narrative** - Does this role strengthen the overall story?
+   - Shows consistent trajectory
+   - Demonstrates key capabilities
+   - Provides important context
+
+### Step 2: Decide on Experience Format
+
+**Use STANDARD FORMAT ("EXPERIENCE")** when:
+- Most selected roles are similarly relevant (no clear tier separation)
+- 3-4 roles tell the complete story
+- Roles flow naturally in chronological order
+- All selected roles directly support the target position
+
+**Use SPLIT FORMAT ("RELEVANT EXPERIENCE" + "RELATED EXPERIENCE")** when:
+- Clear separation between highly relevant roles (3-5) and supporting roles (2-3)
+- Target position requires specific recent experience AND earlier foundational work
+- Different career phases need distinct framing (e.g., recent leadership + earlier IC work)
+- Total of 6-8 roles needed to tell complete story
+
+### Step 3: Determine Role Count
+
+**Flexible guidelines (NOT hard limits):**
+- **Minimum:** 2-3 roles (highly relevant only)
+- **Typical:** 3-5 roles (standard) or 5-7 roles (split format)
+- **Maximum:** 8 roles (only if genuinely needed for narrative)
+
+**Decision criteria:**
+- Include roles that strengthen the application
+- Exclude roles that dilute relevance or add confusion
+- Prioritize recent, highly relevant experience
+- Consider page limits (aim for 1-2 pages maximum)
+
+### Step 4: Section Headers
+
+If using standard format:
+```markdown
+## EXPERIENCE
+```
+
+If using split format:
+```markdown
+## RELEVANT EXPERIENCE
+[3-5 highly aligned roles]
+
+## RELATED EXPERIENCE
+[2-3 supporting roles]
+```
+
+**IMPORTANT:** The {{maxRoles}} placeholder is a SOFT SUGGESTION, not a hard limit. Use your judgment to select the optimal number of roles.
+
 {{themesSection}}
 
 {{recommendationsSection}}{{companyValuesSection}}
@@ -194,7 +261,12 @@ Prefer active verbs and concrete metrics over abstract descriptions.
 
 ## Roles
 
-Include the most recent {{maxRoles}} roles in reverse-chronological order.  
+**CRITICAL: Use the intelligent role selection process described above to determine:**
+1. How many roles to include (typically 3-5, but flexible based on relevance)
+2. Whether to use standard "EXPERIENCE" or split "RELEVANT EXPERIENCE" + "RELATED EXPERIENCE" format
+3. Which specific roles from the CV to include
+
+The {{maxRoles}} value is a soft suggestion (~{{maxRoles}} roles), but you should prioritize relevance over recency. Include roles in reverse-chronological order within each section.
 
 {{rolesSpecificInstructions}}
 
@@ -261,7 +333,18 @@ Return a JSON object with:
 ```json
 {
   "markdownContent": "The complete resume as markdown formatted text",
-  "changes": ["List of specific changes made to tailor the resume"]
+  "changes": ["List of specific changes made to tailor the resume"],
+  "roleSelection": {
+    "format": "standard | split",
+    "rolesIncluded": 4,
+    "reasoning": "Brief explanation of why this format and role count was chosen"
+  }
 }
 ```
+
+**roleSelection fields:**
+- `format`: Either "standard" (single EXPERIENCE section) or "split" (RELEVANT + RELATED sections)
+- `rolesIncluded`: Total number of roles included in the resume
+- `reasoning`: 1-2 sentence explanation of the decision (e.g., "Used split format with 6 roles because candidate has 3 highly relevant recent roles in platform engineering and 3 earlier IC roles showing technical foundation")
+
 Respond with ONLY the JSON object.

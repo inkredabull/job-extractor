@@ -1008,6 +1008,11 @@ header-includes: |
   ): Promise<{
     markdownContent: string;
     changes: string[];
+    roleSelection?: {
+      format: 'standard' | 'split';
+      rolesIncluded: number;
+      reasoning: string;
+    };
   }> {
     // Load any existing recommendations
     const recommendations = this.loadRecommendations(jobId);
@@ -1189,9 +1194,19 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
       }
 
       const result = JSON.parse(sanitized);
+
+      // Log role selection decision if provided
+      if (result.roleSelection) {
+        console.log(`📊 Role Selection Decision:`);
+        console.log(`   Format: ${result.roleSelection.format === 'split' ? 'RELEVANT + RELATED sections' : 'Single EXPERIENCE section'}`);
+        console.log(`   Roles Included: ${result.roleSelection.rolesIncluded}`);
+        console.log(`   Reasoning: ${result.roleSelection.reasoning}`);
+      }
+
       return {
         markdownContent: this.addHeaderToMarkdown(result.markdownContent),
-        changes: result.changes
+        changes: result.changes,
+        roleSelection: result.roleSelection
       };
     } catch (error) {
       // On parse error, save the problematic JSON for debugging

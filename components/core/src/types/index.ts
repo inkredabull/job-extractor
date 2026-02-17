@@ -154,6 +154,12 @@ export interface CVData {
   }>;
 }
 
+export interface RoleSelection {
+  format: 'standard' | 'split';
+  rolesIncluded: number;
+  reasoning: string;
+}
+
 export interface ResumeResult {
   success: boolean;
   pdfPath?: string;
@@ -161,6 +167,7 @@ export interface ResumeResult {
   tailoringChanges?: string[];
   improvedWithCritique?: boolean;
   critiqueRating?: number;
+  roleSelection?: RoleSelection;
 }
 
 export interface ResumeCritique {
