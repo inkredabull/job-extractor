@@ -263,6 +263,74 @@ export class ResumeCriticAgent extends ClaudeBaseAgent {
   } {
     const description = jobDescription.toLowerCase();
 
+    // Platform Engineering / Infrastructure Leadership detection
+    // Check this FIRST as it's most specific
+    const platformSignals = [
+      'platform engineering', 'infrastructure', 'developer experience',
+      'internal tools', 'developer platform', 'api platform',
+      'distributed systems', 'service-oriented architecture',
+      'site reliability', 'sre', 'devops platform',
+      'capacity planning', 'operational excellence', 'backend platform'
+    ];
+    const foundPlatformSignals = platformSignals.filter(signal => description.includes(signal));
+
+    if (foundPlatformSignals.length >= 2) {
+      return {
+        domain: 'Platform Engineering / Infrastructure Leadership',
+        signals: foundPlatformSignals,
+        expectedVocabulary: [
+          'architected platform to scale (strategic systems thinking)',
+          'led organizational transformation (org design is part of the role)',
+          'established operational excellence standards (setting standards)',
+          'built developer platform enabling (internal tooling as product)',
+          'restructured teams for reliability (team design matters)',
+          'defined technical strategy and roadmap (VP-level planning)',
+          'partnered cross-functionally with Product/Security/Data',
+          'scaled infrastructure to support millions of users',
+          'implemented SLO/SLA frameworks and on-call practices',
+          'reduced incident frequency through architectural improvements'
+        ],
+        toneExpectations: [
+          'Strategic technical leader and architect (VP-level appropriate)',
+          'Systems thinking and long-term platform vision',
+          'Team/organization builder and mentor of senior engineers',
+          'Cross-functional influence and executive partnership',
+          'Operational excellence and reliability as core focus',
+          'Scale, performance, availability metrics emphasized',
+          'Internal transformation IS valuable (opposite of Forward Deployed)',
+          'Developer experience and productivity as outcomes'
+        ]
+      };
+    }
+
+    // Forward Deployed / Customer-Facing detection
+    const forwardDeployedSignals = ['forward deployed', 'customer-facing', 'embedded with customers', 'on-site', 'field engineering', 'solutions engineer', 'customer integration', 'client-facing'];
+    const foundFDSignals = forwardDeployedSignals.filter(signal => description.includes(signal));
+
+    if (foundFDSignals.length > 0) {
+      return {
+        domain: 'Forward Deployed / Customer-Facing',
+        signals: foundFDSignals,
+        expectedVocabulary: [
+          'customer-embedded deployment (not "internal transformation")',
+          'partnered directly with enterprise customers to deploy',
+          'embedded on-site with customer teams',
+          'represented company technically in executive stakeholder meetings',
+          'integrated systems into client operational environments',
+          'custom enterprise integrations (not "platform features")',
+          'navigated ambiguity in messy real-world constraints'
+        ],
+        toneExpectations: [
+          'Ground-level execution (not VP-level architecture)',
+          'Customer proximity and direct partnership',
+          'Fast integration cycles in ambiguous environments',
+          'Comfortable operating with incomplete requirements',
+          'Technical ownership in real-world production constraints',
+          'Client relationship management alongside technical delivery'
+        ]
+      };
+    }
+
     // Healthcare / Regulated detection
     const healthcareSignals = ['hipaa', 'soc2', 'compliance', 'clinical', 'patient data', 'pii', 'regulated', 'audit', 'phi', 'fhir', 'ehr', 'healthcare'];
     const foundHealthcareSignals = healthcareSignals.filter(signal => description.includes(signal));
@@ -426,6 +494,38 @@ ${domainContext.toneExpectations.map(t => `- ${t}`).join('\n')}
 `;
     }
 
+    // Build AI technical depth checking section
+    const aiKeywords = ['ai', 'llm', 'genai', 'generative ai', 'machine learning', 'agent', 'agents', 'gpt', 'claude', 'openai'];
+    const isAIRole = aiKeywords.some(keyword => job.title.toLowerCase().includes(keyword) || job.description.toLowerCase().includes(keyword));
+
+    let aiDepthSection = '';
+    if (isAIRole) {
+      aiDepthSection = `
+## AI/LLM TECHNICAL DEPTH CHECK
+
+**CRITICAL:** This is an AI/LLM role. The resume MUST demonstrate technical depth, not abstract buzzwords.
+
+**Required Technical Specifics (check if present):**
+- **RAG architectures:** retrieval-augmented generation, chunking, embeddings, vector databases
+- **Multi-agent orchestration:** agent frameworks (LangChain, LlamaIndex), workflow design
+- **Evaluation frameworks:** how LLM outputs are tested, validated, benchmarked
+- **Guardrails & safety:** content filtering, hallucination detection, safety systems
+- **Cost optimization:** token cost controls, caching strategies, prompt compression, model selection
+- **LLM observability:** tracing, monitoring, debugging (LangSmith, W&B, Phoenix, custom)
+- **Latency optimization:** streaming, batching, caching, model selection
+- **Prompt engineering:** prompt catalogs, versioning, A/B testing, optimization
+- **Human-in-the-loop:** review systems, feedback loops, escalation workflows
+
+**Evaluation:**
+- ❌ ABSTRACT/WEAK: "Scaled AI agent systems", "Implemented GenAI features", "Deployed LLMs"
+- ✅ SPECIFIC/STRONG: "Implemented RAG-backed support agent with semantic caching, reducing token costs 60%"
+- ✅ SPECIFIC/STRONG: "Built multi-agent orchestration with LangChain and human-in-the-loop review for compliance"
+- ✅ SPECIFIC/STRONG: "Deployed evaluation pipeline with hallucination detection using LLM-as-judge + heuristic guardrails"
+
+**Flag as critical weakness if:** AI work is mentioned but lacks technical specifics. The resume should sound technical, not conceptual.
+`;
+    }
+
     const prompt = `You are an expert resume critic and career coach. Analyze the following resume that was tailored for a specific job posting and provide detailed, actionable feedback.
 
 # JOB POSTING
@@ -446,6 +546,8 @@ ${resumeContent}
 ${moreContextSection}
 
 ${domainGuidanceSection}
+
+${aiDepthSection}
 
 # EVALUATION CRITERIA
 

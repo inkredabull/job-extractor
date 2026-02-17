@@ -48,6 +48,113 @@ If the job description emphasizes: enterprise customers, scale, maturity, predic
 **Tone shift:** From "0→1 founder" to "product-minded operator building durable systems"
 **Emphasize:** Predictability, partnership, operational rigor, cross-functional collaboration
 
+### Platform Engineering / Infrastructure Leadership
+If the job description mentions: platform engineering, infrastructure, developer platform, internal tools, distributed systems, site reliability, operational excellence, API platform
+
+**CRITICAL: Internal transformation and VP-level architecture are APPROPRIATE for these roles**
+
+**Language to emphasize:**
+- "Architected platform to scale [X metric]" (strategic systems thinking)
+- "Led organizational transformation to improve [reliability/velocity]" (org design is part of the role)
+- "Established operational excellence standards across [scope]" (setting standards)
+- "Built developer platform enabling [outcome]" (internal tooling as product)
+- "Restructured teams for [reliability/scalability]" (team design matters)
+- "Defined technical strategy and roadmap for [platform area]"
+- "Partnered cross-functionally with Product/Security/Data teams"
+- "Scaled infrastructure to support [millions of users/requests]"
+- "Implemented SLO/SLA frameworks and on-call practices"
+
+**Emphasize:**
+- Scale metrics (users, requests/sec, uptime %, performance improvements)
+- Team leadership (# of teams, engineers, managers led)
+- Platform impact (developer velocity, reliability improvements, cost savings)
+- Technical strategy and architectural decisions
+- Operational excellence (incident response, on-call, SLOs, monitoring)
+- Cross-functional partnerships at senior/executive level
+- Internal transformation projects (this IS the job, not a red flag)
+
+**Surface from CV:**
+- Infrastructure scaling work (distributed systems, microservices)
+- Developer tooling and platform work
+- Reliability engineering (SRE, on-call, incident management)
+- Team building and mentorship of senior engineers
+- Technical strategy and architectural decision-making
+- Cross-functional leadership and influence
+- Organizational restructuring for reliability/velocity
+
+### Forward Deployed / Customer-Facing Roles
+If the job description mentions: forward deployed, customer-facing, embedded, field engineering, solutions engineering, on-site, client integration
+
+**CRITICAL: Opposite of Platform Engineering - emphasize ground-level execution, not VP-level architecture**
+
+**Language to emphasize:**
+- "Partnered directly with [Company] enterprise team to deploy..."
+- "Embedded on-site with customer teams at [Client] to..."
+- "Represented company technically in executive stakeholder meetings"
+- "Integrated AI workflows into [Client's] operational environment"
+- "Navigated ambiguous requirements to deliver custom solutions"
+- "Shipped POC to production in [timeframe] despite [constraint]"
+
+**Emphasize:**
+- Customer-embedded work (not internal transformation)
+- Direct client interaction and relationship management
+- On-site deployments and implementations
+- Executive stakeholder management
+- Custom enterprise solutions and integrations
+- Technical sales engineering and POC work
+- Comfort with ambiguity and messy real-world constraints
+
+**Surface from CV:**
+- Any customer-facing technical work
+- Client integrations or implementations
+- On-site deployments or embedded team experiences
+- Executive/C-level stakeholder interactions
+- Custom enterprise solutions (not platform features)
+- Technical sales or solutions engineering
+- POC/pilot deployments with external customers
+
+**Avoid:**
+- "Internal transformation" language (sounds too internal)
+- "Restructured organization" (too senior/VP-level)
+- Pure infrastructure/platform work unless customer-facing
+- Solo builder "I built everything" language (emphasize partnership)
+
+### AI/LLM Roles - Technical Depth Requirements
+If the job description is for AI agents, LLM, GenAI, or machine learning roles:
+
+**CRITICAL: Be specific and technical, not abstract**
+
+**Bad (too vague):**
+- "Scaled AI agent systems"
+- "Implemented GenAI features"
+- "Deployed LLM applications"
+
+**Good (specific and technical):**
+- "Implemented RAG-backed customer support agent with semantic caching, reducing token costs 60%"
+- "Built multi-agent orchestration framework with human-in-the-loop review for compliance verification"
+- "Deployed evaluation pipeline with hallucination detection using LLM-as-judge + heuristic guardrails"
+- "Optimized prompt engineering catalog reducing latency P95 from 8s to 2s"
+
+**Must include specifics on:**
+- **RAG architectures:** chunking strategies, embeddings, retrieval methods, vector databases
+- **Evaluation frameworks:** how you test/validate LLM outputs, metrics, benchmarks
+- **Guardrails:** content filtering, safety systems, hallucination detection
+- **Cost optimization:** caching strategies, prompt compression, model selection
+- **Observability:** tracing, debugging, monitoring (LangSmith, W&B, custom)
+- **Latency optimization:** streaming, batching, model selection, caching
+- **Prompt engineering:** catalog systems, versioning, A/B testing, prompt optimization
+- **Multi-agent systems:** orchestration, agent frameworks, workflow design
+- **Human-in-the-loop:** review systems, feedback loops, escalation
+
+**Surface from CV any work involving:**
+- LangChain, LlamaIndex, Haystack, or other agent frameworks
+- Vector databases (Pinecone, Weaviate, Chroma, Qdrant)
+- LLM observability tools (LangSmith, Weights & Biases, Phoenix)
+- Prompt management and versioning systems
+- Agent evaluation frameworks and testing
+- Fine-tuning or model training
+- Production LLM deployments with scale metrics
+
 {{themesSection}}
 
 {{recommendationsSection}}{{companyValuesSection}}
