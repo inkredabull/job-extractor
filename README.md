@@ -1468,20 +1468,34 @@ Each category receives a 0-100% score, then weighted to produce the final percen
 
 ### Resume Generation Process
 
-The ResumeCreatorAgent follows a 4-step process:
+The ResumeCreatorAgent follows a 5-step intelligent process:
 
 1. **CV Parsing**: Uses AI to extract structured data from your plain text CV
 2. **Job Analysis**: Loads the specific job posting data from extraction logs
-3. **Content Tailoring**: AI generates optimized Markdown resume content:
-   - Reorders experience to highlight relevant roles
+3. **Intelligent Role Selection** (NEW):
+   - **Analyzes all CV roles** for relevance to the target position
+   - **Assesses direct alignment**: Same technologies, scope, seniority level
+   - **Evaluates transferable value**: Adjacent skills, complementary experience
+   - **Considers career narrative**: Progression, consistency, context
+   - **Decides format automatically**:
+     - Standard ("EXPERIENCE"): When roles are similarly relevant
+     - Split ("RELEVANT + RELATED"): When clear separation exists
+   - **Determines optimal role count**: Flexible 2-8 roles based on relevance (not hardcoded)
+   - **Logs decision transparently**: Format, count, and reasoning
+4. **Content Tailoring**: AI generates optimized Markdown resume content:
+   - Includes most relevant roles (not just most recent)
+   - Reorders experience to highlight aligned roles
    - Emphasizes matching skills and technologies
    - Updates summary with job-specific keywords
    - Prioritizes relevant projects and achievements
    - Follows professional resume formatting guidelines
-4. **PDF Generation**: Uses pandoc to convert Markdown to professional PDF
+5. **PDF Generation**: Uses pandoc to convert Markdown to professional PDF
 
 **Key Features:**
 - **Maintains truthfulness**: Only reorders and emphasizes existing content
+- **Intelligent, not rigid**: Adapts role count to job requirements (2-8 roles)
+- **Format auto-detection**: No manual --split flag needed
+- **Relevance over recency**: Prioritizes best-matching roles, not just latest
 - **Job-specific optimization**: Uses actual job description for tailoring
 - **Professional formatting**: Pandoc-generated PDF with clean layout
 - **Markdown intermediate**: Allows for easy customization and review
@@ -1681,15 +1695,34 @@ const builderCreator = new ResumeCreatorAgent(claudeApiKey, model, maxTokens, ma
 - `claudeApiKey: string` - Anthropic API key
 - `model?: string` - Claude model to use (default: `claude-3-7-sonnet-20250219`)
 - `maxTokens?: number` - Maximum tokens (default: `4000`)
-- `maxRoles: number` - Maximum number of roles to include (default: `4`)
+- `maxRoles: number` - **Soft suggestion** for number of roles (default: `4`). The AI will intelligently decide the actual number based on relevance, typically 3-5 roles but flexible from 2-8.
 - `mode: 'builder' | 'leader'` - Resume generation mode (default: `'leader'`)
 
 **Mode Differences:**
 - **Leader Mode**: Emphasizes management, team leadership, and strategic impact
 - **Builder Mode**: Emphasizes technical skills, hands-on work, and individual contributions
 
+**Intelligent Role Selection (NEW):**
+The system now automatically:
+1. **Analyzes all CV roles for relevance** to the target position
+2. **Decides how many roles to include** (flexible, not hard-limited to maxRoles)
+3. **Chooses format automatically**:
+   - **Standard format** ("EXPERIENCE"): When most roles are similarly relevant
+   - **Split format** ("RELEVANT EXPERIENCE" + "RELATED EXPERIENCE"): When there's clear separation between highly relevant and supporting roles
+4. **Logs the decision** with format, role count, and reasoning for transparency
+
+Example output:
+```
+📊 Role Selection Decision:
+   Format: RELEVANT + RELATED sections
+   Roles Included: 6
+   Reasoning: Used split format with 6 roles because candidate has 3 highly
+   relevant recent roles in platform engineering and 3 earlier IC roles
+   showing technical foundation
+```
+
 **Backwards Compatibility:**
-All existing code will continue to work unchanged as the `mode` parameter defaults to `'leader'`.
+All existing code will continue to work unchanged as the `mode` parameter defaults to `'leader'`. The `maxRoles` parameter is now a soft suggestion rather than a hard limit.
 
 ### Project Structure
 
