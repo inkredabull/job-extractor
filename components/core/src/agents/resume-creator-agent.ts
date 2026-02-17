@@ -87,10 +87,11 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
         }
       }
       
-      if (critique && (isFirstGeneration || source === 'cli')) {
+      if (critique && (isFirstGeneration || source === 'cli') && !regenerate) {
         // Run the critique-and-improve workflow when:
         // 1. It's the first generation and critique is enabled, OR
         // 2. Called from CLI with critique enabled (default behavior for CLI)
+        // BUT NOT when --regen is used (regenerate = true), which should just re-render to PDF
         let workflowReason = 'unknown';
         if (isFirstGeneration) workflowReason = 'first-time generation';
         else if (source === 'cli') workflowReason = 'CLI invocation with critique enabled';
