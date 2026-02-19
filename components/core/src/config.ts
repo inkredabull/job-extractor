@@ -59,7 +59,7 @@ export function getAnthropicConfig(): { anthropicApiKey: string; model: string; 
 
   return {
     anthropicApiKey,
-    model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     maxTokens: process.env.ANTHROPIC_MAX_TOKENS ? parseInt(process.env.ANTHROPIC_MAX_TOKENS) : 4000,
     maxRoles: process.env.MAX_ROLES ? parseInt(process.env.MAX_ROLES) : 4,
   };

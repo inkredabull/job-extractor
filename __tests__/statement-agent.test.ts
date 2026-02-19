@@ -54,7 +54,7 @@ SKILLS:
 
     (Anthropic as jest.MockedClass<typeof Anthropic>).mockImplementation(() => mockAnthropic);
 
-    agent = new StatementAgent('test-key', 'claude-3-7-sonnet-20250219', 4000);
+    agent = new StatementAgent('test-key', 'claude-sonnet-4-5-20250929', 4000);
 
     // Mock file system operations
     (fs.existsSync as jest.Mock).mockReturnValue(true);

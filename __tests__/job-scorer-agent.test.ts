@@ -29,7 +29,7 @@ describe('JobScorerAgent', () => {
     // Mock config functions
     (getAnthropicConfig as jest.Mock).mockReturnValue({
       anthropicApiKey: 'test-anthropic-key',
-      model: 'claude-3-7-sonnet-20250219',
+      model: 'claude-sonnet-4-5-20250929',
       maxTokens: 4000
     });
     
@@ -278,7 +278,7 @@ describe('JobScorerAgent', () => {
 
       expect(ResumeCreatorAgent).toHaveBeenCalledWith(
         'test-anthropic-key',
-        'claude-3-7-sonnet-20250219',
+        'claude-sonnet-4-5-20250929',
         4000
       );
       

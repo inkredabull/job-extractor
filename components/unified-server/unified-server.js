@@ -48,7 +48,7 @@ class CVResponseEngine {
     console.log('  -> ANTHROPIC_API_KEY present:', process.env.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
     if (this.useLLM && this.anthropic) {
-      console.log('  -> Decision: Using LLM for response (Claude 3.7 Sonnet)');
+      console.log('  -> Decision: Using LLM for response (Claude Sonnet 4.5)');
       return this.answerWithLLM(question, jobDescription, jobId);
     } else {
       const reason = !this.useLLM ? 'useLLM=false (server not started with --llm flag)' : 'Anthropic client not initialized (missing API key)';
@@ -129,10 +129,10 @@ ${'='.repeat(80)}
         console.log('  -> Prompt NOT saved (no job ID provided)');
       }
 
-      console.log('  -> Calling Claude API (model: claude-3-7-sonnet-20250219, max_tokens: 150)');
+      console.log('  -> Calling Claude API (model: claude-sonnet-4-5-20250929, max_tokens: 150)');
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-3-7-sonnet-20250219',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 150,
         temperature: 0.5,
         messages: [
@@ -1647,7 +1647,7 @@ app.listen(PORT, () => {
   console.log('🚀 Unified Career Catalyst Server');
   console.log('=' .repeat(50));
   console.log(`🌐 Server running on http://localhost:${PORT}`);
-  console.log(`🧠 LLM mode: ${cvEngine.useLLM ? 'ENABLED (Claude 3.5)' : 'DISABLED (Pattern matching)'}`);
+  console.log(`🧠 LLM mode: ${cvEngine.useLLM ? 'ENABLED (Claude Sonnet 4.5)' : 'DISABLED (Pattern matching)'}`);
   console.log('');
   console.log('📋 Available endpoints:');
   console.log(`  • GET  /health           - Health check`);

@@ -61,7 +61,7 @@ describe('ResumeCreatorAgent', () => {
     // Mock execSync for pandoc
     (execSync as jest.Mock).mockImplementation(() => {});
 
-    agent = new ResumeCreatorAgent('test-anthropic-api-key', 'claude-3-7-sonnet-20250219', 4000);
+    agent = new ResumeCreatorAgent('test-anthropic-api-key', 'claude-sonnet-4-5-20250929', 4000);
   });
 
   afterEach(() => {
@@ -184,7 +184,7 @@ describe('ResumeCreatorAgent', () => {
 
     it('should use configurable number of roles in prompt', async () => {
       // Create agent with different maxRoles
-      const customAgent = new ResumeCreatorAgent('test-api-key', 'claude-3-7-sonnet-20250219', 4000, 2);
+      const customAgent = new ResumeCreatorAgent('test-api-key', 'claude-sonnet-4-5-20250929', 4000, 2);
       
       const tailoringResponse = JSON.stringify({
         markdownContent: '# Resume with 2 roles',
