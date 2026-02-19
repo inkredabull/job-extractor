@@ -27,7 +27,7 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
   ) {
     // Default to Haiku for fast generation with caching, use Sonnet only when explicitly requested
     const initialModel = useFastMode
-      ? 'claude-3-5-haiku-20241022'
+      ? 'claude-haiku-4-5-20251001'
       : (model || 'claude-sonnet-4-5-20250929');
 
     super(claudeApiKey, initialModel, maxTokens);

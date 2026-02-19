@@ -15,7 +15,7 @@ export class ModeDetectorAgent {
   private anthropic: Anthropic;
   private model: string;
 
-  constructor(claudeApiKey: string, model: string = 'claude-3-5-haiku-20241022') {
+  constructor(claudeApiKey: string, model: string = 'claude-haiku-4-5-20251001') {
     this.anthropic = new Anthropic({
       apiKey: claudeApiKey,
     });
