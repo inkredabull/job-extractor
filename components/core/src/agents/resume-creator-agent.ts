@@ -1129,9 +1129,11 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     console.log(`🤖 Model: ${this.resumeProvider.getModelName()}`);
 
     // Cost confirmation
+    // Always pass CV content - providers will handle it appropriately
+    // (cached for Claude, concatenated for OpenAI)
     const request = {
       prompt: prompt,
-      cachedContent: this.resumeProvider.supportsPromptCaching() ? formattedCV : undefined
+      cachedContent: formattedCV
     };
 
     const confirmed = await confirmCostEstimate(
