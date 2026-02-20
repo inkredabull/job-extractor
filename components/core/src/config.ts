@@ -82,8 +82,113 @@ export function getResumeOutputDir(): string {
     }
     return envDir;
   }
-  
+
   // Fallback to default Google Drive location
   const homeDir = os.homedir();
   return path.join(homeDir, 'Google Drive', 'My Drive', 'Professional', 'Job Search', 'Applications', 'Resumes');
+}
+
+export interface ResumeGenerationConfig {
+  // Resume generation provider
+  resumeProvider: 'anthropic' | 'openai';
+  resumeModel: string;
+  resumeApiKey: string;
+
+  // Critique provider
+  critiqueProvider: 'anthropic' | 'openai';
+  critiqueModel: string;
+  critiqueApiKey: string;
+
+  // Settings
+  maxTokens: number;
+  maxRoles: number;
+  temperature: number;
+}
+
+export function getResumeGenerationConfig(): ResumeGenerationConfig {
+  // Resume provider - REQUIRED (no default)
+  const resumeProvider = process.env.RESUME_LLM_PROVIDER as 'anthropic' | 'openai' | undefined;
+  if (!resumeProvider) {
+    throw new Error(
+      'RESUME_LLM_PROVIDER environment variable is required.\n' +
+      'Set to "anthropic" or "openai" in your .env file.'
+    );
+  }
+
+  if (!['anthropic', 'openai'].includes(resumeProvider)) {
+    throw new Error(
+      `Invalid RESUME_LLM_PROVIDER: "${resumeProvider}"\n` +
+      'Must be "anthropic" or "openai"'
+    );
+  }
+
+  // Resume model - REQUIRED (no default)
+  const resumeModel = process.env.RESUME_LLM_MODEL;
+  if (!resumeModel) {
+    throw new Error(
+      'RESUME_LLM_MODEL environment variable is required.\n' +
+      'Examples:\n' +
+      '  - Anthropic: claude-haiku-4-5-20251001, claude-sonnet-4-5-20250929\n' +
+      '  - OpenAI: gpt-4o-mini, gpt-4o, gpt-5.2-2025-12-11'
+    );
+  }
+
+  // Resume API key
+  const resumeApiKey = resumeProvider === 'anthropic'
+    ? process.env.ANTHROPIC_API_KEY
+    : process.env.OPENAI_API_KEY;
+
+  if (!resumeApiKey) {
+    const keyName = resumeProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+    throw new Error(`${keyName} environment variable is required for resume generation`);
+  }
+
+  // Critique provider - REQUIRED (no default)
+  const critiqueProvider = process.env.CRITIQUE_LLM_PROVIDER as 'anthropic' | 'openai' | undefined;
+  if (!critiqueProvider) {
+    throw new Error(
+      'CRITIQUE_LLM_PROVIDER environment variable is required.\n' +
+      'Set to "anthropic" or "openai" in your .env file.'
+    );
+  }
+
+  if (!['anthropic', 'openai'].includes(critiqueProvider)) {
+    throw new Error(
+      `Invalid CRITIQUE_LLM_PROVIDER: "${critiqueProvider}"\n` +
+      'Must be "anthropic" or "openai"'
+    );
+  }
+
+  // Critique model - REQUIRED (no default)
+  const critiqueModel = process.env.CRITIQUE_LLM_MODEL;
+  if (!critiqueModel) {
+    throw new Error(
+      'CRITIQUE_LLM_MODEL environment variable is required.\n' +
+      'Examples:\n' +
+      '  - Anthropic: claude-sonnet-4-5-20250929\n' +
+      '  - OpenAI: gpt-4o, gpt-5.2-2025-12-11'
+    );
+  }
+
+  // Critique API key
+  const critiqueApiKey = critiqueProvider === 'anthropic'
+    ? process.env.ANTHROPIC_API_KEY
+    : process.env.OPENAI_API_KEY;
+
+  if (!critiqueApiKey) {
+    const keyName = critiqueProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+    throw new Error(`${keyName} environment variable is required for critique`);
+  }
+
+  return {
+    resumeProvider,
+    resumeModel,
+    resumeApiKey,
+    critiqueProvider,
+    critiqueModel,
+    critiqueApiKey,
+    maxTokens: parseInt(process.env.ANTHROPIC_MAX_TOKENS || '4000'),
+    maxRoles: parseInt(process.env.MAX_ROLES || '4'),
+    temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.3')
+  };
 }

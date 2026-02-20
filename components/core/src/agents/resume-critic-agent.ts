@@ -1,17 +1,16 @@
-import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeCritique, ResumeResult } from '../types';
 import { resolveFromProjectRoot } from '../utils/project-root';
 import { getResumeOutputDir } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { BaseLLMProvider } from '../providers/llm-provider';
+import { confirmCostEstimate } from '../utils/cost-confirmation';
 
-export class ResumeCriticAgent extends ClaudeBaseAgent {
-  async extract(): Promise<never> {
-    throw new Error('ResumeCriticAgent does not implement extract method. Use critiqueResume instead.');
-  }
+export class ResumeCriticAgent {
+  private provider: BaseLLMProvider;
 
-  async createResume(): Promise<never> {
-    throw new Error('ResumeCriticAgent does not implement createResume method. Use critiqueResume instead.');
+  constructor(provider: BaseLLMProvider) {
+    this.provider = provider;
   }
 
   async critiqueResume(jobId: string): Promise<ResumeCritique> {
@@ -615,11 +614,31 @@ CRITICAL: You must respond with ONLY valid JSON. No other text, explanations, or
 
 REMEMBER: Response must be valid JSON only. No markdown, no code blocks, no additional text.`;
 
-    const response = await this.makeClaudeRequest(prompt);
-    
+    console.log('⏳ Generating critique...');
+    console.log(`📦 Provider: ${this.provider.getProviderName()}`);
+    console.log(`🤖 Model: ${this.provider.getModelName()}`);
+
+    // Cost confirmation
+    const request = { prompt };
+
+    const confirmed = await confirmCostEstimate(
+      this.provider,
+      request,
+      'Resume Critique'
+    );
+
+    if (!confirmed) {
+      throw new Error('Critique cancelled by user');
+    }
+
+    // Make request via provider
+    const response = await this.provider.makeRequest(request);
+
+    console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
+
     try {
       // Clean the response to extract JSON if Claude adds extra text
-      let cleanedResponse = response.trim();
+      let cleanedResponse = response.text.trim();
       
       // Look for JSON object boundaries
       const jsonStart = cleanedResponse.indexOf('{');

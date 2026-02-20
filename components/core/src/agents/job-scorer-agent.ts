@@ -2,8 +2,9 @@ import { BaseAgent } from './base-agent';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import { JobListing, JobCriteria, JobScore, AgentConfig } from '../types';
 import { resolveFromProjectRoot } from '../utils/project-root';
-import { getAnthropicConfig, getAutoResumeConfig } from '../config';
+import { getAnthropicConfig, getAutoResumeConfig, getResumeGenerationConfig } from '../config';
 import { generateScoringReportHTML } from '../utils/report-generator';
+import { LLMProviderConfig } from '../providers/llm-provider';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -447,13 +448,31 @@ Return your response as a JSON object with keys: problem_solving, hiring_archety
   private async generateAutoResume(jobId: string, score: number): Promise<void> {
     try {
       console.log(`🎯 Score of ${score}% exceeds threshold of ${this.autoResumeConfig.threshold}% - generating tailored resume...`);
-      
-      const anthropicConfig = getAnthropicConfig();
+
+      // Get resume generation config
+      const config = getResumeGenerationConfig();
+
+      // Create provider configs
+      const resumeProviderConfig: LLMProviderConfig = {
+        provider: config.resumeProvider,
+        apiKey: config.resumeApiKey,
+        model: config.resumeModel,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature
+      };
+
+      const critiqueProviderConfig: LLMProviderConfig = {
+        provider: config.critiqueProvider,
+        apiKey: config.critiqueApiKey,
+        model: config.critiqueModel,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature
+      };
+
       const resumeCreator = new ResumeCreatorAgent(
-        anthropicConfig.anthropicApiKey,
-        anthropicConfig.model,
-        anthropicConfig.maxTokens,
-        anthropicConfig.maxRoles
+        resumeProviderConfig,
+        critiqueProviderConfig,
+        config.maxRoles
       );
       
       const result = await resumeCreator.createResume(

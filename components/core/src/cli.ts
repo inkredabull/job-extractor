@@ -12,7 +12,8 @@ import { ApplicationAgent } from './agents/application-agent';
 import { WhoGotHiredAgent } from './agents/whogothired-agent';
 import { ModeDetectorAgent } from './agents/mode-detector-agent';
 import { StatementType, AboutMeSection } from './types';
-import { getConfig, getAnthropicConfig } from './config';
+import { getConfig, getAnthropicConfig, getResumeGenerationConfig } from './config';
+import { LLMProviderConfig } from './providers/llm-provider';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs/promises';
@@ -902,7 +903,10 @@ program
   .option('--regen', 'Quick PDF rebuild from cached markdown (fast, no new content). Without this flag, generates fresh content using current prompts.')
   .option('-m, --mode <mode>', 'Resume generation mode: "leader" (emphasizes management/strategy) or "builder" (emphasizes technical work). If not specified, mode will be auto-detected from job description.')
   .option('--split', 'Use split experience format with Relevant and Related sections (default is standard single section)')
-  .option('--sonnet', 'Use Claude Sonnet without caching for highest quality (slower, ~5-10x more expensive). Default uses Haiku with caching for speed.')
+  .option('--provider <provider>', 'Override RESUME_LLM_PROVIDER for this run (anthropic or openai)')
+  .option('--critique-provider <provider>', 'Override CRITIQUE_LLM_PROVIDER for this run (anthropic or openai)')
+  .option('--model <model>', 'Override RESUME_LLM_MODEL for this run')
+  .option('--critique-model <model>', 'Override CRITIQUE_LLM_MODEL for this run')
   .option('--generate', 'Generate a detailed job description if missing or generic')
   .option('--company-url <url>', 'Company URL to use for generating job description context')
   .option('--no-critique', 'Skip the automatic critique and improvement of the resume')
@@ -919,7 +923,45 @@ program
       console.log(`📋 CV File: ${cvFile}`);
       console.log('');
 
-      const anthropicConfig = getAnthropicConfig();
+      // Load configuration
+      let config;
+      try {
+        config = getResumeGenerationConfig();
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('environment variable is required')) {
+          console.error('\n❌ Configuration Error:\n');
+          console.error(error.message);
+          console.error('\nAdd these to your .env file:');
+          console.error('  RESUME_LLM_PROVIDER=anthropic  # or "openai"');
+          console.error('  RESUME_LLM_MODEL=claude-sonnet-4-5-20250929  # or "gpt-5.2-2025-12-11"');
+          console.error('  CRITIQUE_LLM_PROVIDER=anthropic  # or "openai"');
+          console.error('  CRITIQUE_LLM_MODEL=claude-sonnet-4-5-20250929  # or "gpt-5.2-2025-12-11"');
+          console.error('  ANTHROPIC_API_KEY=your_key  # if using Anthropic');
+          console.error('  OPENAI_API_KEY=your_key  # if using OpenAI\n');
+          process.exit(1);
+        }
+        throw error;
+      }
+
+      // Apply CLI option overrides
+      if (options.provider) {
+        config.resumeProvider = options.provider as 'anthropic' | 'openai';
+      }
+      if (options.critiqueProvider) {
+        config.critiqueProvider = options.critiqueProvider as 'anthropic' | 'openai';
+      }
+      if (options.model) {
+        config.resumeModel = options.model;
+      }
+      if (options.critiqueModel) {
+        config.critiqueModel = options.critiqueModel;
+      }
+
+      // Display configuration
+      console.log('🔧 LLM Configuration:');
+      console.log(`  Resume: ${config.resumeProvider} / ${config.resumeModel}`);
+      console.log(`  Critique: ${config.critiqueProvider} / ${config.critiqueModel}`);
+      console.log('');
 
       // Validate mode option
       if (options.mode && !['leader', 'builder'].includes(options.mode)) {
@@ -935,6 +977,8 @@ program
         try {
           console.log('🔍 Analyzing job description to determine optimal resume mode...');
           const jobData = await loadJobData(jobId);
+          // ModeDetectorAgent still uses old API - get Anthropic config for now
+          const anthropicConfig = getAnthropicConfig();
           const modeDetector = new ModeDetectorAgent(anthropicConfig.anthropicApiKey);
           const detection = await modeDetector.detectMode(jobData);
 
@@ -954,31 +998,40 @@ program
       }
 
       const experienceFormat = options.split ? 'split' : 'standard';
-      const useFastMode = !options.sonnet; // Default to fast mode (Haiku + caching) unless --sonnet specified
 
       // Split format needs more roles (3-5 relevant + 2-3 related = 5-8 total)
       // Standard format typically uses 3-4 roles
-      const maxRoles = options.split ? 7 : anthropicConfig.maxRoles;
+      const maxRoles = options.split ? 7 : config.maxRoles;
 
       const modeLabel = modeSource === 'auto' ? '🤖 Auto-detected' : '👤 Manual';
       console.log(`🎯 Resume Mode: ${mode} (${modeLabel}) - ${mode === 'leader' ? 'emphasizes management/strategy' : 'emphasizes technical work'}`);
       if (options.split) {
         console.log(`📊 Experience Format: split (Relevant vs Related sections, using ${maxRoles} roles)`);
       }
-      if (options.sonnet) {
-        console.log(`🎨 Quality Mode: using Sonnet without caching for highest quality (slower)`);
-      } else {
-        console.log(`⚡ Default Mode: using Haiku with prompt caching for fast generation (~5-10x faster)`);
-      }
+
+      // Create provider configurations
+      const resumeProviderConfig: LLMProviderConfig = {
+        provider: config.resumeProvider,
+        apiKey: config.resumeApiKey,
+        model: config.resumeModel,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature
+      };
+
+      const critiqueProviderConfig: LLMProviderConfig = {
+        provider: config.critiqueProvider,
+        apiKey: config.critiqueApiKey,
+        model: config.critiqueModel,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature
+      };
 
       const creator = new ResumeCreatorAgent(
-        anthropicConfig.anthropicApiKey,
-        anthropicConfig.model,
-        anthropicConfig.maxTokens,
+        resumeProviderConfig,
+        critiqueProviderConfig,
         maxRoles,
         mode,
-        experienceFormat,
-        useFastMode
+        experienceFormat
       );
 
       // Show generate mode if enabled
@@ -1051,12 +1104,23 @@ program
       console.log(`📊 Job ID: ${jobId}`);
       console.log('');
 
-      const anthropicConfig = getAnthropicConfig();
-      const critic = new ResumeCriticAgent(
-        anthropicConfig.anthropicApiKey,
-        anthropicConfig.model,
-        anthropicConfig.maxTokens
-      );
+      const config = getResumeGenerationConfig();
+
+      console.log('🔧 LLM Configuration:');
+      console.log(`  Critique: ${config.critiqueProvider} / ${config.critiqueModel}`);
+      console.log('');
+
+      const critiqueProviderConfig: LLMProviderConfig = {
+        provider: config.critiqueProvider,
+        apiKey: config.critiqueApiKey,
+        model: config.critiqueModel,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature
+      };
+
+      const { ProviderFactory } = await import('./providers/provider-factory');
+      const critiqueProvider = ProviderFactory.create(critiqueProviderConfig);
+      const critic = new ResumeCriticAgent(critiqueProvider);
       
       const result = await critic.critiqueResume(jobId);
       

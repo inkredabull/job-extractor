@@ -4,6 +4,7 @@ import { resolveFromProjectRoot } from '../utils/project-root';
 import { ResumeCreatorAgent } from './resume-creator-agent';
 import { InterviewPrepAgent } from './interview-prep-agent';
 import { OutreachAgent } from './outreach-agent';
+import { LLMProviderConfig } from '../providers/llm-provider';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cheerio from 'cheerio';
@@ -23,7 +24,15 @@ export class ApplicationAgent extends BaseAgent {
   constructor(config: AgentConfig, anthropicApiKey: string, maxRoles?: number) {
     super(config);
     // Initialize sub-agents for data retrieval
-    this.resumeAgent = new ResumeCreatorAgent(anthropicApiKey, undefined, undefined, maxRoles);
+    // Note: ApplicationAgent still uses old API - create basic provider config
+    const providerConfig: LLMProviderConfig = {
+      provider: 'anthropic',
+      apiKey: anthropicApiKey,
+      model: 'claude-sonnet-4-5-20250929',
+      maxTokens: 4000,
+      temperature: 0.3
+    };
+    this.resumeAgent = new ResumeCreatorAgent(providerConfig, providerConfig, maxRoles);
     this.interviewAgent = new InterviewPrepAgent(anthropicApiKey);
     this.outreachAgent = new OutreachAgent();
   }

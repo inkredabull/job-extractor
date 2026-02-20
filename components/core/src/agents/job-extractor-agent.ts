@@ -3,6 +3,7 @@ import { JobListing, ExtractorResult, AgentConfig } from '../types';
 import { WebScraper } from '../utils/web-scraper';
 import { JobScorerAgent } from './job-scorer-agent';
 import { ResumeCreatorAgent } from './resume-creator-agent';
+import { LLMProviderConfig } from '../providers/llm-provider';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -1648,11 +1649,19 @@ Outreach activities:
       
       // Use Anthropic API key if available, fallback to OpenAI
       const anthropicApiKey = process.env.ANTHROPIC_API_KEY || this.config.openaiApiKey;
-      
+
+      // Create provider configs for resume creator
+      const providerConfig: LLMProviderConfig = {
+        provider: 'anthropic',
+        apiKey: anthropicApiKey,
+        model: 'claude-sonnet-4-5-20250929',
+        maxTokens: this.config.maxTokens,
+        temperature: 0.3
+      };
+
       const resumeCreator = new ResumeCreatorAgent(
-        anthropicApiKey,
-        this.config.model,
-        this.config.maxTokens,
+        providerConfig,
+        providerConfig,
         workflowConfig.max_roles || 4,
         workflowConfig.resume_mode || 'leader'
       );

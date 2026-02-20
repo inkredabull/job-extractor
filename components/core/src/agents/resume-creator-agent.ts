@@ -1,4 +1,3 @@
-import { ClaudeBaseAgent } from './claude-base-agent';
 import { JobListing, ResumeResult, PDFValidationGuidance } from '../types';
 import { resolveFromProjectRoot } from '../utils/project-root';
 import * as fs from 'fs';
@@ -7,37 +6,31 @@ import * as os from 'os';
 import { execSync } from 'child_process';
 import { ResumeCriticAgent } from './resume-critic-agent';
 import { ResumePDFJudgeAgent } from './resume-pdf-judge-agent';
+import { BaseLLMProvider, LLMProviderConfig } from '../providers/llm-provider';
+import { ProviderFactory } from '../providers/provider-factory';
+import { confirmCostEstimate } from '../utils/cost-confirmation';
 
-export class ResumeCreatorAgent extends ClaudeBaseAgent {
+export class ResumeCreatorAgent {
+  private resumeProvider: BaseLLMProvider;
+  private critiqueProvider: BaseLLMProvider;
   private maxRoles: number;
-  private claudeApiKey: string;
   private mode: 'builder' | 'leader';
   private experienceFormat: 'standard' | 'split';
-  private critiqueModel: string;
-  private useFastMode: boolean;
+  private maxTokens: number;
 
   constructor(
-    claudeApiKey: string,
-    model?: string,
-    maxTokens?: number,
+    resumeProviderConfig: LLMProviderConfig,
+    critiqueProviderConfig: LLMProviderConfig,
     maxRoles: number = 4,
     mode: 'builder' | 'leader' = 'leader',
-    experienceFormat: 'standard' | 'split' = 'standard',
-    useFastMode: boolean = true
+    experienceFormat: 'standard' | 'split' = 'standard'
   ) {
-    // Default to Haiku for fast generation with caching, use Sonnet only when explicitly requested
-    const initialModel = useFastMode
-      ? 'claude-haiku-4-5-20251001'
-      : (model || 'claude-sonnet-4-5-20250929');
-
-    super(claudeApiKey, initialModel, maxTokens);
+    this.resumeProvider = ProviderFactory.create(resumeProviderConfig);
+    this.critiqueProvider = ProviderFactory.create(critiqueProviderConfig);
     this.maxRoles = maxRoles;
-    this.claudeApiKey = claudeApiKey;
     this.mode = mode;
     this.experienceFormat = experienceFormat;
-    this.useFastMode = useFastMode;
-    // Always use Sonnet for critique regardless of mode
-    this.critiqueModel = 'claude-sonnet-4-5-20250929';
+    this.maxTokens = resumeProviderConfig.maxTokens || 4000;
   }
 
   async createResume(
@@ -379,23 +372,19 @@ export class ResumeCreatorAgent extends ClaudeBaseAgent {
 
   private async runCritique(jobId: string): Promise<any> {
     try {
-      // Create ResumeCriticAgent and run critique with Sonnet for best quality
-      const critic = new ResumeCriticAgent(
-        this.claudeApiKey,
-        this.critiqueModel,
-        this.maxTokens
-      );
-      
+      // Create ResumeCriticAgent with critique provider
+      const critic = new ResumeCriticAgent(this.critiqueProvider);
+
       const result = await critic.critiqueResume(jobId);
-      
+
       if (result.success) {
         console.log(`✅ Critique completed for job ${jobId}`);
         console.log(`⭐ Overall Rating: ${result.overallRating}/10`);
-        
+
         if (result.recommendations && result.recommendations.length > 0) {
           console.log(`💡 Generated ${result.recommendations.length} recommendations`);
         }
-        
+
         return result;
       } else {
         console.warn(`⚠️  Critique failed for job ${jobId}: ${result.error}`);
@@ -1136,12 +1125,39 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     }
 
     console.log('⏳ Generating tailored resume content...');
-    const response = await this.makeClaudeRequest(prompt, formattedCV);
+    console.log(`📦 Provider: ${this.resumeProvider.getProviderName()}`);
+    console.log(`🤖 Model: ${this.resumeProvider.getModelName()}`);
+
+    // Cost confirmation
+    const request = {
+      prompt: prompt,
+      cachedContent: this.resumeProvider.supportsPromptCaching() ? formattedCV : undefined
+    };
+
+    const confirmed = await confirmCostEstimate(
+      this.resumeProvider,
+      request,
+      'Resume Generation'
+    );
+
+    if (!confirmed) {
+      throw new Error('Resume generation cancelled by user');
+    }
+
+    // Make request via provider
+    const response = await this.resumeProvider.makeRequest(request);
+
+    // Log caching info
+    if (response.usage.cachedTokens && response.usage.cachedTokens > 0) {
+      console.log(`💾 Cache hit: ${response.usage.cachedTokens.toLocaleString()} tokens from cache`);
+    }
+
+    console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
     console.log('📝 Parsing response and extracting content...');
 
     let jsonMatch: RegExpMatchArray | null = null;
     try {
-      jsonMatch = response.match(/\{[\s\S]*\}/);
+      jsonMatch = response.text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in tailoring response');
       }
@@ -1414,12 +1430,8 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
 
       console.log(`🔍 No recommendations found for job ${jobId}, running automatic critique...`);
 
-      // Create ResumeCriticAgent and run critique with Sonnet for best quality
-      const critic = new ResumeCriticAgent(
-        this.claudeApiKey,
-        this.critiqueModel,
-        this.maxTokens
-      );
+      // Create ResumeCriticAgent with critique provider
+      const critic = new ResumeCriticAgent(this.critiqueProvider);
       
       const result = await critic.critiqueResume(jobId);
       
@@ -1497,7 +1509,8 @@ Do not include salary information. Focus on making this sound authentic and role
 Return ONLY the job description text, no additional formatting or commentary.`;
 
       console.log('🤖 Generating job description with AI...');
-      const generatedDescription = await this.makeClaudeRequest(prompt);
+      const response = await this.resumeProvider.makeRequest({ prompt });
+      const generatedDescription = response.text;
       
       // Update the job data
       const updatedJobData = {
@@ -1539,8 +1552,8 @@ Provide a concise 2-3 paragraph summary that would be useful for understanding w
 Website content:
 ${simplifiedHtml.slice(0, 8000)}...`;
 
-      const companyInfo = await this.makeClaudeRequest(prompt);
-      return companyInfo.trim();
+      const response = await this.resumeProvider.makeRequest({ prompt });
+      return response.text.trim();
       
     } catch (error) {
       throw new Error(`Failed to fetch company information: ${error instanceof Error ? error.message : 'Unknown error'}`);
