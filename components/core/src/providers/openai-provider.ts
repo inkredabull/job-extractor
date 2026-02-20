@@ -28,12 +28,26 @@ export class OpenAIProvider extends BaseLLMProvider {
 
     messages.push({ role: 'user', content: fullPrompt });
 
-    const response = await this.openai.chat.completions.create({
+    // GPT-4o and newer models (including GPT-5) use max_completion_tokens
+    // Older models use max_tokens
+    const usesNewTokenParam = this.config.model.includes('gpt-4o') ||
+                               this.config.model.includes('gpt-5') ||
+                               this.config.model.includes('o1') ||
+                               this.config.model.includes('o3');
+
+    const requestParams: any = {
       model: this.config.model,
       messages,
-      max_tokens: this.config.maxTokens || 4000,
       temperature: this.config.temperature || 0.3
-    });
+    };
+
+    if (usesNewTokenParam) {
+      requestParams.max_completion_tokens = this.config.maxTokens || 4000;
+    } else {
+      requestParams.max_tokens = this.config.maxTokens || 4000;
+    }
+
+    const response = await this.openai.chat.completions.create(requestParams);
 
     return {
       text: response.choices[0]?.message?.content || '',
