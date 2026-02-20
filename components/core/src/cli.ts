@@ -1067,6 +1067,9 @@ program
         console.log('=' .repeat(50));
         console.log(`📄 PDF Generated: ${result.pdfPath}`);
         console.log(`⏱️  Duration: ${duration}s`);
+        if (result.totalCost !== undefined) {
+          console.log(`💰 Total Cost: $${result.totalCost.toFixed(4)}`);
+        }
 
         if (result.improvedWithCritique) {
           console.log('🎯 Resume automatically improved with critique feedback');

@@ -641,6 +641,7 @@ REMEMBER: Response must be valid JSON only. No markdown, no code blocks, no addi
     const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
     console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
+    console.log(`💰 Cost: $${response.cost.totalCost.toFixed(4)}`);
     console.log(`⏱️  Critique time: ${elapsedSeconds}s`);
 
     try {
@@ -675,7 +676,8 @@ REMEMBER: Response must be valid JSON only. No markdown, no code blocks, no addi
         weaknesses: critiqueData.weaknesses.filter((w: any) => typeof w === 'string' && w.trim()),
         recommendations: critiqueData.recommendations.filter((r: any) => typeof r === 'string' && r.trim()),
         detailedAnalysis: critiqueData.detailedAnalysis,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        cost: response.cost.totalCost
       };
     } catch (error) {
       throw new Error(`Failed to parse critique response: ${error instanceof Error ? error.message : 'Invalid JSON'}`);

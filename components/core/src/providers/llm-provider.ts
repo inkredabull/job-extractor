@@ -22,6 +22,12 @@ export interface LLMResponse {
     outputTokens: number;
     cachedTokens?: number; // Only populated if caching was used
   };
+  cost: {
+    inputCost: number;
+    outputCost: number;
+    cachingSavings: number;
+    totalCost: number;
+  };
 }
 
 export interface CostEstimate {
@@ -41,6 +47,12 @@ export abstract class BaseLLMProvider {
   abstract makeRequest(request: LLMRequest): Promise<LLMResponse>;
   abstract supportsPromptCaching(): boolean;
   abstract estimateCost(request: LLMRequest): CostEstimate;
+  abstract calculateActualCost(usage: { inputTokens: number; outputTokens: number; cachedTokens?: number }): {
+    inputCost: number;
+    outputCost: number;
+    cachingSavings: number;
+    totalCost: number;
+  };
 
   getProviderName(): string {
     return this.config.provider;

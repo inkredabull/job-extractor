@@ -168,6 +168,7 @@ export interface ResumeResult {
   improvedWithCritique?: boolean;
   critiqueRating?: number;
   roleSelection?: RoleSelection;
+  totalCost?: number;
 }
 
 export interface ResumeCritique {
@@ -181,6 +182,7 @@ export interface ResumeCritique {
   detailedAnalysis: string;
   timestamp: string;
   error?: string;
+  cost?: number;
 }
 
 export type StatementType = 'cover-letter' | 'endorsement' | 'about-me' | 'general' | 'about-me-opener' | 'about-me-focus-story' | 'about-me-themes' | 'about-me-why';

@@ -17,6 +17,7 @@ export class ResumeCreatorAgent {
   private mode: 'builder' | 'leader';
   private experienceFormat: 'standard' | 'split';
   private maxTokens: number;
+  private totalCost: number = 0; // Track total cost for current resume generation
 
   constructor(
     resumeProviderConfig: LLMProviderConfig,
@@ -44,6 +45,9 @@ export class ResumeCreatorAgent {
     skipJudge: boolean = false
   ): Promise<ResumeResult> {
     try {
+      // Reset cost tracking for this generation
+      this.totalCost = 0;
+
       // Load job data
       let jobData = this.loadJobData(jobId);
 
@@ -69,13 +73,15 @@ export class ResumeCreatorAgent {
           return {
             success: true,
             pdfPath,
-            tailoringChanges: cachedContent.changes
+            tailoringChanges: cachedContent.changes,
+            totalCost: this.totalCost
           };
         } else {
           console.log(`❌ No existing tailored content found for job ${jobId}. Use without --regen to generate new content.`);
           return {
             success: false,
-            error: `No existing tailored content found for job ${jobId}. Remove --regen flag to generate new content.`
+            error: `No existing tailored content found for job ${jobId}. Remove --regen flag to generate new content.`,
+            totalCost: this.totalCost
           };
         }
       }
@@ -118,25 +124,28 @@ export class ResumeCreatorAgent {
             return {
               ...finalResult,
               improvedWithCritique: true,
-              critiqueRating: critiqueResult.overallRating
+              critiqueRating: critiqueResult.overallRating,
+              totalCost: this.totalCost
             };
           }
           
           // If regeneration fails, return initial result
           console.warn(`⚠️  Failed to regenerate with recommendations, keeping initial version`);
-          return initialResult;
+          return { ...initialResult, totalCost: this.totalCost };
         } else {
           console.log(`📋 No recommendations received from critique, keeping initial version`);
-          return initialResult;
+          return { ...initialResult, totalCost: this.totalCost };
         }
       } else {
         // Standard resume generation without critique workflow
-        return await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath, critique);
+        const result = await this.generateStandardResume(jobId, cvFilePath, jobData, regenerate, outputPath, critique);
+        return { ...result, totalCost: this.totalCost };
       }
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        totalCost: this.totalCost
       };
     }
   }
@@ -383,6 +392,11 @@ export class ResumeCreatorAgent {
 
         if (result.recommendations && result.recommendations.length > 0) {
           console.log(`💡 Generated ${result.recommendations.length} recommendations`);
+        }
+
+        // Accumulate critique cost
+        if (result.cost) {
+          this.totalCost += result.cost;
         }
 
         return result;
@@ -1152,6 +1166,9 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     // Make request via provider
     const response = await this.resumeProvider.makeRequest(request);
 
+    // Accumulate cost
+    this.totalCost += response.cost.totalCost;
+
     // Calculate elapsed time
     const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -1161,6 +1178,7 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     }
 
     console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
+    console.log(`💰 Cost: $${response.cost.totalCost.toFixed(4)}`);
     console.log(`⏱️  Generation time: ${elapsedSeconds}s`);
     console.log('📝 Parsing response and extracting content...');
 
@@ -1519,6 +1537,7 @@ Return ONLY the job description text, no additional formatting or commentary.`;
 
       console.log('🤖 Generating job description with AI...');
       const response = await this.resumeProvider.makeRequest({ prompt });
+      this.totalCost += response.cost.totalCost;
       const generatedDescription = response.text;
       
       // Update the job data
@@ -1562,6 +1581,7 @@ Website content:
 ${simplifiedHtml.slice(0, 8000)}...`;
 
       const response = await this.resumeProvider.makeRequest({ prompt });
+      this.totalCost += response.cost.totalCost;
       return response.text.trim();
       
     } catch (error) {

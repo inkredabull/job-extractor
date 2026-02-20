@@ -49,13 +49,48 @@ export class OpenAIProvider extends BaseLLMProvider {
 
     const response = await this.openai.chat.completions.create(requestParams);
 
+    const usage = {
+      inputTokens: response.usage?.prompt_tokens || 0,
+      outputTokens: response.usage?.completion_tokens || 0,
+      cachedTokens: 0 // OpenAI doesn't expose cache info
+    };
+
     return {
       text: response.choices[0]?.message?.content || '',
-      usage: {
-        inputTokens: response.usage?.prompt_tokens || 0,
-        outputTokens: response.usage?.completion_tokens || 0,
-        cachedTokens: 0 // OpenAI doesn't expose cache info
-      }
+      usage,
+      cost: this.calculateActualCost(usage)
+    };
+  }
+
+  calculateActualCost(usage: { inputTokens: number; outputTokens: number; cachedTokens?: number }): {
+    inputCost: number;
+    outputCost: number;
+    cachingSavings: number;
+    totalCost: number;
+  } {
+    // Pricing varies by model
+    // GPT-4o: $2.50/MTok input, $10/MTok output
+    // GPT-4o-mini: $0.15/MTok input, $0.60/MTok output
+    // GPT-5: estimate higher pricing
+    let inputPricePerMTok = 2.50;
+    let outputPricePerMTok = 10;
+
+    if (this.config.model.includes('mini')) {
+      inputPricePerMTok = 0.15;
+      outputPricePerMTok = 0.60;
+    } else if (this.config.model.startsWith('gpt-5')) {
+      inputPricePerMTok = 5;
+      outputPricePerMTok = 20;
+    }
+
+    const inputCost = (usage.inputTokens / 1_000_000) * inputPricePerMTok;
+    const outputCost = (usage.outputTokens / 1_000_000) * outputPricePerMTok;
+
+    return {
+      inputCost,
+      outputCost,
+      cachingSavings: 0, // No caching support
+      totalCost: inputCost + outputCost
     };
   }
 
