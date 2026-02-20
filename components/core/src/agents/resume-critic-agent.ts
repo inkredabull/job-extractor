@@ -631,10 +631,17 @@ REMEMBER: Response must be valid JSON only. No markdown, no code blocks, no addi
       throw new Error('Critique cancelled by user');
     }
 
+    // Start timing after confirmation
+    const startTime = Date.now();
+
     // Make request via provider
     const response = await this.provider.makeRequest(request);
 
+    // Calculate elapsed time
+    const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+
     console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
+    console.log(`⏱️  Critique time: ${elapsedSeconds}s`);
 
     try {
       // Clean the response to extract JSON if Claude adds extra text

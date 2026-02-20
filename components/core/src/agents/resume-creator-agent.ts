@@ -1146,8 +1146,14 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
       throw new Error('Resume generation cancelled by user');
     }
 
+    // Start timing after confirmation
+    const startTime = Date.now();
+
     // Make request via provider
     const response = await this.resumeProvider.makeRequest(request);
+
+    // Calculate elapsed time
+    const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
     // Log caching info
     if (response.usage.cachedTokens && response.usage.cachedTokens > 0) {
@@ -1155,6 +1161,7 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     }
 
     console.log(`📊 Token usage: ${response.usage.inputTokens.toLocaleString()} input, ${response.usage.outputTokens.toLocaleString()} output`);
+    console.log(`⏱️  Generation time: ${elapsedSeconds}s`);
     console.log('📝 Parsing response and extracting content...');
 
     let jsonMatch: RegExpMatchArray | null = null;
