@@ -8,7 +8,7 @@ import * as readline from 'readline';
 
 export class InterviewPrepAgent extends ClaudeBaseAgent {
   private currentJobId: string = '';
-  private cachedUserTheme: string | null = null; // Cache theme to avoid asking twice
+  private cachedFocalTheme: string | null = null; // Cache auto-determined focal theme to avoid redundant LLM calls
   private cachedCompanyUrl: string | null = null; // Cache company URL to avoid asking twice
   private profileConfig: ProfileConfig = {
     location: "hybrid in/near SF",
@@ -54,7 +54,7 @@ export class InterviewPrepAgent extends ClaudeBaseAgent {
     // Focus functionality has been merged into 'about-me' - no separate focus type needed
     try {
       // Clear cached prompts for new generation
-      this.cachedUserTheme = null;
+      this.cachedFocalTheme = null;
       this.cachedCompanyUrl = null;
 
       // Store jobId for use in sub-methods
@@ -343,7 +343,7 @@ Format as:
           this.saveSection(this.currentJobId, 'opener', openerContent);
           break;
         case 'focus-story':
-          const userTheme = await this.askUserForTheme();
+          const userTheme = await this.determineFocalThemeFromJob(job);
           const focusContent = await this.generateFocusStory(job, cvContent, userTheme, options);
           this.saveSection(this.currentJobId, 'focus-story', focusContent, { userTheme });
           break;
@@ -423,7 +423,7 @@ Format as:
           content = await this.generateOpener(jobData, cvContent, options);
           break;
         case 'focus-story':
-          const userTheme = await this.askUserForTheme();
+          const userTheme = await this.determineFocalThemeFromJob(jobData);
           content = await this.generateFocusStory(jobData, cvContent, userTheme, options);
           this.saveSection(jobId, section, content, { userTheme });
           return { success: true, content, section };
@@ -495,7 +495,7 @@ Format as:
     const promptTemplate = this.loadSectionPrompt('themes');
     
     // Get or extract themes
-    const userTheme = await this.askUserForTheme();
+    const userTheme = await this.determineFocalThemeFromJob(job);
     const themes = await this.getOrExtractThemes(job);
     const themesWithExamples = await this.enrichThemesWithExamples(themes, cvContent, job, userTheme);
     await this.updateThemesWithExamples(job, themesWithExamples, this.currentJobId);
@@ -2103,38 +2103,32 @@ ${project.result}`;
     }
   }
 
-  private async askUserForTheme(): Promise<string> {
-    // Return cached theme if already asked
-    if (this.cachedUserTheme !== null) {
-      console.log(`✅ Using previously provided theme: "${this.cachedUserTheme}"`);
-      return this.cachedUserTheme;
+  private async determineFocalThemeFromJob(job: JobListing): Promise<string> {
+    // Return cached theme if already determined
+    if (this.cachedFocalTheme !== null) {
+      console.log(`✅ Using previously determined focal theme: "${this.cachedFocalTheme}"`);
+      return this.cachedFocalTheme;
     }
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+    console.log('\n🎯 Focus Story Generation - Determining focal theme from job description...');
 
-    return new Promise<string>((resolve) => {
-      console.log('\n🎯 Focus Story Generation - CV Line Item Analysis');
-      console.log('=' .repeat(50));
-      rl.question('What theme should I consider when making the focal story choice? (e.g., "customer success", "observability", "scale", "innovation"): ', (answer: string) => {
-        rl.close();
-        const theme = answer.trim();
+    const themes = await this.extractJobThemes(job);
 
-        // Cache the theme for subsequent calls
-        this.cachedUserTheme = theme;
+    // Pick the top "high" importance theme, falling back to the first theme
+    const topTheme = themes.find(t => t.importance === 'high') || themes[0];
+    const theme = topTheme ? topTheme.name : '';
 
-        if (theme) {
-          console.log(`✅ Will focus on theme: "${theme}"`);
-        } else {
-          console.log('📋 Will focus on general high-impact stories');
-        }
-        console.log('');
+    // Cache for subsequent calls
+    this.cachedFocalTheme = theme;
 
-        resolve(theme);
-      });
-    });
+    if (theme) {
+      console.log(`✅ Auto-selected focal story theme: "${theme}"`);
+    } else {
+      console.log('📋 No theme identified; will focus on general high-impact stories');
+    }
+    console.log('');
+
+    return theme;
   }
 
   private async generateStandaloneFocusStory(jobId: string, cvFilePath: string, regenerate: boolean): Promise<StatementResult> {
@@ -2166,8 +2160,9 @@ ${project.result}`;
       // Load CV content
       const cvContent = fs.readFileSync(cvFilePath, 'utf-8');
 
-      // Ask user for theme to focus on
-      const theme = await this.askUserForTheme();
+      // Determine focal theme from job description
+      const jobData = this.loadJobData(jobId);
+      const theme = await this.determineFocalThemeFromJob(jobData);
 
       // Generate the focus story
       console.log(`🎯 Analyzing CV line items for focus story generation...`);
