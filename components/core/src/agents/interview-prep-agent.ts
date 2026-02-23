@@ -1113,17 +1113,27 @@ Return ONLY the refined RTF content, no explanations or commentary.`;
   }
 
   private cleanResponse(response: string, type: StatementType): string {
-    // Remove any markdown formatting or extra text
+    // For about-me type, extract RTF content from code blocks if present
+    if (type === 'about-me') {
+      // Check if response is wrapped in markdown code blocks
+      const codeBlockMatch = response.match(/```(?:rtf)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        // Extract content from code block
+        return codeBlockMatch[1].trim();
+      }
+      // If no code block, just clean markdown formatting
+      return response
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
+        .trim();
+    }
+
+    // Remove any markdown formatting or extra text for other types
     let cleaned = response
       .replace(/```[\s\S]*?```/g, '') // Remove code blocks
       .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
       .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
       .trim();
-
-    // For about-me type, return RTF content directly (no conversion needed)
-    if (type === 'about-me') {
-      return cleaned;
-    }
 
     // For other types, ensure single paragraph format if needed
     if (type === 'general') {
