@@ -236,10 +236,11 @@ The general structure MUST be (in this exact order):
 * "Complete work history available upon request." (in italics)
 * Skills
 * Education (MANDATORY - must always be included)
+* Beyond Work (OPTIONAL - include if present in CV)
 
 ## Heading
 
-Lead with "<CANDIDATE NAME> : ROLE" where role is the role from the job description.
+Lead with "<CANDIDATE NAME>" (name only, no title or role after name).
 
 ## Contact Information
 
@@ -307,6 +308,13 @@ Each line of skills should be at maximum 95 characters long.
 **MANDATORY**: Include an "EDUCATION" section after the SKILLS section. This section MUST always be included.
 Use bullet points to list educational credentials from the CV.
 Do not omit this section under any circumstances.
+
+## Beyond Work
+
+**OPTIONAL**: If the CV includes a "BEYOND WORK" section, include it as the final section of the résumé after EDUCATION.
+This section should contain personal interests and activities that provide insight into the candidate's character and work-life balance.
+Keep the content concise and authentic - typically 1-2 sentences.
+Format as a simple paragraph without bullet points.
 
 ## Misc
 
