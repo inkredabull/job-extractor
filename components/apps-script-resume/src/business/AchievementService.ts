@@ -5,9 +5,9 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 1476-1642
  */
 
-import { AIService } from '@ai/AIService';
-import { CONFIG } from '@config';
-import { Logger } from '@utils/Logger';
+import { AIService } from '../ai/AIService';
+import { CONFIG } from '../config';
+import { Logger } from '../utils/Logger';
 
 export class AchievementService {
   // TODO: Migrate class implementation from Code-refactored.gs
@@ -16,7 +16,10 @@ export class AchievementService {
   // - Formatting achievements
   // - Validating achievement quality
 
-  static generateAchievement(challenge: string, actions: string, result: string): string {
+  static generateAchievement(_challenge: string, _actions: string, _result: string): string {
+    void AIService;
+    void CONFIG;
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 

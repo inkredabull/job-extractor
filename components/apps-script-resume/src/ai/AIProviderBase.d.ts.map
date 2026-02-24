@@ -1,0 +1,1 @@
+{"version":3,"file":"AIProviderBase.d.ts","sourceRoot":"","sources":["AIProviderBase.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAIH,8BAAsB,cAAc;IAIlC,QAAQ,CAAC,WAAW,CAAC,MAAM,EAAE,MAAM,EAAE,SAAS,EAAE,MAAM,GAAG,MAAM;IAG/D,SAAS,CAAC,gBAAgB,IAAI,IAAI;CAKnC"}

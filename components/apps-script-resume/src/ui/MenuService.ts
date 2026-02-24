@@ -5,7 +5,7 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 2256-2288
  */
 
-import { Logger } from '@utils/Logger';
+import { Logger } from '../utils/Logger';
 
 export class MenuService {
   // TODO: Migrate class implementation from Code-refactored.gs
@@ -15,6 +15,7 @@ export class MenuService {
   // - Organizing menu structure
 
   static createMenu(): void {
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 

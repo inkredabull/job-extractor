@@ -5,8 +5,8 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 775-994
  */
 
-import { CONFIG } from '@config';
-import { Logger } from '@utils/Logger';
+import { CONFIG } from '../config';
+import { Logger } from '../utils/Logger';
 
 export interface AIModel {
   id: string;
@@ -26,10 +26,12 @@ export class ModelDiscoveryService {
   // - Filtering models by capabilities
 
   static discoverModels(): AIModel[] {
+    void CONFIG;
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 
-  static getModel(modelId: string): AIModel | null {
+  static getModel(_modelId: string): AIModel | null {
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 

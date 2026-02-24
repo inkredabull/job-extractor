@@ -5,7 +5,7 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 646-774
  */
 
-import { Logger } from '@utils/Logger';
+import { Logger } from '../utils/Logger';
 
 export class ConfigService {
   // TODO: Migrate class implementation from Code-refactored.gs
@@ -14,11 +14,12 @@ export class ConfigService {
   // - API key management
   // - Configuration persistence
 
-  static getProperty(key: string): string | null {
+  static getProperty(_key: string): string | null {
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 
-  static setProperty(key: string, value: string): void {
+  static setProperty(_key: string, _value: string): void {
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 

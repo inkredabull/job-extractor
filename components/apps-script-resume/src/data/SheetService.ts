@@ -5,8 +5,8 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 474-645
  */
 
-import { CONFIG } from '@config';
-import { Logger } from '@utils/Logger';
+import { CONFIG } from '../config';
+import { Logger } from '../utils/Logger';
 
 export class SheetService {
   // TODO: Migrate class implementation from Code-refactored.gs
@@ -16,11 +16,13 @@ export class SheetService {
   // - Managing sheet data
   // - Column header operations
 
-  static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
+  static getSheet(_sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
+    void CONFIG;
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 
-  static getColumnIndex(sheetName: string, columnName: string): number {
+  static getColumnIndex(_sheetName: string, _columnName: string): number {
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 

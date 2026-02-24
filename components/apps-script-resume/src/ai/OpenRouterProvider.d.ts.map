@@ -1,0 +1,1 @@
+{"version":3,"file":"OpenRouterProvider.d.ts","sourceRoot":"","sources":["OpenRouterProvider.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,EAAE,cAAc,EAAE,MAAM,kBAAkB,CAAC;AAIlD,qBAAa,kBAAmB,SAAQ,cAAc;IAOpD,WAAW,CAAC,OAAO,EAAE,MAAM,EAAE,UAAU,EAAE,MAAM,GAAG,MAAM;CAQzD"}

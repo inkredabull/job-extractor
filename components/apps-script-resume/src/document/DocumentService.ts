@@ -5,8 +5,8 @@
  * @migration-status STUB - Needs implementation from Code-refactored.gs lines 1337-1465
  */
 
-import { CONFIG } from '@config';
-import { Logger } from '@utils/Logger';
+import { CONFIG } from '../config';
+import { Logger } from '../utils/Logger';
 
 export class DocumentService {
   // TODO: Migrate class implementation from Code-refactored.gs
@@ -15,7 +15,9 @@ export class DocumentService {
   // - Formatting documents
   // - Generating resumes
 
-  static createDocument(title: string): GoogleAppsScript.Document.Document {
+  static createDocument(_title: string): GoogleAppsScript.Document.Document {
+    void CONFIG;
+    void Logger;
     throw new Error('Not implemented - migrate from Code-refactored.gs');
   }
 
