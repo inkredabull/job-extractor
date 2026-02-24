@@ -1,7 +1,15 @@
 {
   "timeZone": "America/Los_Angeles",
   "dependencies": {
-    "enabledAdvancedServices": []
+    "enabledAdvancedServices": [],
+    "libraries": [
+      {
+        "userSymbol": "ConnectionClassifier",
+        "version": "0",
+        "libraryId": "1V_ieaSJeYSyyu8qk6nD9GRFZ70wdwrnpEZ1b5LI4z7R5DPrst5MmR24J",
+        "developmentMode": false
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
