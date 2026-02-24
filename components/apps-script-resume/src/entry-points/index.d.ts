@@ -65,6 +65,37 @@ export declare function createID(): void;
  */
 export declare function createCustomization(): void;
 /**
+ * Generate achievement using specific model
+ * @param modelName - Name of model ('claude', 'gemini', 'openai', 'mistral', 'cohere')
+ */
+export declare function fetchWithModel(modelName: string): void;
+/**
+ * Result object from model generation
+ */
+interface ModelGenerationResult {
+    text: string;
+    latencyMs: number;
+    prompt: string;
+    config: {
+        provider: string;
+        model: string;
+        maxTokens: number;
+        targetAudience: string;
+        columnHeader: string;
+    };
+}
+/**
+ * Generate achievement without writing to cell (for comparison)
+ * @param modelName - Name of model ('claude', 'gemini', 'openai', 'mistral', 'cohere')
+ * @returns Result object with text, latency, prompt, and config
+ */
+export declare function generateAchievementWithModel(modelName: string): ModelGenerationResult;
+/**
+ * Set active cell value to selected model output
+ * @param content - Achievement text to set
+ */
+export declare function setActiveCellValue(content: string): void;
+/**
  * Choose model for single generation
  * Menu item: "Choose Model"
  */
@@ -100,4 +131,5 @@ export declare function handleGenerate(): void;
  * @returns HTML content
  */
 export declare function include(filename: string): string;
+export {};
 //# sourceMappingURL=index.d.ts.map

@@ -92,6 +92,7 @@ export interface AISettings {
   SHORT_SCALE: number;
   LONG_SCALE: number;
   SCALE_FACTOR: number;
+  REASONING_MULTIPLIER: number;
 }
 
 export interface DocumentSettings {
@@ -233,6 +234,7 @@ export const CONFIG: Config = {
     SHORT_SCALE: 2.2,
     LONG_SCALE: 1.33,
     SCALE_FACTOR: 1.33, // Use LONG_SCALE as default
+    REASONING_MULTIPLIER: 3, // For reasoning models (DeepSeek, etc.) that need tokens for thinking
   },
 
   // Document generation settings

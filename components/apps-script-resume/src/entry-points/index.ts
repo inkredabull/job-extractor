@@ -376,6 +376,202 @@ export function createCustomization(): void {
 }
 
 /**
+ * Generate achievement using specific model
+ * @param modelName - Name of model ('claude', 'gemini', 'openai', 'mistral', 'cohere')
+ */
+export function fetchWithModel(modelName: string): void {
+  try {
+    const services = initializeServices();
+    const { row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
+
+    // Get the active cell to determine target audience from column header
+    const currentCell = services.sheet.getActiveCell();
+    const columnIndex = currentCell.getColumn();
+    const columnHeader = headers[columnIndex - 1]; // Convert 1-indexed to 0-indexed
+
+    // Determine target audience based on column header
+    let targetAudience = 'cv'; // default
+    if (columnHeader) {
+      const headerLower = columnHeader.toLowerCase();
+      if (headerLower.includes('linkedin')) {
+        targetAudience = 'linkedin';
+      } else if (headerLower.includes('cv')) {
+        targetAudience = 'cv';
+      }
+    }
+
+    // Select appropriate max_tokens based on target audience
+    const maxTokens =
+      targetAudience === 'linkedin'
+        ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
+        : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    Logger.log(
+      `fetchWithModel: column="${columnHeader}" -> audience=${targetAudience}, maxTokens=${maxTokens}`
+    );
+
+    const challenge = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CHALLENGE)] as string;
+    const actions = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.ACTIONS)] as string;
+    const result = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.RESULT)] as string;
+    const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)] as boolean;
+
+    const prompt = services.achievement.buildPrompt(
+      challenge,
+      actions,
+      result,
+      client,
+      targetAudience
+    );
+    const response = services.ai.query(prompt, {
+      provider: modelName,
+      maxTokens: maxTokens,
+    });
+
+    currentCell.setValue(response);
+
+    Logger.log(`Generated achievement using ${modelName}: ${response.length} chars`);
+  } catch (error) {
+    Logger.error(`Error in fetchWithModel with ${modelName}`, error as Error);
+    throw new Error(`Failed to generate with ${modelName}: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Result object from model generation
+ */
+interface ModelGenerationResult {
+  text: string;
+  latencyMs: number;
+  prompt: string;
+  config: {
+    provider: string;
+    model: string;
+    maxTokens: number;
+    targetAudience: string;
+    columnHeader: string;
+  };
+}
+
+/**
+ * Generate achievement without writing to cell (for comparison)
+ * @param modelName - Name of model ('claude', 'gemini', 'openai', 'mistral', 'cohere')
+ * @returns Result object with text, latency, prompt, and config
+ */
+export function generateAchievementWithModel(modelName: string): ModelGenerationResult {
+  try {
+    const startTime = new Date().getTime();
+
+    const services = initializeServices();
+    const { row, headers } = services.sheet.getActiveRowData(CONFIG.SHEETS.STORY_BANK);
+
+    // Get the active cell to determine target audience from column header
+    const currentCell = services.sheet.getActiveCell();
+    const columnIndex = currentCell.getColumn();
+    const columnHeader = headers[columnIndex - 1]; // Convert 1-indexed to 0-indexed
+
+    // Determine target audience based on column header
+    let targetAudience = 'cv'; // default
+    if (columnHeader) {
+      const headerLower = columnHeader.toLowerCase();
+      if (headerLower.includes('linkedin')) {
+        targetAudience = 'linkedin';
+      } else if (headerLower.includes('cv')) {
+        targetAudience = 'cv';
+      }
+    }
+
+    Logger.log(
+      `Column header: "${columnHeader}" -> Target audience: ${targetAudience} for model: ${modelName}`
+    );
+
+    const challenge = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CHALLENGE)] as string;
+    const actions = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.ACTIONS)] as string;
+    const result = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.RESULT)] as string;
+    const client = row[headers.indexOf(CONFIG.COLUMNS.STORY_BANK.CLIENT)] as boolean;
+
+    const prompt = services.achievement.buildPrompt(
+      challenge,
+      actions,
+      result,
+      client,
+      targetAudience
+    );
+
+    // Select appropriate max_tokens based on target audience
+    let maxTokens =
+      targetAudience === 'linkedin'
+        ? CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_LINKEDIN
+        : CONFIG.AI.MAX_TOKENS.ACHIEVEMENT_CV;
+
+    // Reasoning models (DeepSeek) need more tokens for internal thinking process
+    const modelId = services.ai['modelMap'][modelName];
+    const isReasoningModel = modelId && modelId.includes('deepseek');
+
+    if (isReasoningModel) {
+      const originalTokens = maxTokens;
+      maxTokens = maxTokens * CONFIG.AI.REASONING_MULTIPLIER;
+      Logger.log(
+        `Reasoning model detected (${modelId}): increased maxTokens from ${originalTokens} to ${maxTokens}`
+      );
+    }
+
+    Logger.log(
+      `generateAchievementWithModel: using maxTokens=${maxTokens} for audience=${targetAudience}`
+    );
+
+    // Configuration used for this request
+    const config = {
+      provider: modelName,
+      model: services.ai['modelMap'][modelName] || '',
+      maxTokens: maxTokens,
+      targetAudience: targetAudience,
+      columnHeader: columnHeader || '',
+    };
+
+    const response = services.ai.query(prompt, {
+      provider: modelName,
+      maxTokens: maxTokens,
+    });
+
+    const endTime = new Date().getTime();
+    const latencyMs = endTime - startTime;
+
+    Logger.log(`Generated achievement using ${modelName}: ${response.length} chars in ${latencyMs}ms`);
+
+    // Log if response is empty
+    if (!response || response.length === 0) {
+      Logger.warn(`Empty response from ${modelName}!`);
+    }
+
+    return {
+      text: response || '',
+      latencyMs: latencyMs,
+      prompt: prompt,
+      config: config,
+    };
+  } catch (error) {
+    Logger.error(`Error in generateAchievementWithModel with ${modelName}`, error as Error);
+    throw new Error(`Failed to generate with ${modelName}: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Set active cell value to selected model output
+ * @param content - Achievement text to set
+ */
+export function setActiveCellValue(content: string): void {
+  try {
+    const services = initializeServices();
+    const currentCell = services.sheet.getActiveCell();
+    currentCell.setValue(content);
+    Logger.log(`Set active cell to: ${content.substring(0, 50)}...`);
+  } catch (error) {
+    Logger.error('Error in setActiveCellValue', error as Error);
+    throw new Error(`Failed to set cell value: ${(error as Error).message}`);
+  }
+}
+
+/**
  * Choose model for single generation
  * Menu item: "Choose Model"
  */
@@ -551,6 +747,9 @@ declare const global: {
   sortSheet: typeof sortSheet;
   createID: typeof createID;
   createCustomization: typeof createCustomization;
+  fetchWithModel: typeof fetchWithModel;
+  generateAchievementWithModel: typeof generateAchievementWithModel;
+  setActiveCellValue: typeof setActiveCellValue;
   chooseModel: typeof chooseModel;
   compareModels: typeof compareModels;
   viewCurrentModels: typeof viewCurrentModels;
@@ -572,6 +771,9 @@ global.showModal = showModal;
 global.sortSheet = sortSheet;
 global.createID = createID;
 global.createCustomization = createCustomization;
+global.fetchWithModel = fetchWithModel;
+global.generateAchievementWithModel = generateAchievementWithModel;
+global.setActiveCellValue = setActiveCellValue;
 global.chooseModel = chooseModel;
 global.compareModels = compareModels;
 global.viewCurrentModels = viewCurrentModels;

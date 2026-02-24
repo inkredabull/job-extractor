@@ -83,6 +83,7 @@ export interface AISettings {
     SHORT_SCALE: number;
     LONG_SCALE: number;
     SCALE_FACTOR: number;
+    REASONING_MULTIPLIER: number;
 }
 export interface DocumentSettings {
     DEFAULT_PADDING: number;
