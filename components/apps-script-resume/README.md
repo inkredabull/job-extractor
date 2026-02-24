@@ -1,4 +1,6 @@
-# Resume & Achievement Management System (Built System)
+# Resume & Achievement Management System 
+
+Originally prototyped as functions in a Google sheet and with time, migrated to this more robust paradigm.
 
 A comprehensive Google Apps Script application built with TypeScript and modern development tooling for managing work history, generating achievements, and creating tailored resumes using AI.
 
@@ -8,13 +10,13 @@ This project represents a **complete refactoring** of the monolithic `Code-refac
 
 ### Key Features
 
-✅ **TypeScript** - Full type safety and IDE support
-✅ **Modular Architecture** - Clear separation of concerns across layers
-✅ **Build System** - Webpack bundling for Google Apps Script deployment
-✅ **Code Quality** - ESLint + Prettier for consistent code style
-✅ **Testing** - Jest framework ready for unit tests
-✅ **Version Control** - Git-friendly with meaningful diffs
-✅ **Developer Experience** - Hot reload, autocomplete, refactoring tools
+* ✅ **TypeScript** - Full type safety and IDE support
+* ✅ **Modular Architecture** - Clear separation of concerns across layers
+* ✅ **Build System** - Webpack bundling for Google Apps Script deployment
+* ✅ **Code Quality** - ESLint + Prettier for consistent code style
+* ✅ **Testing** - Jest framework ready for unit tests
+* ✅ **Version Control** - Git-friendly with meaningful diffs
+* ✅ **Developer Experience** - Hot reload, autocomplete, refactoring tools
 
 ## 📁 Project Structure
 
