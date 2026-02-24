@@ -1642,6 +1642,115 @@ app.post('/save-resume-drive-url', (req, res) => {
   }
 });
 
+// Job info lookup endpoint - returns structured job metadata from logs
+// GET /llm?jobID=<id>  or  POST /llm { jobID: '<id>' }
+app.all('/llm', (req, res) => {
+  const timestamp = new Date().toISOString();
+  const jobId = req.query.jobID || req.query.jobId || (req.body && (req.body.jobID || req.body.jobId));
+
+  console.log(`[${timestamp}] /llm request - jobID: ${jobId}`);
+
+  if (!jobId) {
+    return res.status(400).json({
+      success: false,
+      error: 'jobID query parameter is required'
+    });
+  }
+
+  try {
+    const projectDir = path.resolve(__dirname, '..', '..');
+
+    // Search candidate log directories in priority order
+    const candidateDirs = [
+      path.join(projectDir, 'logs', jobId),
+      path.join(projectDir, 'components', 'core', 'logs', jobId),
+      path.join(projectDir, 'packages', 'core', 'logs', jobId),
+    ];
+
+    let jobDir = null;
+    for (const dir of candidateDirs) {
+      if (fs.existsSync(dir)) {
+        jobDir = dir;
+        console.log(`  -> Found job directory: ${dir}`);
+        break;
+      }
+    }
+
+    if (!jobDir) {
+      return res.status(404).json({
+        success: false,
+        error: `Job ID "${jobId}" not found in any logs directory`
+      });
+    }
+
+    const files = fs.readdirSync(jobDir);
+
+    // --- Read job JSON (most recent job-*.json) ---
+    const jobFiles = files
+      .filter(f => f.startsWith('job-') && f.endsWith('.json'))
+      .sort()
+      .reverse();
+
+    if (jobFiles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: `No job-*.json file found in logs/${jobId}`
+      });
+    }
+
+    const jobData = JSON.parse(fs.readFileSync(path.join(jobDir, jobFiles[0]), 'utf-8'));
+    console.log(`  -> Read job file: ${jobFiles[0]}`);
+
+    const jobTitle = jobData.title || jobData.job_title || jobData.position || jobData.role || '';
+    const company  = jobData.company || jobData.company_name || jobData.employer || '';
+    const jobURL   = jobData.url || jobData.jobUrl || jobData.sourceUrl || jobData.job_url || null;
+
+    // --- Derive short title (first 3-4 significant words, max 40 chars) ---
+    const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'at', 'with', 'on']);
+    const significantWords = jobTitle
+      .split(/\s+/)
+      .filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()))
+      .slice(0, 4);
+    let jobTitleShorthand = significantWords.join(' ');
+    if (jobTitleShorthand.length > 40) {
+      jobTitleShorthand = jobTitleShorthand.substring(0, 37) + '...';
+    }
+
+    // --- Read most recent third-person blurb ---
+    const blurbFiles = files
+      .filter(f => f.startsWith('blurb-third-') && f.endsWith('.txt'))
+      .sort()
+      .reverse();
+
+    let thirdPersonBlurb = null;
+    if (blurbFiles.length > 0) {
+      thirdPersonBlurb = fs.readFileSync(path.join(jobDir, blurbFiles[0]), 'utf-8').trim();
+      console.log(`  -> Read blurb file: ${blurbFiles[0]} (${thirdPersonBlurb.length} chars)`);
+    } else {
+      console.log('  -> No third-person blurb file found');
+    }
+
+    console.log(`  -> ✅ Returning job info for: "${jobTitle}" at "${company}"`);
+
+    return res.json({
+      success: true,
+      jobID: jobId,
+      jobTitle: jobTitle,
+      jobURL: jobURL,
+      Company: company,
+      jobTitleShorthand: jobTitleShorthand,
+      'third-person-blurb': thirdPersonBlurb
+    });
+
+  } catch (error) {
+    console.error('  -> /llm lookup failed:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('🚀 Unified Career Catalyst Server');
@@ -1660,6 +1769,7 @@ app.listen(PORT, () => {
   console.log(`  • POST /generate-resume  - Generate tailored resume`);
   console.log(`  • POST /linkedin-reminder - Create reminder for saved LinkedIn posts`);
   console.log(`  • POST /teal-track       - Deprecated (use Chrome extension)`);
+  console.log(`  • GET  /llm?jobID=<id>  - Job info lookup (title, URL, company, blurb)`);
   console.log('');
   console.log('💡 Usage:');
   console.log(`  • Chrome Extension: Will connect automatically`);
