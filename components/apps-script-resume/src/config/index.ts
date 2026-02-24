@@ -163,7 +163,7 @@ export const CONFIG: Config = {
     WORK_HISTORY: 'Work History',
     FUNCTION: 'Work History : Function',
     POSITIONING: 'Positioning : Mnookin PT',
-    CUSTOMIZATION: 'Customization'
+    CUSTOMIZATION: 'Customization',
   },
 
   // Column mappings for Story Bank sheet
@@ -185,7 +185,7 @@ export const CONFIG: Config = {
       FOCUS: 'Focus',
       ID: 'ID',
       TEAL_ID: 'TealHQ ID',
-      TIMING: 'Timing'
+      TIMING: 'Timing',
     },
     COMPANIES: {
       COMPANY: 'Company',
@@ -194,12 +194,12 @@ export const CONFIG: Config = {
       DURATION: 'Duration',
       SUMMARY: 'Summary',
       STACK: 'Stack',
-      DOMAIN: 'Domain'
+      DOMAIN: 'Domain',
     },
     CUSTOMIZER: {
-      JOB_DESCRIPTION: 0,  // Column A (0-indexed)
-      RESUME: 1            // Column B (0-indexed)
-    }
+      JOB_DESCRIPTION: 0, // Column A (0-indexed)
+      RESUME: 1, // Column B (0-indexed)
+    },
   },
 
   // AI Provider settings - Using OpenRouter for unified access
@@ -212,27 +212,27 @@ export const CONFIG: Config = {
       GEMINI: 'google/gemini-1.5-flash',
       OPENAI: 'openai/gpt-4o-mini',
       MISTRAL: 'mistralai/mistral-large-2407',
-      COHERE: 'cohere/command-r-plus'
+      COHERE: 'cohere/command-r-plus',
     },
     // Model discovery settings
     DISCOVERY: {
-      CACHE_DURATION_HOURS: 24,  // Refresh model list daily
-      PREFER_LATEST: true,         // Use most recent models
-      MIN_CONTEXT: 32000           // Minimum context window (tokens)
+      CACHE_DURATION_HOURS: 24, // Refresh model list daily
+      PREFER_LATEST: true, // Use most recent models
+      MIN_CONTEXT: 32000, // Minimum context window (tokens)
     },
     MAX_TOKENS: {
-      ACHIEVEMENT_CV: 80,        // CV format: longer, more comprehensive
-      ACHIEVEMENT_LINKEDIN: 50,  // LinkedIn format: shorter, more concise
-      ACHIEVEMENT: 80,           // Default (fallback to CV)
+      ACHIEVEMENT_CV: 80, // CV format: longer, more comprehensive
+      ACHIEVEMENT_LINKEDIN: 50, // LinkedIn format: shorter, more concise
+      ACHIEVEMENT: 80, // Default (fallback to CV)
       RESUME: 2048,
       CATEGORIZATION: 15,
-      ARCHETYPE: 20
+      ARCHETYPE: 20,
     },
     TEAL_BULLET_POINT_MIN_LENGTH: 140,
     TEAL_BULLET_POINT_MAX_LENGTH: 190,
     SHORT_SCALE: 2.2,
     LONG_SCALE: 1.33,
-    SCALE_FACTOR: 1.33  // Use LONG_SCALE as default
+    SCALE_FACTOR: 1.33, // Use LONG_SCALE as default
   },
 
   // Document generation settings
@@ -240,7 +240,7 @@ export const CONFIG: Config = {
     DEFAULT_PADDING: 4,
     DEFAULT_FONT_SIZE: 11,
     RESUME_TEMPLATE_ID: '1E7ttSQEnpsO5LMX1anSQ_dg2RJsqOQ_4WlO1Oadc-GY',
-    INCLUDE_TECH_STACK: false
+    INCLUDE_TECH_STACK: false,
   },
 
   // Resume filtering thresholds
@@ -249,37 +249,39 @@ export const CONFIG: Config = {
     WOW_THRESHOLD: 6,
     SEQUENCE_THRESHOLD: 4,
     COMPLETE_WOW: 3,
-    COMPLETE_SEQUENCE: 10
+    COMPLETE_SEQUENCE: 10,
   },
 
   // Strengths to display on resume
   STRENGTHS: [
-    "Process & Structure - Instills order and clarity to scale engineering with aligned execution",
-    "Communication - Trusted communicator who fosters clarity, alignment, and cross-team collaboration",
-    "Action-Oriented - Unblocks teams and delivers fast, practical solutions",
-    "Leadership - Inspires vision, uplifts teams, and accelerates positive change",
-    "Detail-Oriented - Brings structure, clarity, and accountability to complex ideas"
+    'Process & Structure - Instills order and clarity to scale engineering with aligned execution',
+    'Communication - Trusted communicator who fosters clarity, alignment, and cross-team collaboration',
+    'Action-Oriented - Unblocks teams and delivers fast, practical solutions',
+    'Leadership - Inspires vision, uplifts teams, and accelerates positive change',
+    'Detail-Oriented - Brings structure, clarity, and accountability to complex ideas',
   ],
 
   // Key accomplishments to display on resume
   KEY_ACCOMPLISHMENTS: [
-    "Drove 35% productivity gain via AI in 2024",
-    "Launched 0-1 marketplace in 2023; 1st $1M",
-    "Boosted ARR 50% via data platform in 2022",
-    "Delivered 1200% productivity gain in 2022"
+    'Drove 35% productivity gain via AI in 2024',
+    'Launched 0-1 marketplace in 2023; 1st $1M',
+    'Boosted ARR 50% via data platform in 2022',
+    'Delivered 1200% productivity gain in 2022',
   ],
 
   // Prompt templates
   PROMPTS: {
-    SYSTEM_ROLE: "You are a professional, experienced copywriter specializing in writing resumes for executive product engineering roles.",
+    SYSTEM_ROLE:
+      'You are a professional, experienced copywriter specializing in writing resumes for executive product engineering roles.',
 
-    BULLET_CHAR: "Start with a Unicode bullet character e.g. U+2022",
+    BULLET_CHAR: 'Start with a Unicode bullet character e.g. U+2022',
 
     MARKS: `Omit any reference marks; do not use symbols like '*,' '**,' or '-.'
 Omit use definite or indefinite articles such as 'the' or 'a'.
 Do not end with a period.`,
 
-    SPECIFICS: "Do not provide any reasoning or contextualization; simply return the output without any prefix or suffix.",
+    SPECIFICS:
+      'Do not provide any reasoning or contextualization; simply return the output without any prefix or suffix.',
 
     FORMATTING_TEMPLATE: `An achievement must be at least minOuputSizeInChars characters long and cannot be more than maxOuputSizeInChars characters long and must be a singular sentence.
 
@@ -356,7 +358,7 @@ Given the following CHALLENGE, ACTIONS, and RESULT, summarize into a single achi
 * a reference to 'hands-on'
 * a reference to a country
 
-Lead the summary with any quantitative improvement outcome as followed by implementation or other details.`
+Lead the summary with any quantitative improvement outcome as followed by implementation or other details.`,
   },
 
   // Contact information
@@ -365,21 +367,23 @@ Lead the summary with any quantitative improvement outcome as followed by implem
     LOCATION: 'San Francisco, CA',
     PHONE: '+1 415-269-4893',
     EMAIL: 'anthony at bluxomelabs.com',
-    LINKEDIN: 'linkedin.com/in/anthony-bull'
+    LINKEDIN: 'linkedin.com/in/anthony-bull',
   },
 
   // Education
   EDUCATION: [
     {
       degree: 'MS Information Science @ UNC Chapel Hill',
-      details: ['Focus on Information Retrieval, Bayesian Classification, & Recommendation Systems']
+      details: [
+        'Focus on Information Retrieval, Bayesian Classification, & Recommendation Systems',
+      ],
     },
     {
       degree: 'BA in Mathematics @ Hope College',
-      details: []
-    }
+      details: [],
+    },
   ],
 
   // Debug flag
-  DEBUG: false
+  DEBUG: false,
 };

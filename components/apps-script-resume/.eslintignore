@@ -1,0 +1,11 @@
+# Build output
+dist/
+*.d.ts
+*.d.ts.map
+
+# Dependencies
+node_modules/
+
+# Config files
+webpack.config.js
+jest.config.js

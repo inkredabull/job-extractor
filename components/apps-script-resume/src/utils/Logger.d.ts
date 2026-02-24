@@ -5,17 +5,16 @@
  */
 export declare class Logger {
     /**
-     * Log a message
-     * @param message - Message to log
-     * @param level - Log level (INFO, WARN, ERROR)
+     * Log a message (supports multiple arguments)
+     * @param args - Message parts to log
      */
-    static log(message: string, level?: string): void;
+    static log(...args: unknown[]): void;
     /**
      * Log an error with stack trace
      * @param message - Error message
-     * @param error - Error object
+     * @param error - Error object or additional context (optional)
      */
-    static error(message: string, error: Error): void;
+    static error(message: string, error?: Error | string): void;
     /**
      * Log a warning
      * @param message - Warning message

@@ -1,10 +1,16 @@
 /**
- * Menu Service - Manages Google Sheets custom menus
+ * Menu Service - Manages spreadsheet menu items
  *
  * @module ui/MenuService
- * @migration-status STUB - Needs implementation from Code-refactored.gs lines 2256-2288
+ */
+/**
+ * Service for managing menu items
  */
 export declare class MenuService {
-    static createMenu(): void;
+    /**
+     * Create custom menu in spreadsheet
+     * @param ui - Spreadsheet UI object
+     */
+    static createCustomMenu(ui: GoogleAppsScript.Base.Ui): void;
 }
 //# sourceMappingURL=MenuService.d.ts.map

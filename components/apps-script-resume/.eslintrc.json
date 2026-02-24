@@ -15,8 +15,7 @@
   ],
   "env": {
     "browser": false,
-    "node": true,
-    "googleappsscript/googleappsscript": true
+    "node": true
   },
   "rules": {
     "@typescript-eslint/explicit-function-return-type": "warn",

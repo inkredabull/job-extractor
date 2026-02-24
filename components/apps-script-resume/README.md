@@ -352,8 +352,42 @@ Anthony Bull
 
 ## 📖 Resources
 
+### Official Documentation
 - [Google Apps Script Documentation](https://developers.google.com/apps-script)
 - [clasp CLI Documentation](https://github.com/google/clasp)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Webpack Documentation](https://webpack.js.org/)
 - [gas-webpack-plugin](https://www.npmjs.com/package/gas-webpack-plugin)
+
+### Historical References (from original Code.gs)
+
+These references were used during the initial development of the monolithic Apps Script implementation:
+
+**Vertex AI & Google Cloud Integration:**
+- [Vertex AI Summarization Samples](https://cloud.google.com/vertex-ai/docs/samples/aiplatform-sdk-summarization#aiplatform_sdk_summarization-nodejs)
+- [Vertex AI Text Generation Console](https://console.cloud.google.com/vertex-ai/generative/language/create/text)
+- [Apps Script Vertex AI Integration](https://justin.poehnelt.com/posts/apps-script-vertex-ai/)
+- [Vertex AI Model Reference](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text)
+
+**Apps Script & Cloud Functions:**
+- **Important:** Apps Script MUST be in the same GCP project as Cloud Functions ([reference](https://stackoverflow.com/questions/69354426/calling-a-google-cloud-function-from-google-app-script))
+- Need to redeploy Cloud Function after updating Apps Script ([reference](https://stackoverflow.com/questions/66543047/call-google-cloud-functions-from-app-scripts))
+- [How to call Cloud Run or Cloud Functions from Apps Scripts](https://medium.com/geekculture/how-to-call-google-cloud-run-or-cloud-functions-from-apps-scripts-c0086289c965)
+- [Calling Cloud Function from Apps Script](https://stackoverflow.com/questions/69354426/calling-a-google-cloud-function-from-google-app-script)
+- [Securely calling Cloud Functions via Apps Script](https://stackoverflow.com/questions/61781421/securely-calling-a-google-cloud-function-via-a-google-apps-script)
+- [Trigger Cloud Function using Sheets trigger](https://stackoverflow.com/questions/63043738/how-to-trigger-a-google-cloud-function-using-a-google-sheets-trigger)
+
+**Authentication & Scopes:**
+- [Cloud Functions Authentication](https://cloud.google.com/functions/docs/securing/authenticating)
+- [Setting Explicit Scopes in Apps Script](https://developers.google.com/apps-script/concepts/scopes#setting_explicit_scopes)
+- [OAuth 2.0 Client IDs](https://support.google.com/cloud/answer/6158849?hl=en#)
+- [ScriptApp.getIdentityToken() Reference](https://developers.google.com/apps-script/reference/script/script-app#getidentitytoken)
+
+**Custom Functions Limitations:**
+- Custom functions in Google Sheets never ask users to authorize access to personal data ([reference](https://justin.poehnelt.com/posts/apps-script-vertex-ai/))
+
+**Google Drive & XML Import:**
+- [Using IMPORTXML with Google Drive files](https://stackoverflow.com/questions/45988417/how-to-use-importxml-function-with-a-file-from-google-drive)
+- [Disabling large file notification](https://stackoverflow.com/questions/14728038/disabling-the-large-file-notification-from-google-drive)
+- [Download file error: lockedDomainCreationFailure](https://stackoverflow.com/questions/68016649/google-drive-api-download-file-gives-lockeddomaincreationfailure-error)
+- [IMPORTXML function documentation](https://support.google.com/docs/answer/3093342?hl=en)

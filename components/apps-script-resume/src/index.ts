@@ -1,41 +1,39 @@
 /**
- * Resume & Achievement Management System - Main Entry Point
- *
- * A comprehensive Google Apps Script for managing work history,
- * generating achievements, and creating tailored resumes using AI.
- *
- * @author Anthony Bull
- * @version 3.0.0
- * @description Built with TypeScript and modern module system
+ * Main entry point for the apps-script-resume module
+ * Exports all public APIs and entry points
  */
 
-// Export all entry point functions to make them globally available in Google Apps Script
-export * from './entry-points';
-
-// Export configuration for external access
+// Export configuration
 export { CONFIG } from './config';
 
-// Export services for programmatic access
+// Export utilities
 export { Logger } from './utils/Logger';
 export { ValidationUtils } from './utils/ValidationUtils';
 export { TextUtils } from './utils/TextUtils';
 
-// Data layer
+// Export data services
 export { SheetService } from './data/SheetService';
 export { ConfigService } from './data/ConfigService';
 export { ModelDiscoveryService } from './data/ModelDiscoveryService';
 
-// AI layer
+// Export AI services
 export { AIProviderBase } from './ai/AIProviderBase';
 export { OpenRouterProvider } from './ai/OpenRouterProvider';
 export { AIService } from './ai/AIService';
 
-// Document layer
+// Export document services
 export { DocumentService } from './document/DocumentService';
 
-// Business logic layer
+// Export business services
 export { AchievementService } from './business/AchievementService';
+export { EvaluationService } from './business/EvaluationService';
+export { CustomizationService } from './business/CustomizationService';
 export { ResumeFormatter } from './business/ResumeFormatter';
+export { WorkHistoryExporter } from './business/WorkHistoryExporter';
 
-// UI layer
+// Export UI services
 export { MenuService } from './ui/MenuService';
+export { DialogService } from './ui/DialogService';
+
+// Export all entry points (global functions for Google Apps Script)
+export * from './entry-points';

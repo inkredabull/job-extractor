@@ -1,27 +1,151 @@
 /**
- * OpenRouter Provider - Unified AI model access via OpenRouter
+ * OpenRouter Provider - Unified AI provider via OpenRouter API
  *
  * @module ai/OpenRouterProvider
- * @migration-status STUB - Needs implementation from Code-refactored.gs lines 1096-1228
  */
 
-import { AIProviderBase } from './AIProviderBase';
 import { CONFIG } from '../config';
 import { Logger } from '../utils/Logger';
+import { AIProviderBase } from './AIProviderBase';
 
+/**
+ * OpenRouter unified AI provider
+ * Access to Claude, Gemini, OpenAI, Mistral, Cohere, and 200+ models through single API
+ */
 export class OpenRouterProvider extends AIProviderBase {
-  // TODO: Migrate class implementation from Code-refactored.gs
-  // This class handles:
-  // - Making requests to OpenRouter API
-  // - Model selection and switching
-  // - Error handling and retries
-
-  makeRequest(_prompt: string, _maxTokens: number): string {
-    // Suppress unused parameter warnings (will be used when implemented)
-    void CONFIG;
-    void Logger;
-    throw new Error('Not implemented - migrate from Code-refactored.gs');
+  /**
+   * Create an OpenRouter provider
+   * @param apiKey - OpenRouter API key
+   */
+  constructor(apiKey: string) {
+    super(apiKey, '', 'openrouter');
   }
 
-  // Add other methods as needed from original implementation
+  /**
+   * Get OpenRouter API endpoint
+   * @returns Endpoint URL
+   */
+  getEndpoint(): string {
+    return CONFIG.AI.ENDPOINT;
+  }
+
+  /**
+   * Generate OpenRouter request payload
+   * @param prompt - Prompt text
+   * @param maxTokens - Maximum output tokens
+   * @param modelName - Model identifier (e.g., 'anthropic/claude-3.7-sonnet')
+   * @returns Request payload
+   */
+  generatePayload(prompt: string, maxTokens: number, modelName?: string): Record<string, unknown> {
+    return {
+      model: modelName,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+    };
+  }
+
+  /**
+   * Generate OpenRouter authentication headers
+   * @returns Headers object
+   */
+  generateAuthHeader(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.apiKey}`,
+      'HTTP-Referer': 'https://sheets.google.com', // For OpenRouter rankings
+      'X-Title': 'Resume Achievement Generator', // For OpenRouter rankings
+    };
+  }
+
+  /**
+   * Parse OpenRouter response
+   * @param response - HTTP response
+   * @returns Extracted text
+   */
+  parseResponse(response: GoogleAppsScript.URL_Fetch.HTTPResponse): string {
+    const json = JSON.parse(response.getContentText()) as {
+      choices?: Array<{
+        message?: {
+          content?: string;
+          reasoning?: string;
+        };
+        finish_reason?: string;
+      }>;
+    };
+
+    // Log full response for debugging
+    Logger.log('OpenRouter response JSON:', JSON.stringify(json));
+
+    // Check if response has expected structure
+    if (!json.choices || json.choices.length === 0) {
+      Logger.error('No choices in response:', JSON.stringify(json));
+      throw new Error('Invalid response: no choices array');
+    }
+
+    const message = json.choices[0]?.message;
+    const content = message?.content || '';
+    const reasoning = message?.reasoning || '';
+    const finishReason = json.choices[0]?.finish_reason;
+
+    // Log reasoning if present (for debugging)
+    if (reasoning) {
+      Logger.log(`Model reasoning detected (${reasoning.length} chars)`);
+    }
+
+    // Content is the final answer - reasoning is just the thought process
+    if (!content || content.trim().length === 0) {
+      // If model hit token limit during reasoning, it never produced the answer
+      if (finishReason === 'length' && reasoning) {
+        Logger.error('Reasoning model hit token limit before producing final answer');
+        Logger.error(`Reasoning length: ${reasoning.length} chars`);
+        throw new Error(
+          'Model used all tokens for reasoning and did not produce final answer. Increase REASONING_MULTIPLIER.'
+        );
+      } else if (reasoning) {
+        Logger.error('Model produced reasoning but no final content');
+        throw new Error('Model produced reasoning but no final answer in content field');
+      } else {
+        Logger.error('Both content and reasoning are empty:', JSON.stringify(message));
+        throw new Error('Invalid response: no content or reasoning');
+      }
+    }
+
+    return String(content).trim();
+  }
+
+  /**
+   * Query OpenRouter with specific model
+   * @param prompt - Prompt text
+   * @param maxTokens - Maximum output tokens
+   * @param modelName - Model identifier
+   * @returns AI response
+   */
+  queryWithModel(prompt: string, maxTokens: number, modelName: string): string {
+    try {
+      const payload = this.generatePayload(prompt, maxTokens, modelName);
+      const headers = this.generateAuthHeader();
+      const options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
+        method: 'post',
+        headers: headers,
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true,
+        contentType: 'application/json',
+      };
+
+      const url = this.getEndpoint();
+      const response = UrlFetchApp.fetch(url, options);
+
+      if (response.getResponseCode() === 200) {
+        const result = this.parseResponse(response);
+        Logger.log(`OpenRouter response (${modelName}): ${result.length} chars`);
+        return result;
+      } else {
+        const errorText = response.getContentText();
+        Logger.error(`OpenRouter query failed: ${errorText}`);
+        throw new Error(errorText);
+      }
+    } catch (error) {
+      Logger.error(`OpenRouter query failed: ${(error as Error).message}`, error as Error);
+      throw error;
+    }
+  }
 }

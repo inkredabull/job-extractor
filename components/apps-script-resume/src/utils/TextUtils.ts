@@ -53,9 +53,9 @@ export class TextUtils {
    * @returns HTML text
    */
   static convertMarkdownToHtml(markdown: string): string {
-    let html = markdown
+    const html = markdown
       // Replace Markdown headings (#, ##, ###, etc.)
-      .replace(/^(#{1,6})\s+(.*)/gm, (_, hashes, title) => {
+      .replace(/^(#{1,6})\s+(.*)/gm, (_match: string, hashes: string, title: string) => {
         const level = hashes.length;
         return `<h${level}>${title}</h${level}>`;
       })
@@ -76,9 +76,8 @@ export class TextUtils {
    * @returns Text with replaced values
    */
   static replaceSizePlaceholders(text: string, targetAudience: string = 'linkedin'): string {
-    const scaleFactor = (targetAudience !== 'linkedin')
-      ? CONFIG.AI.LONG_SCALE
-      : CONFIG.AI.SHORT_SCALE;
+    const scaleFactor =
+      targetAudience !== 'linkedin' ? CONFIG.AI.LONG_SCALE : CONFIG.AI.SHORT_SCALE;
 
     const minLength = Math.round(CONFIG.AI.TEAL_BULLET_POINT_MIN_LENGTH / scaleFactor);
     const maxLength = Math.round(CONFIG.AI.TEAL_BULLET_POINT_MAX_LENGTH / scaleFactor);

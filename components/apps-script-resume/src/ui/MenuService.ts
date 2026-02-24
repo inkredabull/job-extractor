@@ -1,23 +1,36 @@
 /**
- * Menu Service - Manages Google Sheets custom menus
+ * Menu Service - Manages spreadsheet menu items
  *
  * @module ui/MenuService
- * @migration-status STUB - Needs implementation from Code-refactored.gs lines 2256-2288
  */
 
-import { Logger } from '../utils/Logger';
-
+/**
+ * Service for managing menu items
+ */
 export class MenuService {
-  // TODO: Migrate class implementation from Code-refactored.gs
-  // This class handles:
-  // - Creating custom menus
-  // - Adding menu items
-  // - Organizing menu structure
-
-  static createMenu(): void {
-    void Logger;
-    throw new Error('Not implemented - migrate from Code-refactored.gs');
+  /**
+   * Create custom menu in spreadsheet
+   * @param ui - Spreadsheet UI object
+   */
+  static createCustomMenu(ui: GoogleAppsScript.Base.Ui): void {
+    ui.createMenu('Utils')
+      .addItem('Generate summary', 'fetch')
+      .addItem('Choose Model', 'chooseModel')
+      .addItem('Compare Models', 'compareModels')
+      .addSeparator()
+      .addItem('View Current Models', 'viewCurrentModels')
+      .addItem('Refresh Models', 'refreshModelsMenu')
+      .addSeparator()
+      .addItem('Shorten', 'shorten')
+      .addItem('Evaluate achievement', 'evaluate')
+      .addItem('Categorize', 'findTheme')
+      .addItem('Get judgement', 'getJudgement')
+      .addItem('Get KPI', 'getKeyPerformanceIndicator')
+      .addItem('Get Work History as G Doc', 'getWorkHistoryAsGDoc')
+      .addItem('Generate resume', 'showModal')
+      .addItem('Sort', 'sortSheet')
+      .addItem('Create ID', 'createID')
+      .addItem('Customize', 'createCustomization')
+      .addToUi();
   }
-
-  // Add other methods as needed from original implementation
 }

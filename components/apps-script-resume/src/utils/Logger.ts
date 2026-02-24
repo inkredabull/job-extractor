@@ -6,23 +6,26 @@
 
 export class Logger {
   /**
-   * Log a message
-   * @param message - Message to log
-   * @param level - Log level (INFO, WARN, ERROR)
+   * Log a message (supports multiple arguments)
+   * @param args - Message parts to log
    */
-  static log(message: string, level: string = 'INFO'): void {
-    console.log(`[${level}] ${message}`);
+  static log(...args: unknown[]): void {
+    console.log('[INFO]', ...args);
   }
 
   /**
    * Log an error with stack trace
    * @param message - Error message
-   * @param error - Error object
+   * @param error - Error object or additional context (optional)
    */
-  static error(message: string, error: Error): void {
-    console.error(`[ERROR] ${message}`, error);
-    if (error && error.stack) {
-      console.error(error.stack);
+  static error(message: string, error?: Error | string): void {
+    if (error instanceof Error) {
+      console.error(`[ERROR] ${message}`, error);
+      if (error.stack) {
+        console.error(error.stack);
+      }
+    } else {
+      console.error(`[ERROR] ${message}`, error);
     }
   }
 
