@@ -3,6 +3,7 @@ export interface JobListing {
   company: string;
   location: string;
   description: string;
+  url?: string; // Job posting URL
   applicantCount?: number;
   competitionLevel?: 'low' | 'medium' | 'high' | 'extreme';
   linkedInCompany?: string; // LinkedIn company slug (e.g., "microsoft", "google")

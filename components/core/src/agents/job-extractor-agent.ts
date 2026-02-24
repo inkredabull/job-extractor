@@ -247,10 +247,11 @@ export class JobExtractorAgent extends BaseAgent {
       company: company,
       location: inputData.location || inputData.job_location || inputData.work_location || '',
       description: description,
+      url: inputData.url || inputData.jobUrl || inputData.sourceUrl || inputData.job_url || undefined,
       salary: normalizedSalary,
       applicantCount: inputData.applicantCount || inputData.applicant_count,
       competitionLevel: inputData.competitionLevel || inputData.competition_level,
-      linkedInCompany: inputData.linkedInCompany || inputData.linked_in || inputData.linkedin_company || 
+      linkedInCompany: inputData.linkedInCompany || inputData.linked_in || inputData.linkedin_company ||
                        (company ? this.convertToLinkedInSlug(company) : undefined)
     };
   }

@@ -1705,13 +1705,52 @@ app.all('/llm', (req, res) => {
     const company  = jobData.company || jobData.company_name || jobData.employer || '';
     const jobURL   = jobData.url || jobData.jobUrl || jobData.sourceUrl || jobData.job_url || null;
 
-    // --- Derive short title (first 3-4 significant words, max 40 chars) ---
-    const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'at', 'with', 'on']);
-    const significantWords = jobTitle
-      .split(/\s+/)
-      .filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()))
-      .slice(0, 4);
-    let jobTitleShorthand = significantWords.join(' ');
+    // --- Derive short title with common abbreviations ---
+    const abbreviationMap = {
+      'Technical Program Manager': 'TPM',
+      'Program Manager': 'PM',
+      'Product Manager': 'PM',
+      'Software Engineer': 'SWE',
+      'Software Engineering': 'SWE',
+      'Site Reliability Engineer': 'SRE',
+      'Site Reliability Engineering': 'SRE',
+      'Engineering Manager': 'EM',
+      'Data Scientist': 'DS',
+      'Machine Learning Engineer': 'MLE',
+      'Machine Learning': 'ML',
+      'DevOps Engineer': 'DevOps',
+      'Quality Assurance': 'QA',
+      'User Experience': 'UX',
+      'User Interface': 'UI'
+    };
+
+    let jobTitleShorthand = jobTitle;
+
+    // Check if title contains known abbreviation patterns
+    for (const [fullTitle, abbrev] of Object.entries(abbreviationMap)) {
+      if (jobTitle.includes(fullTitle)) {
+        // Extract level/prefix (Senior, Staff, Principal, etc.)
+        const level = jobTitle.replace(fullTitle, '').trim().split(/\s+/)[0];
+        if (level && level.length > 0 && !['a', 'an', 'the', 'and'].includes(level.toLowerCase())) {
+          jobTitleShorthand = `${level} ${abbrev}`;
+        } else {
+          jobTitleShorthand = abbrev;
+        }
+        break;
+      }
+    }
+
+    // If no abbreviation found, fall back to first 3-4 significant words
+    if (jobTitleShorthand === jobTitle) {
+      const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'at', 'with', 'on']);
+      const significantWords = jobTitle
+        .split(/\s+/)
+        .filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()))
+        .slice(0, 4);
+      jobTitleShorthand = significantWords.join(' ');
+    }
+
+    // Enforce max length
     if (jobTitleShorthand.length > 40) {
       jobTitleShorthand = jobTitleShorthand.substring(0, 37) + '...';
     }
