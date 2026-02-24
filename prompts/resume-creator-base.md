@@ -179,30 +179,30 @@ For each role in the CV, assess:
 
 ### Step 2: Decide on Experience Format
 
-**Use STANDARD FORMAT ("EXPERIENCE")** when:
-- Most selected roles are similarly relevant (no clear tier separation)
-- 3-4 roles tell the complete story
-- Roles flow naturally in chronological order
-- All selected roles directly support the target position
-
-**Use SPLIT FORMAT ("RELEVANT EXPERIENCE" + "RELATED EXPERIENCE")** when:
+**DEFAULT: Use SPLIT FORMAT ("RELEVANT EXPERIENCE" + "RELATED EXPERIENCE")** when:
+- 4 or more roles will be included (default for most resumes)
 - Clear separation between highly relevant roles (3-5) and supporting roles (2-3)
 - Target position requires specific recent experience AND earlier foundational work
 - Different career phases need distinct framing (e.g., recent leadership + earlier IC work)
-- Total of 6-8 roles needed to tell complete story
+- Total of 5-8 roles needed to tell complete story
+
+**Use STANDARD FORMAT ("EXPERIENCE")** only when:
+- Only 2-3 highly relevant roles are needed to tell the complete story
+- All selected roles are equally relevant (no clear tier separation)
+- Minimal career history or very focused application
 
 ### Step 3: Determine Role Count
 
 **Flexible guidelines (NOT hard limits):**
 - **Minimum:** 2-3 roles (highly relevant only)
-- **Typical:** 3-5 roles (standard) or 5-7 roles (split format)
+- **Typical:** 5-7 roles (split format for 2-page resume)
 - **Maximum:** 8 roles (only if genuinely needed for narrative)
 
 **Decision criteria:**
 - Include roles that strengthen the application
 - Exclude roles that dilute relevance or add confusion
 - Prioritize recent, highly relevant experience
-- Consider page limits (aim for 1-2 pages maximum)
+- Target 2 pages for optimal content density and complete career narrative
 
 ### Step 4: Section Headers
 
@@ -282,7 +282,7 @@ After the overview paragraph, add a blank line.
 Then include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that.
 Each bullet point should be between 75 and 90 characters.
 **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets on the same line as the overview.**
-**IMPORTANT: Aim for the UPPER end of the bullet point ranges to ensure adequate content density and avoid excessive white space on the page. A one-page resume should have substantial content, not large gaps.**
+**IMPORTANT: Aim for the UPPER end of the bullet point ranges to ensure adequate content density across two pages. Include enough detail to demonstrate impact while maintaining readability.**
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.
