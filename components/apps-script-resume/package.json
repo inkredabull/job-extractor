@@ -19,6 +19,7 @@
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist/*",
     "prebuild": "npm run clean",
+    "postbuild": "cp appsscript.json dist/",
     "clasp:login": "clasp login",
     "clasp:create": "clasp create --type sheets --title 'Resume Achievement System'",
     "clasp:open": "clasp open"
