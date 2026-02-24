@@ -408,7 +408,42 @@ pip install openai numpy pandas
 # deactivate
 ```
 
-7. Build the project:
+7. Set up Google Drive sync for logs and archives (recommended):
+```bash
+# Create symlinks to sync logs/archive folders to Google Drive
+npm run setup:gdrive
+
+# This will:
+# - Create career-catalyst folder in Google Drive
+# - Create symlinks from logs/ and archive/ to Google Drive
+# - Enable automatic cloud backup via Google Drive Desktop sync
+```
+
+**Prerequisites for Google Drive setup:**
+- Google Drive Desktop must be installed and syncing
+- Google Drive should be at the default location: `~/Google Drive/My Drive`
+
+**What happens:**
+- Your `logs/` and `archive/` directories become symlinks to Google Drive
+- All job data automatically syncs to the cloud via Google Drive Desktop
+- You can access files from any device with Google Drive sync
+- No code changes needed - all existing commands work as-is
+
+**Manual setup (if script fails):**
+```bash
+# Create the folder structure
+mkdir -p ~/Google\ Drive/My\ Drive/Professional/Job\ Search/career-catalyst
+
+# Move existing folders (if they exist)
+mv logs ~/Google\ Drive/My\ Drive/Professional/Job\ Search/career-catalyst/
+mv archive ~/Google\ Drive/My\ Drive/Professional/Job\ Search/career-catalyst/
+
+# Create symlinks
+ln -s ~/Google\ Drive/My\ Drive/Professional/Job\ Search/career-catalyst/logs logs
+ln -s ~/Google\ Drive/My\ Drive/Professional/Job\ Search/career-catalyst/archive archive
+```
+
+8. Build the project:
 ```bash
 npm run build
 ```
@@ -1975,6 +2010,30 @@ The project includes comprehensive unit tests for:
 - Error handling scenarios and edge cases
 
 ## 🛠️ Maintenance
+
+### Google Drive Cloud Backup
+
+The `logs/` and `archive/` directories can be automatically synced to Google Drive for cloud backup and multi-device access:
+
+```bash
+# Set up Google Drive symlinks (one-time setup)
+npm run setup:gdrive
+```
+
+**Benefits:**
+- ☁️ **Automatic cloud backup**: Google Drive Desktop syncs all job data
+- 🔄 **Multi-device access**: Access files from any device with Drive sync
+- 🔗 **Zero code changes**: All existing commands work seamlessly with symlinks
+- 📱 **Mobile access**: View job data on phone/tablet via Google Drive app
+
+**Location:** Files are synced to `My Drive > Professional > Job Search > career-catalyst/`
+
+**Setup on additional machines:**
+1. Install Google Drive Desktop and sync the folder
+2. Clone the repository
+3. Run `npm run setup:gdrive` to create local symlinks
+
+See [Installation](#installation) section for detailed setup instructions.
 
 ### Archiving Old Jobs
 

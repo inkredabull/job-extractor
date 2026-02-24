@@ -19,6 +19,7 @@
     "evaluate": "npm run eval --workspace=@career-catalyst/evaluation",
     "evaluate:check": "cd components/evaluation/python && source venv/bin/activate && python -m job_extractor_eval.cli --check-setup",
     "setup-gmail": "node scripts/setup-gmail-auth.js",
+    "setup:gdrive": "node scripts/setup-gdrive-symlinks.js",
     "archive:jobs": "node scripts/archive-jobs.js"
   },
   "keywords": [
