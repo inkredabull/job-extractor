@@ -130,3 +130,4 @@ migration/
 # Temporary and working files
 temp-*.scpt
 *-suggestions.md
+*.tar.gz
