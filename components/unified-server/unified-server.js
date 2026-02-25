@@ -1769,6 +1769,12 @@ app.all('/llm', (req, res) => {
       console.log('  -> No third-person blurb file found');
     }
 
+    // --- Extract resume Google Drive URL from job data ---
+    const resumeURL = jobData.resumeGoogleDriveUrl || jobData.resumeUrl || jobData.resume_url || null;
+    if (resumeURL) {
+      console.log(`  -> Resume URL found: ${resumeURL}`);
+    }
+
     console.log(`  -> ✅ Returning job info for: "${jobTitle}" at "${company}"`);
 
     return res.json({
@@ -1776,6 +1782,7 @@ app.all('/llm', (req, res) => {
       jobID: jobId,
       jobTitle: jobTitle,
       jobURL: jobURL,
+      resumeURL: resumeURL,
       Company: company,
       jobTitleShorthand: jobTitleShorthand,
       'third-person-blurb': thirdPersonBlurb
