@@ -1726,25 +1726,46 @@ app.all('/llm', (req, res) => {
       'User Interface': 'UI'
     };
 
-    // Word-level abbreviations for fallback
+    // Word-level abbreviations for aggressive shortening
     const wordAbbreviations = {
-      'Director': 'Dir',
+      'Director': 'DIR',
       'Vice President': 'VP',
-      'Assistant': 'Asst',
-      'Associate': 'Assoc',
-      'Generative': 'Gen',
-      'Foundation': 'Fnd'
+      'Senior': 'Sr.',
+      'Junior': 'Jr.',
+      'Principal': 'Principal',
+      'Staff': 'Staff',
+      'Lead': 'Lead',
+      'Chief': 'Chief',
+      'Engineering': 'ENG',
+      'Engineer': 'ENG',
+      'Manager': 'MGR',
+      'Assistant': 'ASST',
+      'Associate': 'ASSOC',
+      'Foundation': 'FND'
     };
 
     let jobTitleShorthand = jobTitle;
 
     // Check if title contains known abbreviation patterns
     for (const [fullTitle, abbrev] of Object.entries(abbreviationMap)) {
-      if (jobTitle.includes(fullTitle)) {
-        // Extract level/prefix (Senior, Staff, Principal, etc.)
-        const level = jobTitle.replace(fullTitle, '').trim().split(/\s+/)[0];
-        if (level && level.length > 0 && !['a', 'an', 'the', 'and'].includes(level.toLowerCase())) {
-          jobTitleShorthand = `${level} ${abbrev}`;
+      const matchIndex = jobTitle.indexOf(fullTitle);
+      if (matchIndex !== -1) {
+        // Extract only the prefix BEFORE the matched phrase
+        let prefix = jobTitle.substring(0, matchIndex).trim();
+
+        // Remove trailing comma or other punctuation from prefix
+        prefix = prefix.replace(/[,\s]+$/, '');
+
+        if (prefix && prefix.length > 0 && !['a', 'an', 'the', 'and'].includes(prefix.toLowerCase())) {
+          // Abbreviate the prefix too
+          let abbreviatedPrefix = prefix;
+          for (const [word, wordAbbrev] of Object.entries(wordAbbreviations)) {
+            abbreviatedPrefix = abbreviatedPrefix.replace(new RegExp(`\\b${word}\\b`, 'gi'), wordAbbrev);
+          }
+
+          // If original had comma after prefix, preserve it
+          const hasComma = prefix.includes(',') || jobTitle.substring(0, matchIndex).includes(',');
+          jobTitleShorthand = hasComma ? `${abbreviatedPrefix}, ${abbrev}` : `${abbreviatedPrefix} ${abbrev}`;
         } else {
           jobTitleShorthand = abbrev;
         }
@@ -1756,10 +1777,21 @@ app.all('/llm', (req, res) => {
     if (jobTitleShorthand === jobTitle) {
       let abbreviated = jobTitle;
 
-      // Apply word-level abbreviations
-      for (const [word, abbrev] of Object.entries(wordAbbreviations)) {
-        abbreviated = abbreviated.replace(new RegExp(word, 'g'), abbrev);
+      // Apply word-level abbreviations (longest matches first to avoid partial replacements)
+      const sortedAbbreviations = Object.entries(wordAbbreviations)
+        .sort((a, b) => b[0].length - a[0].length);
+
+      for (const [word, abbrev] of sortedAbbreviations) {
+        abbreviated = abbreviated.replace(new RegExp(`\\b${word}\\b`, 'gi'), abbrev);
       }
+
+      // Remove filler words and clean up spacing
+      abbreviated = abbreviated
+        .replace(/\bof\b/gi, '')
+        .replace(/\bthe\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .replace(/,\s+/g, ', ')
+        .trim();
 
       // If we made any abbreviations, use that
       if (abbreviated !== jobTitle && abbreviated.length <= 40) {
