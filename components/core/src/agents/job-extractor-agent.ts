@@ -212,9 +212,50 @@ export class JobExtractorAgent extends BaseAgent {
     }
   }
 
+  private cleanUrl(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+
+    try {
+      const urlObj = new URL(url);
+
+      // List of tracking parameters to remove
+      const trackingParams = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'utm_id', 'utm_source_platform', 'utm_creative_format', 'utm_marketing_tactic',
+        'fbclid', 'gclid', 'msclkid', 'mc_cid', 'mc_eid',
+        '_ga', '_gl', '_ke', 'ref', 'referrer'
+      ];
+
+      // Remove tracking parameters
+      trackingParams.forEach(param => {
+        urlObj.searchParams.delete(param);
+      });
+
+      // Return cleaned URL
+      let cleanedUrl = urlObj.origin + urlObj.pathname;
+
+      // Add back non-tracking query parameters if any remain
+      const remainingParams = urlObj.searchParams.toString();
+      if (remainingParams) {
+        cleanedUrl += '?' + remainingParams;
+      }
+
+      // Add hash if present
+      if (urlObj.hash) {
+        cleanedUrl += urlObj.hash;
+      }
+
+      return cleanedUrl;
+    } catch (error) {
+      // If URL parsing fails, return original
+      console.warn(`Failed to parse URL for cleaning: ${url}`);
+      return url;
+    }
+  }
+
   private normalizeJobData(inputData: any): JobListing {
     // Map various JSON structures to our expected schema
-    
+
     // Handle salary from multiple sources
     let salaryData = inputData.salary || inputData.compensation || inputData.pay;
     
@@ -242,12 +283,16 @@ export class JobExtractorAgent extends BaseAgent {
       }
     }
     
+    // Extract and clean URL (remove tracking parameters)
+    const rawUrl = inputData.url || inputData.jobUrl || inputData.sourceUrl || inputData.job_url || undefined;
+    const cleanedUrl = this.cleanUrl(rawUrl);
+
     return {
       title: inputData.title || inputData.job_title || inputData.position || inputData.role || '',
       company: company,
       location: inputData.location || inputData.job_location || inputData.work_location || '',
       description: description,
-      url: inputData.url || inputData.jobUrl || inputData.sourceUrl || inputData.job_url || undefined,
+      url: cleanedUrl,
       salary: normalizedSalary,
       applicantCount: inputData.applicantCount || inputData.applicant_count,
       competitionLevel: inputData.competitionLevel || inputData.competition_level,
