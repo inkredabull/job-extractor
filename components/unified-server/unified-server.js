@@ -1718,10 +1718,22 @@ app.all('/llm', (req, res) => {
       'Data Scientist': 'DS',
       'Machine Learning Engineer': 'MLE',
       'Machine Learning': 'ML',
+      'Generative AI': 'GenAI',
+      'Artificial Intelligence': 'AI',
       'DevOps Engineer': 'DevOps',
       'Quality Assurance': 'QA',
       'User Experience': 'UX',
       'User Interface': 'UI'
+    };
+
+    // Word-level abbreviations for fallback
+    const wordAbbreviations = {
+      'Director': 'Dir',
+      'Vice President': 'VP',
+      'Assistant': 'Asst',
+      'Associate': 'Assoc',
+      'Generative': 'Gen',
+      'Foundation': 'Fnd'
     };
 
     let jobTitleShorthand = jobTitle;
@@ -1740,14 +1752,27 @@ app.all('/llm', (req, res) => {
       }
     }
 
-    // If no abbreviation found, fall back to first 3-4 significant words
+    // If no abbreviation found, try intelligent word-level abbreviation
     if (jobTitleShorthand === jobTitle) {
-      const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'at', 'with', 'on']);
-      const significantWords = jobTitle
-        .split(/\s+/)
-        .filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()))
-        .slice(0, 4);
-      jobTitleShorthand = significantWords.join(' ');
+      let abbreviated = jobTitle;
+
+      // Apply word-level abbreviations
+      for (const [word, abbrev] of Object.entries(wordAbbreviations)) {
+        abbreviated = abbreviated.replace(new RegExp(word, 'g'), abbrev);
+      }
+
+      // If we made any abbreviations, use that
+      if (abbreviated !== jobTitle && abbreviated.length <= 40) {
+        jobTitleShorthand = abbreviated;
+      } else {
+        // Fall back to first 3-4 significant words
+        const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'at', 'with', 'on']);
+        const significantWords = jobTitle
+          .split(/\s+/)
+          .filter(w => w.length > 0 && !stopWords.has(w.toLowerCase()))
+          .slice(0, 4);
+        jobTitleShorthand = significantWords.join(' ');
+      }
     }
 
     // Enforce max length
