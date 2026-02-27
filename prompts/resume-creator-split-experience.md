@@ -27,7 +27,7 @@ For each relevant role:
   - 2nd most recent: 3-4 bullets
   - 3rd role: 2-3 bullets
   - 4th+ roles: 1-2 bullets each
-- Each bullet point should be between 75 and 90 characters
+- **Each bullet MUST be 70-80 characters maximum** (strict upper limit - be concise)
 - **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets.**
 
 ### RELATED EXPERIENCE
@@ -48,7 +48,7 @@ For each related role:
 - Include brief overview (100-150 characters) focusing on transferable value
 - Add a blank line after the overview
 - Include 1-2 bullet points per role highlighting most relevant achievements
-- Each bullet point should be between 75 and 90 characters
+- **Each bullet MUST be 70-80 characters maximum** (strict upper limit - be concise)
 - **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets.**
 
 ### Pagination Requirements

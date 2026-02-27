@@ -10,7 +10,14 @@ Given a job posting and a candidate's CV, create a tailored version that optimiz
 
 {{modeSpecificInstructions}}
 - Use keywords from the job description where appropriate
-- Maintain all factual information - DO NOT fabricate anything
+
+**🚨 CRITICAL - ANTI-HALLUCINATION REQUIREMENTS:**
+- **NEVER invent, fabricate, or guess metrics, numbers, percentages, or latency figures**
+- **ONLY use quantitative data that appears explicitly in the source CV**
+- **If a metric is uncertain or not in the CV, omit it rather than approximate**
+- All technical claims (technologies, scale, performance) must come directly from the CV
+- Do not embellish or add specificity that wasn't in the original content
+- When in doubt, use qualitative language instead of inventing numbers
 
 ## Domain Adaptation & Vocabulary
 
@@ -285,8 +292,14 @@ For each role, include an overview of the role of between 175 and 225 characters
 After the overview paragraph, add a blank line.
 
 Then include between 3-5 bullet points for the most recent role, 3-4 for the next role, and 1-3 for each role after that.
-Each bullet point should be between 75 and 90 characters.
-**CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets on the same line as the overview.**
+
+**CRITICAL BULLET REQUIREMENTS:**
+- **Each bullet MUST be 70-80 characters maximum** (strict upper limit)
+- **Be ruthlessly concise** - eliminate filler words like "while", "ensuring", "maintaining"
+- **Start with strong action verbs** - get to the impact immediately
+- **Each bullet must be on its own line starting with a dash (-)**
+- DO NOT inline bullets on the same line as the overview
+
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.
