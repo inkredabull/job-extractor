@@ -37,8 +37,10 @@ Thumbs.db
 *.swo
 *~
 
-# Logs
+# Logs (symlinks and directories)
+logs
 logs/
+archive
 archive/
 *.log
 
@@ -126,6 +128,9 @@ data/
 macos-reminder-config.yaml
 auto-workflow-config.yaml
 migration/
+
+# Old directory (replaced by components/)
+packages/
 
 # Temporary and working files
 temp-*.scpt
