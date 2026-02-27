@@ -1066,7 +1066,7 @@ program
         console.log('✅ Resume Generation Complete');
         console.log('=' .repeat(50));
         console.log(`📄 PDF Generated: ${result.pdfPath}`);
-        console.log(`⏱️  Duration: ${duration}s`);
+        console.log(`⏱️  Total Duration: ${duration}s`);
         if (result.totalCost !== undefined) {
           console.log(`💰 Total Cost: $${result.totalCost.toFixed(4)}`);
         }
