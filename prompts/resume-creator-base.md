@@ -300,6 +300,13 @@ Then include between 3-5 bullet points for the most recent role, 3-4 for the nex
 - **Each bullet must be on its own line starting with a dash (-)**
 - DO NOT inline bullets on the same line as the overview
 
+**Examples of proper length (70-80 chars):**
+✅ GOOD (75 chars): "Reduced P95 API latency 60% via Redis caching and query optimization"
+✅ GOOD (78 chars): "Led 3-squad coordination reducing integration bugs 40% through API contracts"
+❌ BAD (150+ chars): "Implemented execution discipline enabling 3 squads to ship in parallel: established API contracts, bi-weekly dependency reviews, and deployment gates"
+
+**VALIDATION REQUIREMENT:** After drafting bullets, count characters for each. If any bullet exceeds 80 characters, aggressively cut it down by removing clauses, combining ideas, or splitting into separate bullets. A bullet that wraps to a second line is TOO LONG.
+
 {{bulletPointGuidance}}
 If an input contains the name of the company from the job description, be sure to include it.  
 Be sure bullets reflect the verbiage used in the job description.

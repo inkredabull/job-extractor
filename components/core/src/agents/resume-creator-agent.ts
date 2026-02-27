@@ -909,10 +909,13 @@ export class ResumeCreatorAgent {
       // Load base template
       const basePath = path.resolve('prompts', 'resume-creator-base.md');
       let promptTemplate = fs.readFileSync(basePath, 'utf-8');
-      
+
+      // Filter domain adaptation to include only relevant sections (saves tokens)
+      promptTemplate = this.filterDomainAdaptation(promptTemplate, variables.job.description);
+
       // First, replace the maxRoles placeholder to ensure it's not lost
       promptTemplate = promptTemplate.replace(/\{\{maxRoles\}\}/g, variables.maxRoles.toString());
-      
+
       // Load mode-specific fragments
       const fragmentsFileName = this.mode === 'builder' ? 'resume-creator-builder-fragments.md' : 'resume-creator-leader-fragments.md';
       const fragmentsPath = path.resolve('prompts', fragmentsFileName);
@@ -989,21 +992,90 @@ export class ResumeCreatorAgent {
     try {
       const fragmentsContent = fs.readFileSync(fragmentsPath, 'utf-8');
       const fragments: Record<string, string> = {};
-      
+
       // Parse fragments using regex to find ### sectionName blocks
       const fragmentRegex = /### (\w+)\n((?:(?!### \w+)[\s\S])*)/g;
       let match;
-      
+
       while ((match = fragmentRegex.exec(fragmentsContent)) !== null) {
         const [, sectionName, sectionContent] = match;
         fragments[sectionName] = sectionContent.trim();
       }
-      
+
       return fragments;
     } catch (error) {
       console.warn(`⚠️  Failed to load fragments from ${fragmentsPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return {};
     }
+  }
+
+  private detectRelevantDomains(jobDescription: string): Set<string> {
+    const domains = new Set<string>();
+    const lowerDesc = jobDescription.toLowerCase();
+
+    // Regulated / High-Trust Environments
+    if (/(hipaa|soc2|compliance|clinical|patient data|pii|regulated|audit|fintech|healthcare|legal|government)/i.test(lowerDesc)) {
+      domains.add('regulated');
+    }
+
+    // Enterprise / Scale Stage
+    if (/(enterprise|scale|maturity|predictability|enterprise customers)/i.test(lowerDesc)) {
+      domains.add('enterprise');
+    }
+
+    // Platform Engineering / Infrastructure Leadership
+    if (/(platform engineering|infrastructure|developer platform|internal tools|distributed systems|site reliability|operational excellence|api platform|sre)/i.test(lowerDesc)) {
+      domains.add('platform');
+    }
+
+    // Forward Deployed / Customer-Facing
+    if (/(forward deployed|customer-facing|embedded|field engineering|solutions engineering|on-site|client integration)/i.test(lowerDesc)) {
+      domains.add('forward-deployed');
+    }
+
+    return domains;
+  }
+
+  private filterDomainAdaptation(basePrompt: string, jobDescription: string): string {
+    const relevantDomains = this.detectRelevantDomains(jobDescription);
+
+    // If no specific domains detected, keep only the header
+    if (relevantDomains.size === 0) {
+      return basePrompt.replace(
+        /## Domain Adaptation & Vocabulary[\s\S]*?(?=\n## |$)/,
+        '## Domain Adaptation & Vocabulary\n\nUse language and framing appropriate to the target role and company context.\n\n'
+      );
+    }
+
+    // Extract the full Domain Adaptation section
+    const domainSectionMatch = basePrompt.match(/## Domain Adaptation & Vocabulary[\s\S]*?(?=\n## |$)/);
+    if (!domainSectionMatch) return basePrompt;
+
+    const fullDomainSection = domainSectionMatch[0];
+
+    // Extract individual domain subsections
+    const sections: Record<string, string> = {
+      regulated: fullDomainSection.match(/### Regulated \/ High-Trust[\s\S]*?(?=\n### |$)/)?.[0] || '',
+      enterprise: fullDomainSection.match(/### Enterprise \/ Scale Stage[\s\S]*?(?=\n### |$)/)?.[0] || '',
+      platform: fullDomainSection.match(/### Platform Engineering[\s\S]*?(?=\n### |$)/)?.[0] || '',
+      'forward-deployed': fullDomainSection.match(/### Forward Deployed[\s\S]*?(?=\n### |$)/)?.[0] || ''
+    };
+
+    // Build filtered section with only relevant domains
+    let filteredSection = '## Domain Adaptation & Vocabulary\n\n**CRITICAL**: Adapt your language to match the domain and maturity stage of the company:\n\n';
+
+    for (const domain of relevantDomains) {
+      const section = sections[domain];
+      if (section) {
+        filteredSection += section + '\n\n';
+      }
+    }
+
+    // Replace the full domain section with the filtered one
+    return basePrompt.replace(
+      /## Domain Adaptation & Vocabulary[\s\S]*?(?=\n## |$)/,
+      filteredSection
+    );
   }
 
   private addHeaderToMarkdown(markdownContent: string): string {
