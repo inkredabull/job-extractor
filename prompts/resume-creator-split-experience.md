@@ -1,5 +1,8 @@
 ## Roles - RELEVANT vs RELATED Format
 
+**🚨 ABSOLUTE CONSTRAINT: MAXIMUM 2 PAGES 🚨**
+The final resume must NEVER exceed 2 pages. If content approaches this limit, aggressively reduce bullet points and role count as specified in the Pagination Requirements section below.
+
 Analyze and categorize all roles from the CV into two distinct sections based on alignment with the target position:
 
 ### RELEVANT EXPERIENCE
@@ -19,7 +22,11 @@ For each relevant role:
 - Add a blank line after the title/dates line
 - Include role overview (175-225 characters) with specific quantitative {{metricsType}} metrics
 - Add a blank line after the overview
-- Include 4-5 bullet points for the most recent role, 3-4 for subsequent relevant roles
+- **CRITICAL BULLET ALLOCATION (prioritize recency):**
+  - Most recent role: 4-5 bullets
+  - 2nd most recent: 3-4 bullets
+  - 3rd role: 2-3 bullets
+  - 4th+ roles: 1-2 bullets each
 - Each bullet point should be between 75 and 90 characters
 - **CRITICAL: Each bullet point must be on its own line starting with a dash (-). Do NOT inline bullets.**
 
@@ -46,11 +53,16 @@ For each related role:
 
 ### Pagination Requirements
 
-**CRITICAL PAGE LAYOUT:**
+**CRITICAL PAGE LAYOUT - MAXIMUM 2 PAGES:**
+- **ABSOLUTE MAXIMUM: 2 pages total. Never exceed 2 pages.**
 - Page 1 MUST contain: Header, Contact Info, Summary, RELEVANT EXPERIENCE section, Skills
-- Page 2 SHOULD contain: RELATED EXPERIENCE section (if included), Education
-- Adjust role count and bullet point density to ensure RELEVANT EXPERIENCE fits on page 1
-- If RELEVANT EXPERIENCE threatens to spill to page 2, reduce to 3 roles with 3 bullets each
+- Page 2 MUST contain: RELATED EXPERIENCE section (if included), Education
+- **If approaching 2-page limit:**
+  - First, reduce oldest role bullets (4th+ roles to 1 bullet only)
+  - Second, reduce RELATED roles to 1 bullet each
+  - Third, remove lowest-relevance roles from RELATED section entirely
+  - Fourth, reduce 3rd RELEVANT role to 2 bullets
+  - Last resort: Limit to 3 RELEVANT roles with 4/3/2 bullet allocation
 
 ### Section Headers
 
