@@ -267,7 +267,12 @@ Prefer active verbs and concrete metrics over abstract descriptions.
 2. Whether to use standard "EXPERIENCE" or split "RELEVANT EXPERIENCE" + "RELATED EXPERIENCE" format
 3. Which specific roles from the CV to include
 
-The {{maxRoles}} value is a soft suggestion (~{{maxRoles}} roles), but you should prioritize relevance over recency. Include roles in reverse-chronological order within each section.
+The {{maxRoles}} value is a soft suggestion (~{{maxRoles}} roles), but you should prioritize relevance over recency.
+
+**CRITICAL ORDERING REQUIREMENT:**
+- Within BOTH the "RELEVANT EXPERIENCE" and "RELATED EXPERIENCE" sections, roles MUST be listed in strict reverse-chronological order (most recent first)
+- Sort by the END date of each role (e.g., a role ending in 2024 comes before a role ending in 2022)
+- Never group roles by relevance if it breaks chronological order within a section
 
 {{rolesSpecificInstructions}}
 

@@ -44,7 +44,15 @@ export async function confirmCostEstimate(
     rl.question('Proceed with this cost estimate? (y/N): ', (answer) => {
       rl.close();
       const confirmed = answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
-      console.log('');
+
+      if (confirmed) {
+        console.log('');
+        console.log('✅ Confirmed - preparing request...');
+      } else {
+        console.log('');
+        console.log('❌ Cancelled');
+      }
+
       resolve(confirmed);
     });
   });

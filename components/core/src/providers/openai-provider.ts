@@ -14,52 +14,78 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async makeRequest(request: LLMRequest): Promise<LLMResponse> {
-    // Concatenate cached content with prompt (no special caching)
-    let fullPrompt = request.prompt;
-    if (request.cachedContent) {
-      fullPrompt = request.cachedContent + '\n\n' + request.prompt;
+    const startTime = Date.now();
+    console.log(`🤖 Sending request to OpenAI (${this.config.model})...`);
+
+    // Start elapsed time display
+    let elapsedSeconds = 0;
+    const timerInterval = setInterval(() => {
+      elapsedSeconds++;
+      process.stdout.write(`\r⏱️  Elapsed time: ${elapsedSeconds}s...`);
+    }, 1000);
+
+    try {
+      // Concatenate cached content with prompt (no special caching)
+      let fullPrompt = request.prompt;
+      if (request.cachedContent) {
+        fullPrompt = request.cachedContent + '\n\n' + request.prompt;
+      }
+
+      const messages: any[] = [];
+
+      if (request.systemPrompt) {
+        messages.push({ role: 'system', content: request.systemPrompt });
+      }
+
+      messages.push({ role: 'user', content: fullPrompt });
+
+      // GPT-4o and newer models (including GPT-5) use max_completion_tokens
+      // Older models use max_tokens
+      const usesNewTokenParam = this.config.model.includes('gpt-4o') ||
+                                 this.config.model.includes('gpt-5') ||
+                                 this.config.model.includes('o1') ||
+                                 this.config.model.includes('o3');
+
+      const requestParams: any = {
+        model: this.config.model,
+        messages,
+        temperature: this.config.temperature || 0.3
+      };
+
+      if (usesNewTokenParam) {
+        requestParams.max_completion_tokens = this.config.maxTokens || 4000;
+      } else {
+        requestParams.max_tokens = this.config.maxTokens || 4000;
+      }
+
+      const response = await this.openai.chat.completions.create(requestParams);
+
+      // Clear the timer and show final elapsed time
+      clearInterval(timerInterval);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (complete)\n`);
+
+      const usage = {
+        inputTokens: response.usage?.prompt_tokens || 0,
+        outputTokens: response.usage?.completion_tokens || 0,
+        cachedTokens: 0 // OpenAI doesn't expose cache info
+      };
+
+      // Log usage info
+      console.log(`✅ Response received (${usage.inputTokens.toLocaleString()} input tokens, ${usage.outputTokens.toLocaleString()} output tokens)`);
+
+      return {
+        text: response.choices[0]?.message?.content || '',
+        usage,
+        cost: this.calculateActualCost(usage)
+      };
+    } catch (error) {
+      // Make sure to clear interval on error too
+      clearInterval(timerInterval);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (failed)\n`);
+      throw error;
     }
-
-    const messages: any[] = [];
-
-    if (request.systemPrompt) {
-      messages.push({ role: 'system', content: request.systemPrompt });
-    }
-
-    messages.push({ role: 'user', content: fullPrompt });
-
-    // GPT-4o and newer models (including GPT-5) use max_completion_tokens
-    // Older models use max_tokens
-    const usesNewTokenParam = this.config.model.includes('gpt-4o') ||
-                               this.config.model.includes('gpt-5') ||
-                               this.config.model.includes('o1') ||
-                               this.config.model.includes('o3');
-
-    const requestParams: any = {
-      model: this.config.model,
-      messages,
-      temperature: this.config.temperature || 0.3
-    };
-
-    if (usesNewTokenParam) {
-      requestParams.max_completion_tokens = this.config.maxTokens || 4000;
-    } else {
-      requestParams.max_tokens = this.config.maxTokens || 4000;
-    }
-
-    const response = await this.openai.chat.completions.create(requestParams);
-
-    const usage = {
-      inputTokens: response.usage?.prompt_tokens || 0,
-      outputTokens: response.usage?.completion_tokens || 0,
-      cachedTokens: 0 // OpenAI doesn't expose cache info
-    };
-
-    return {
-      text: response.choices[0]?.message?.content || '',
-      usage,
-      cost: this.calculateActualCost(usage)
-    };
   }
 
   calculateActualCost(usage: { inputTokens: number; outputTokens: number; cachedTokens?: number }): {

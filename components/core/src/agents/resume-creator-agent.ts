@@ -210,7 +210,15 @@ export class ResumeCreatorAgent {
   private async generateInitialResume(jobId: string, cvFilePath: string, outputPath?: string, jobData?: JobListing, forceRegenerate: boolean = false): Promise<ResumeResult> {
     const job = jobData || this.loadJobData(jobId);
 
-    let tailoredContent: { markdownContent: string; changes: string[] };
+    let tailoredContent: {
+      markdownContent: string;
+      changes: string[];
+      roleSelection?: {
+        format: 'standard' | 'split';
+        rolesIncluded: number;
+        reasoning: string;
+      };
+    };
 
     // Only use cached content if not forcing regeneration
     // When forceRegenerate is true, always generate fresh content to apply updated prompts
@@ -228,10 +236,16 @@ export class ResumeCreatorAgent {
       const scopedCvContent = this.scopeCVContent(cvContent);
       tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
 
+      // Update experienceFormat based on Claude's decision
+      if (tailoredContent.roleSelection) {
+        this.experienceFormat = tailoredContent.roleSelection.format;
+        console.log(`📊 Updated experience format to: ${this.experienceFormat} (for ${this.experienceFormat === 'split' ? '2' : '1'}-page PDF validation)`);
+      }
+
       // Cache the newly generated content
       this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
     }
-    
+
     // Create PDF
     const pdfPath = await this.generatePDF(tailoredContent, job, outputPath, jobId);
     
@@ -258,6 +272,12 @@ export class ResumeCreatorAgent {
 
     let tailoredContent = await this.generateTailoredContent(job, scopedCvContent, jobId);
 
+    // Update experienceFormat based on Claude's decision
+    if (tailoredContent.roleSelection) {
+      this.experienceFormat = tailoredContent.roleSelection.format;
+      console.log(`📊 Updated experience format to: ${this.experienceFormat} (for ${this.experienceFormat === 'split' ? '2' : '1'}-page PDF validation)`);
+    }
+
     // Cache the tailored content
     this.saveTailoredContent(jobId, cvFilePath, tailoredContent);
 
@@ -268,7 +288,7 @@ export class ResumeCreatorAgent {
     if (!skipJudge) {
       const maxAttempts = 2;
 
-      // Set guidance based on experience format
+      // Set guidance based on experience format (now correctly updated from roleSelection)
       const guidance: PDFValidationGuidance = {
         maxPages: this.experienceFormat === 'split' ? 2 : 1,
         requiredSections: this.experienceFormat === 'split'
@@ -1186,6 +1206,17 @@ If the theme mentions specific technologies, standards, or domains (e.g., FHIR, 
     try {
       jsonMatch = response.text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
+        // Save the raw response for debugging
+        const jobDir = path.join(process.cwd(), 'logs', jobId || 'unknown');
+        if (!fs.existsSync(jobDir)) {
+          fs.mkdirSync(jobDir, { recursive: true });
+        }
+        const debugPath = path.join(jobDir, `debug-no-json-${Date.now()}.txt`);
+        fs.writeFileSync(debugPath, response.text);
+        console.error(`❌ No JSON found in response. Raw response saved to: ${debugPath}`);
+        console.error(`📊 Response length: ${response.text.length} characters`);
+        console.error(`📊 Output tokens: ${response.usage.outputTokens}`);
+        console.error(`🔍 First 500 chars: ${response.text.substring(0, 500)}`);
         throw new Error('No JSON found in tailoring response');
       }
 

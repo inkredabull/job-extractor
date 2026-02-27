@@ -14,41 +14,70 @@ export class ClaudeProvider extends BaseLLMProvider {
   }
 
   async makeRequest(request: LLMRequest): Promise<LLMResponse> {
-    const content: Array<any> = [];
+    const startTime = Date.now();
+    console.log(`🤖 Sending request to Claude (${this.config.model})${request.cachedContent ? ' with prompt caching' : ''}...`);
 
-    // Use prompt caching for CV content if supported
-    if (request.cachedContent && this.supportsPromptCaching()) {
-      content.push({
-        type: 'text',
-        text: request.cachedContent,
-        cache_control: { type: 'ephemeral' }
+    // Start elapsed time display
+    let elapsedSeconds = 0;
+    const timerInterval = setInterval(() => {
+      elapsedSeconds++;
+      process.stdout.write(`\r⏱️  Elapsed time: ${elapsedSeconds}s...`);
+    }, 1000);
+
+    try {
+      const content: Array<any> = [];
+
+      // Use prompt caching for CV content if supported
+      if (request.cachedContent && this.supportsPromptCaching()) {
+        content.push({
+          type: 'text',
+          text: request.cachedContent,
+          cache_control: { type: 'ephemeral' }
+        });
+      }
+
+      content.push({ type: 'text', text: request.prompt });
+
+      const response = await this.anthropic.messages.create({
+        model: this.config.model,
+        max_tokens: this.config.maxTokens || 4000,
+        messages: [{
+          role: 'user',
+          content: content.length === 1 ? request.prompt : content
+        }]
       });
+
+      // Clear the timer and show final elapsed time
+      clearInterval(timerInterval);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (complete)\n`);
+
+      const textContent = response.content.find(b => b.type === 'text');
+
+      const usage = {
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        cachedTokens: (response.usage as any).cache_read_input_tokens || 0
+      };
+
+      // Log usage info
+      const cacheInfo = usage.cachedTokens > 0
+        ? ` (${usage.cachedTokens.toLocaleString()} from cache)`
+        : '';
+      console.log(`✅ Response received (${usage.inputTokens.toLocaleString()} input tokens, ${usage.outputTokens.toLocaleString()} output tokens${cacheInfo})`);
+
+      return {
+        text: textContent?.text || '',
+        usage,
+        cost: this.calculateActualCost(usage)
+      };
+    } catch (error) {
+      // Make sure to clear interval on error too
+      clearInterval(timerInterval);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stdout.write(`\r⏱️  Elapsed time: ${duration}s (failed)\n`);
+      throw error;
     }
-
-    content.push({ type: 'text', text: request.prompt });
-
-    const response = await this.anthropic.messages.create({
-      model: this.config.model,
-      max_tokens: this.config.maxTokens || 4000,
-      messages: [{
-        role: 'user',
-        content: content.length === 1 ? request.prompt : content
-      }]
-    });
-
-    const textContent = response.content.find(b => b.type === 'text');
-
-    const usage = {
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      cachedTokens: (response.usage as any).cache_read_input_tokens || 0
-    };
-
-    return {
-      text: textContent?.text || '',
-      usage,
-      cost: this.calculateActualCost(usage)
-    };
   }
 
   calculateActualCost(usage: { inputTokens: number; outputTokens: number; cachedTokens?: number }): {

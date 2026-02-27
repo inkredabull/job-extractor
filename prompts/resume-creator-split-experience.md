@@ -12,6 +12,8 @@ Include roles that directly align with the target position's core requirements. 
 
 **Total: 3-5 roles maximum for RELEVANT EXPERIENCE**
 
+**CRITICAL: Roles MUST be listed in strict reverse-chronological order (most recent first). Sort by end date.**
+
 For each relevant role:
 - Include dates on the same line as title and company name
 - Add a blank line after the title/dates line
@@ -30,6 +32,8 @@ Include roles that provide supporting context but aren't direct matches. These m
 - Roles demonstrating transferable skills valuable to the position
 
 **Total: 2-3 roles maximum for RELATED EXPERIENCE**
+
+**CRITICAL: Roles MUST be listed in strict reverse-chronological order (most recent first). Sort by end date.**
 
 For each related role:
 - Include dates on the same line as title and company name
